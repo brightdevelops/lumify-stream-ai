@@ -98,11 +98,6 @@ function Landing() {
               </div>
               <div className="mt-1 text-2xl">{p.price}</div>
               <div className="mt-1 text-xs text-muted-foreground">≈ {Math.round(p.credits / 2 / 60)} minutes of streaming</div>
-              <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-                <li className="flex gap-2"><Check className="h-4 w-4 text-primary" /> Full prompt control</li>
-                <li className="flex gap-2"><Check className="h-4 w-4 text-primary" /> 720p output</li>
-                <li className="flex gap-2"><Check className="h-4 w-4 text-primary" /> Credits never expire</li>
-              </ul>
               <Link to="/signup" className="mt-6 block w-full rounded-md bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground hover:opacity-90">
                 Buy {p.name}
               </Link>
