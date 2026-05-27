@@ -108,6 +108,15 @@ export type Database = {
         Args: { p_amount: number; p_credits: number; p_description?: string }
         Returns: number
       }
+      purchase_credits_for_user: {
+        Args: {
+          p_amount: number
+          p_credits: number
+          p_description?: string
+          p_user_id: string
+        }
+        Returns: number
+      }
     }
     Enums: {
       transaction_type: "purchase" | "usage"

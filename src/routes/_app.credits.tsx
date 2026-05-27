@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { verifyPaystackAndCredit } from "@/lib/payments.functions";
+
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
@@ -69,16 +70,16 @@ function CreditsPage() {
         email: user.email,
         amount: pack.price * 100, // kobo
         currency: "NGN",
-        ref: `lumify_${user.id.slice(0, 8)}_${Date.now()}`,
+        ref: `lumify_${pack.id}_${user.id.slice(0, 8)}_${Date.now()}`,
         metadata: {
           custom_fields: [
             { display_name: "Package", variable_name: "package", value: pack.name },
             { display_name: "Credits", variable_name: "credits", value: String(pack.credits) },
           ],
         },
-        callback: (_response: { reference: string }) => {
+        callback: (response: { reference: string }) => {
           // Runs in Paystack's callback context — handle async work separately
-          void finalizePayment();
+          void finalizePayment(response.reference);
         },
         onClose: () => {
           setProcessing(false);
@@ -92,23 +93,21 @@ function CreditsPage() {
     }
   };
 
-  const finalizePayment = async () => {
+  const finalizePayment = async (reference: string) => {
     try {
       if (!user) throw new Error("Not authenticated");
 
-      const { error: rpcErr } = await supabase.rpc("purchase_credits", {
-        p_credits: pack.credits,
-        p_amount: pack.price,
-        p_description: `Credit purchase — ${pack.name} pack`,
+      await verifyPaystackAndCredit({
+        data: { reference, packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
       });
-      if (rpcErr) throw rpcErr;
 
       navigate({ to: "/dashboard" });
     } catch (e: any) {
       setProcessing(false);
-      setError(e?.message ?? "Payment succeeded but we couldn't update your balance. Contact support.");
+      setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
     }
   };
+
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
