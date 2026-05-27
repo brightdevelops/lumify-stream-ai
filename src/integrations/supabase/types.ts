@@ -89,11 +89,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_list_users_with_credits: {
+        Args: never
+        Returns: {
+          balance: number
+          created_at: string
+          email: string
+          full_name: string
+          is_admin: boolean
+          total_credits_used: number
+          total_spent: number
+          user_id: string
+        }[]
+      }
       deduct_credits: {
         Args: {
           p_amount: number
@@ -102,6 +136,13 @@ export type Database = {
           p_log_transaction?: boolean
         }
         Returns: number
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       log_usage_transaction: {
         Args: { p_amount: number; p_credits: number; p_description?: string }
@@ -124,6 +165,7 @@ export type Database = {
       resolve_stream_token: { Args: { p_token: string }; Returns: string }
     }
     Enums: {
+      app_role: "admin" | "user"
       transaction_type: "purchase" | "usage"
     }
     CompositeTypes: {
@@ -252,6 +294,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       transaction_type: ["purchase", "usage"],
     },
   },
