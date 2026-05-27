@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,17 +15,24 @@ const NAIRA_PER_CREDIT = 23;
 const MIN_CREDITS_TO_START = 10;
 const DECART_API_KEY = "dct_lumify_wvFmmngQSbkAOeNvIwEFJAMMmIyNqNbjvgacliJWPQMEBjbFwxyezzeQQxcChbQn";
 
+const buildPrompt = (preset: string | null) =>
+  preset ? `Transform into this character in ${preset} style` : "Transform into this character";
+
 function StreamPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const inputVideoRef = useRef<HTMLVideoElement>(null);
   const outputVideoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
 
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [prompt, setPrompt] = useState("");
+  const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [referenceUrl, setReferenceUrl] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [duration, setDuration] = useState(0);
   const [credits, setCredits] = useState(0);
   const [startingCredits, setStartingCredits] = useState(0);
@@ -37,7 +44,6 @@ function StreamPage() {
   const usedRef = useRef(0);
   const durationRef = useRef(0);
 
-  // Load credit balance
   useEffect(() => {
     if (!user) return;
     supabase
@@ -53,26 +59,13 @@ function StreamPage() {
       });
   }, [user]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       teardownStream();
+      if (referenceUrl) URL.revokeObjectURL(referenceUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Push prompt updates live to Decart whenever it changes during streaming
-  useEffect(() => {
-    if (!streaming || !decartClientRef.current) return;
-    const text = prompt.trim();
-    if (!text) return;
-    const t = setTimeout(() => {
-      decartClientRef.current?.setPrompt(text, { enhance: true }).catch((e) => {
-        console.error("Decart set prompt error", e);
-      });
-    }, 250); // debounce typing
-    return () => clearTimeout(t);
-  }, [prompt, streaming]);
 
   // Credit tick loop
   useEffect(() => {
@@ -111,17 +104,41 @@ function StreamPage() {
     if (outputVideoRef.current) outputVideoRef.current.srcObject = null;
   };
 
+  const applyReference = async (preset: string | null, image: File | null) => {
+    if (!decartClientRef.current || !image) return;
+    try {
+      await decartClientRef.current.set({
+        prompt: buildPrompt(preset),
+        image,
+        enhance: true,
+      } as never);
+    } catch (e) {
+      console.error("Decart set error", e);
+    }
+  };
+
+  const handleFile = (file: File | null) => {
+    if (!file) return;
+    if (!/image\/(jpeg|jpg|png)/i.test(file.type)) {
+      setError("Please upload a JPG or PNG image");
+      return;
+    }
+    if (referenceUrl) URL.revokeObjectURL(referenceUrl);
+    setReferenceImage(file);
+    setReferenceUrl(URL.createObjectURL(file));
+    setError(null);
+    if (streaming) applyReference(selectedPreset, file);
+  };
+
   const start = async () => {
     setError(null);
     if (!user) return;
 
-    const text = prompt.trim();
-    if (!text) {
-      setError("Please enter a transformation prompt first");
+    if (!referenceImage) {
+      setError("Please upload a reference image first");
       return;
     }
 
-    // Re-check fresh balance
     const { data } = await supabase
       .from("credits")
       .select("balance")
@@ -135,16 +152,11 @@ function StreamPage() {
 
     setConnecting(true);
 
-    // 1. Camera
     let stream: MediaStream;
     try {
       const model = models.realtime("lucy-2.1");
       stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          frameRate: model.fps,
-          width: model.width,
-          height: model.height,
-        },
+        video: { frameRate: model.fps, width: model.width, height: model.height },
         audio: false,
       });
     } catch (e) {
@@ -159,7 +171,6 @@ function StreamPage() {
       inputVideoRef.current.play().catch(() => {});
     }
 
-    // 2. Decart
     try {
       const model = models.realtime("lucy-2.1");
       const client = createDecartClient({ apiKey: DECART_API_KEY });
@@ -171,11 +182,15 @@ function StreamPage() {
             outputVideoRef.current.play().catch(() => {});
           }
         },
-        initialState: {
-          prompt: { text, enhance: true },
-        },
       });
       decartClientRef.current = realtimeClient;
+
+      const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+      await realtimeClient.set({
+        prompt: buildPrompt(selectedPreset),
+        image: photo,
+        enhance: true,
+      } as never);
     } catch (e) {
       console.error("Decart connect failed", e);
       teardownStream();
@@ -184,7 +199,6 @@ function StreamPage() {
       return;
     }
 
-    // 3. Begin session
     setCredits(bal);
     setStartingCredits(bal);
     creditsRef.current = bal;
@@ -221,14 +235,17 @@ function StreamPage() {
   };
 
   const selectPreset = (p: string) => {
-    setPrompt(p);
+    const next = selectedPreset === p ? null : p;
+    setSelectedPreset(next);
     setError(null);
-    // Live apply handled by the prompt effect; for instant feedback also push now if streaming
-    if (streaming && decartClientRef.current) {
-      decartClientRef.current.setPrompt(p, { enhance: true }).catch((e) => {
-        console.error("Decart set prompt error", e);
-      });
-    }
+    if (streaming) applyReference(next, referenceImage);
+  };
+
+  const clearReference = () => {
+    if (referenceUrl) URL.revokeObjectURL(referenceUrl);
+    setReferenceImage(null);
+    setReferenceUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const mmss = (s: number) =>
@@ -240,7 +257,7 @@ function StreamPage() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl">Studio</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Describe a look and watch your camera transform in real time.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Upload a reference image and watch your camera transform in real time.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -270,25 +287,81 @@ function StreamPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5">
-            <label className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">Prompt</label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe the visual style for your stream…"
-              rows={2}
-              className="w-full resize-none rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-primary"
+            <label className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">Reference Image</label>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/jpg"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
             />
-            <div className="mt-4 flex flex-wrap gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => selectPreset(p)}
-                  className={`rounded-full border px-3 py-1 text-xs ${prompt === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
-                >
-                  {p}
-                </button>
-              ))}
+
+            {!referenceUrl ? (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  handleFile(e.dataTransfer.files?.[0] ?? null);
+                }}
+                className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-colors ${
+                  dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/60 hover:bg-secondary/40"
+                }`}
+              >
+                <Upload className="h-8 w-8 text-muted-foreground" />
+                <div className="text-sm">Drag and drop or <span className="text-primary">click to upload</span></div>
+                <div className="text-xs text-muted-foreground">JPG or PNG</div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 rounded-lg border border-border bg-background/50 p-3">
+                <img src={referenceUrl} alt="Reference" className="h-20 w-20 rounded-md object-cover border border-border" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-sm font-medium truncate">
+                    <ImageIcon className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">{referenceImage?.name}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {referenceImage ? `${(referenceImage.size / 1024).toFixed(0)} KB` : ""}
+                    {streaming && <span className="ml-2 text-primary">• Live</span>}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs rounded border border-border px-2 py-1 hover:bg-secondary"
+                    >
+                      Change
+                    </button>
+                    {!streaming && (
+                      <button
+                        onClick={clearReference}
+                        className="text-xs rounded border border-border px-2 py-1 hover:bg-secondary text-muted-foreground"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Style (optional)</div>
+              <div className="flex flex-wrap gap-2">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => selectPreset(p)}
+                    className={`rounded-full border px-3 py-1 text-xs ${selectedPreset === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
+
             {error && (
               <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
