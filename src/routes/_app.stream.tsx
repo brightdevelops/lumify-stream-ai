@@ -225,7 +225,7 @@ function StreamPage() {
     setError(null);
     // Live apply handled by the prompt effect; for instant feedback also push now if streaming
     if (streaming && decartClientRef.current) {
-      decartClientRef.current.set({ prompt: { text: p, enhance: true } }).catch((e) => {
+      decartClientRef.current.setPrompt(p, { enhance: true }).catch((e) => {
         console.error("Decart set prompt error", e);
       });
     }
