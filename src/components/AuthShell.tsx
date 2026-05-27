@@ -19,6 +19,7 @@ export function AuthShell({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
