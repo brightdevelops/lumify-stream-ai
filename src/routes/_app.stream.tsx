@@ -67,7 +67,7 @@ function StreamPage() {
     const text = prompt.trim();
     if (!text) return;
     const t = setTimeout(() => {
-      decartClientRef.current?.set({ prompt: { text, enhance: true } }).catch((e) => {
+      decartClientRef.current?.setPrompt(text, { enhance: true }).catch((e) => {
         console.error("Decart set prompt error", e);
       });
     }, 250); // debounce typing
