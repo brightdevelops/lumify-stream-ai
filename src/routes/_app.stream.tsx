@@ -209,6 +209,12 @@ function StreamPage() {
             outputVideoRef.current.srcObject = transformedStream;
             outputVideoRef.current.play().catch(() => {});
           }
+          try {
+            broadcasterStopRef.current?.();
+            broadcasterStopRef.current = startBroadcaster(transformedStream);
+          } catch (e) {
+            console.error("Broadcaster start failed", e);
+          }
         },
       });
       decartClientRef.current = realtimeClient;
