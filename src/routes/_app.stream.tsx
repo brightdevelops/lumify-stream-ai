@@ -71,18 +71,24 @@ function StreamPage() {
   useEffect(() => {
     if (!streaming || !user) return;
     const id = setInterval(async () => {
-      const newBalance = Math.max(0, creditsRef.current - RATE);
+      const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
+        p_credits: RATE,
+        p_amount: RATE * NAIRA_PER_CREDIT,
+        p_description: null,
+        p_log_transaction: false,
+      });
+      if (rpcErr) {
+        console.error("deduct_credits failed", rpcErr);
+        await endStream(false);
+        return;
+      }
+      const newBalance = typeof data === "number" ? data : 0;
       creditsRef.current = newBalance;
       usedRef.current = usedRef.current + RATE;
       durationRef.current = durationRef.current + 1;
       setCredits(newBalance);
       setUsed(usedRef.current);
       setDuration(durationRef.current);
-
-      await supabase
-        .from("credits")
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id);
 
       if (newBalance <= 0) {
         await endStream(true);
