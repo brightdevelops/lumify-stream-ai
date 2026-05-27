@@ -522,7 +522,7 @@ function Panel({ label, accent, children }: { label: string; accent?: boolean; c
 function PanelEmpty({ hint }: { hint: string }) {
   return <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">{hint}</div>;
 }
-function SidePanel({ title, children }: { title: string; children: React.ReactNode }) {
+function SidePanel({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="text-xs uppercase tracking-wide text-muted-foreground mb-3">{title}</div>
