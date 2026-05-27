@@ -1,10 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
+import { startBroadcaster } from "@/lib/stream-broadcast";
+
+const OUTPUT_URL = "lumify-stream-ai.lovable.app/output";
 
 
 export const Route = createFileRoute("/_app/stream")({
@@ -28,6 +31,16 @@ function StreamPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
+  const broadcasterStopRef = useRef<(() => void) | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyObsUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(`https://${OUTPUT_URL}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
 
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -100,6 +113,12 @@ function StreamPage() {
   }, [streaming, user]);
 
   const teardownStream = () => {
+    try {
+      broadcasterStopRef.current?.();
+    } catch (e) {
+      console.error("Broadcaster stop error", e);
+    }
+    broadcasterStopRef.current = null;
     try {
       decartClientRef.current?.disconnect?.();
     } catch (e) {
@@ -189,6 +208,12 @@ function StreamPage() {
           if (outputVideoRef.current) {
             outputVideoRef.current.srcObject = transformedStream;
             outputVideoRef.current.play().catch(() => {});
+          }
+          try {
+            broadcasterStopRef.current?.();
+            broadcasterStopRef.current = startBroadcaster(transformedStream);
+          } catch (e) {
+            console.error("Broadcaster start failed", e);
           }
         },
       });
@@ -413,6 +438,43 @@ function StreamPage() {
             <Row k="Cost so far" v={`₦${cost.toLocaleString()}`} />
           </SidePanel>
 
+          <SidePanel title={
+            <span className="inline-flex items-center gap-1.5">
+              <Monitor className="h-3.5 w-3.5 text-primary" /> OBS Setup
+              <span className="ml-1 rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-primary">Live</span>
+            </span>
+          }>
+            <p className="text-xs text-muted-foreground -mt-1 mb-2">Pipe your AI face into OBS as a Browser Source.</p>
+            <ol className="text-xs text-foreground/90 space-y-1.5 list-decimal pl-4">
+              <li>Start your stream on Lumify</li>
+              <li>Open OBS</li>
+              <li>Click <span className="font-mono text-primary">+</span> under Sources</li>
+              <li>Select <span className="font-medium">Browser Source</span></li>
+              <li>Paste the URL below</li>
+              <li>Set width <span className="font-mono">1280</span> height <span className="font-mono">720</span></li>
+              <li>Click <span className="font-medium">OK</span> — your AI face is now in OBS</li>
+            </ol>
+            <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-background/60 p-2">
+              <code className="flex-1 truncate text-[11px] font-mono text-muted-foreground">{OUTPUT_URL}</code>
+              <button
+                onClick={copyObsUrl}
+                className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary"
+                title="Copy OBS URL"
+              >
+                {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <a
+              href={`https://${OUTPUT_URL}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" /> Open output preview
+            </a>
+          </SidePanel>
+
           <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-4 w-4" /> Top Up Credits
           </Link>
@@ -460,7 +522,7 @@ function Panel({ label, accent, children }: { label: string; accent?: boolean; c
 function PanelEmpty({ hint }: { hint: string }) {
   return <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">{hint}</div>;
 }
-function SidePanel({ title, children }: { title: string; children: React.ReactNode }) {
+function SidePanel({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="text-xs uppercase tracking-wide text-muted-foreground mb-3">{title}</div>

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as OutputRouteImport } from './routes/output'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,6 +23,11 @@ import { Route as AppBillingRouteImport } from './routes/_app.billing'
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OutputRoute = OutputRouteImport.update({
+  id: '/output',
+  path: '/output',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -67,6 +73,7 @@ const AppBillingRoute = AppBillingRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/output': typeof OutputRoute
   '/signup': typeof SignupRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
@@ -77,6 +84,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/output': typeof OutputRoute
   '/signup': typeof SignupRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/output': typeof OutputRoute
   '/signup': typeof SignupRoute
   '/_app/billing': typeof AppBillingRoute
   '/_app/credits': typeof AppCreditsRoute
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/output'
     | '/signup'
     | '/billing'
     | '/credits'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/output'
     | '/signup'
     | '/billing'
     | '/credits'
@@ -122,6 +133,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/login'
+    | '/output'
     | '/signup'
     | '/_app/billing'
     | '/_app/credits'
@@ -134,6 +146,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  OutputRoute: typeof OutputRoute
   SignupRoute: typeof SignupRoute
 }
 
@@ -144,6 +157,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/output': {
+      id: '/output'
+      path: '/output'
+      fullPath: '/output'
+      preLoaderRoute: typeof OutputRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -227,6 +247,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  OutputRoute: OutputRoute,
   SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
