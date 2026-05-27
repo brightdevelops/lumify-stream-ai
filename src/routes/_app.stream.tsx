@@ -114,6 +114,12 @@ function StreamPage() {
 
   const teardownStream = () => {
     try {
+      broadcasterStopRef.current?.();
+    } catch (e) {
+      console.error("Broadcaster stop error", e);
+    }
+    broadcasterStopRef.current = null;
+    try {
       decartClientRef.current?.disconnect?.();
     } catch (e) {
       console.error("Decart disconnect error", e);
