@@ -1,26 +1,62 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Coins, Clock, TrendingUp, Wallet, Video, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
 });
 
-const stats = [
-  { label: "Credits Remaining", value: "1,240", icon: Coins, highlight: true, hint: "≈ 10 min of streaming" },
-  { label: "Total Streamed", value: "0h 00m", icon: Clock, hint: "Across 0 sessions" },
-  { label: "Credits Used", value: "0", icon: TrendingUp, hint: "Last 30 days" },
-  { label: "Total Spent", value: "₦0", icon: Wallet, hint: "Lifetime" },
-];
+type Txn = {
+  id: string;
+  type: "purchase" | "usage";
+  amount: number;
+  credits: number;
+  description: string | null;
+  created_at: string;
+};
 
-const activity = [
-  { desc: "Stream session — Cyberpunk preset", date: "Today, 14:02", credits: -420, status: "Complete" },
-  { desc: "Credit purchase — Basic pack", date: "Today, 09:18", credits: 1000, status: "Paid" },
-  { desc: "Stream session — Anime preset", date: "Yesterday, 21:11", credits: -680, status: "Complete" },
-  { desc: "Stream session — Oil Painting", date: "May 24, 17:48", credits: -240, status: "Complete" },
-  { desc: "Credit purchase — Starter pack", date: "May 22, 11:03", credits: 500, status: "Paid" },
-];
+function fmtDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
 
 function Dashboard() {
+  const { user } = useAuth();
+  const [balance, setBalance] = useState<number>(0);
+  const [spent, setSpent] = useState<number>(0);
+  const [used, setUsed] = useState<number>(0);
+  const [txns, setTxns] = useState<Txn[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: c }, { data: t }] = await Promise.all([
+        supabase.from("credits").select("balance").eq("user_id", user.id).maybeSingle(),
+        supabase.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+      setBalance(c?.balance ?? 0);
+      const txList = (t ?? []) as Txn[];
+      setTxns(txList);
+      setSpent(txList.filter((x) => x.type === "purchase").reduce((s, x) => s + Number(x.amount), 0));
+      setUsed(txList.filter((x) => x.type === "usage").reduce((s, x) => s + Math.abs(x.credits), 0));
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const streamMin = Math.floor(balance / 2 / 60);
+  const stats = [
+    { label: "Credits Remaining", value: balance.toLocaleString(), icon: Coins, highlight: true, hint: `≈ ${streamMin} min of streaming` },
+    { label: "Total Streamed", value: "0h 00m", icon: Clock, hint: `Across ${txns.filter(t => t.type === "usage").length} sessions` },
+    { label: "Credits Used", value: used.toLocaleString(), icon: TrendingUp, hint: "All time" },
+    { label: "Total Spent", value: `₦${spent.toLocaleString()}`, icon: Wallet, hint: "Lifetime" },
+  ];
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <div className="flex items-end justify-between mb-8">
@@ -44,20 +80,8 @@ function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 mb-8">
-        <QuickAction
-          to="/stream"
-          icon={Video}
-          title="Start a Stream"
-          desc="Open the studio and transform your camera with a prompt."
-          cta="Open studio"
-        />
-        <QuickAction
-          to="/credits"
-          icon={Plus}
-          title="Top Up Credits"
-          desc="Add credits to your balance. Pay with Paystack."
-          cta="Buy credits"
-        />
+        <QuickAction to="/stream" icon={Video} title="Start a Stream" desc="Open the studio and transform your camera with a prompt." cta="Open studio" />
+        <QuickAction to="/credits" icon={Plus} title="Top Up Credits" desc="Add credits to your balance. Pay with Paystack." cta="Buy credits" />
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -71,16 +95,23 @@ function Dashboard() {
               <tr><th className="px-6 py-3">Description</th><th className="px-6 py-3">Date</th><th className="px-6 py-3 text-right">Credits</th><th className="px-6 py-3">Status</th></tr>
             </thead>
             <tbody>
-              {activity.map((a, i) => (
-                <tr key={i} className="border-t border-border">
-                  <td className="px-6 py-4">{a.desc}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{a.date}</td>
-                  <td className={`px-6 py-4 text-right font-medium ${a.credits > 0 ? "text-primary" : "text-foreground"}`}>
-                    {a.credits > 0 ? "+" : ""}{a.credits.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4"><StatusBadge status={a.status} /></td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground">Loading…</td></tr>
+              ) : txns.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground">No activity yet. Buy credits to get started.</td></tr>
+              ) : txns.slice(0, 5).map((a) => {
+                const credits = a.type === "purchase" ? a.credits : -Math.abs(a.credits);
+                return (
+                  <tr key={a.id} className="border-t border-border">
+                    <td className="px-6 py-4">{a.description ?? (a.type === "purchase" ? "Credit purchase" : "Stream session")}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{fmtDate(a.created_at)}</td>
+                    <td className={`px-6 py-4 text-right font-medium ${credits > 0 ? "text-primary" : "text-foreground"}`}>
+                      {credits > 0 ? "+" : ""}{credits.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4"><StatusBadge status={a.type === "purchase" ? "Paid" : "Complete"} /></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
