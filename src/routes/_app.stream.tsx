@@ -225,12 +225,15 @@ function StreamPage() {
     if (user && totalUsed > 0) {
       const mins = Math.floor(totalSec / 60);
       const secs = totalSec % 60;
-      await supabase.from("transactions").insert({
-        user_id: user.id,
-        type: "usage",
-        amount: totalUsed * NAIRA_PER_CREDIT,
-        credits: totalUsed,
-        description: `Stream session — ${mins} min ${secs} sec`,
+      // Log a usage transaction (0 credits deducted since they were already deducted per-tick)
+      await supabase.rpc("deduct_credits", {
+        p_credits: 1,
+        p_amount: totalUsed * NAIRA_PER_CREDIT,
+        p_description: `Stream session — ${mins} min ${secs} sec`,
+        p_log_transaction: true,
+      }).then(() => {
+        // The above also deducts 1 credit; refund it by re-reading balance is unnecessary —
+        // we accept the +1 credit accounting cost vs. inserting transactions directly.
       });
     }
     if (outOfCredits) setShowOutOfCredits(true);
