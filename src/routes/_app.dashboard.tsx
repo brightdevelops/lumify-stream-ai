@@ -7,9 +7,9 @@ export const Route = createFileRoute("/_app/dashboard")({
 
 const stats = [
   { label: "Credits Remaining", value: "1,240", icon: Coins, highlight: true, hint: "≈ 10 min of streaming" },
-  { label: "Total Streamed", value: "8h 42m", icon: Clock, hint: "Across 24 sessions" },
-  { label: "Credits Used", value: "3,760", icon: TrendingUp, hint: "Last 30 days" },
-  { label: "Total Spent", value: "₦86,250", icon: Wallet, hint: "Lifetime" },
+  { label: "Total Streamed", value: "0h 00m", icon: Clock, hint: "Across 0 sessions" },
+  { label: "Credits Used", value: "0", icon: TrendingUp, hint: "Last 30 days" },
+  { label: "Total Spent", value: "₦0", icon: Wallet, hint: "Lifetime" },
 ];
 
 const activity = [
