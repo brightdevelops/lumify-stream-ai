@@ -2,7 +2,7 @@
 -- Block direct authenticated access — purchases must go through verified server flow
 REVOKE EXECUTE ON FUNCTION public.purchase_credits(integer, numeric, text) FROM PUBLIC, anon, authenticated;
 
--- Service-role-only version that takes an explicit user id (called from server fn after Paystack verification)
+-- Service-role-only version that takes an explicit user id (called from server fn after payment verification)
 CREATE OR REPLACE FUNCTION public.purchase_credits_for_user(
   p_user_id uuid,
   p_credits integer,
