@@ -74,7 +74,7 @@ function StreamPage() {
       const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
         p_credits: RATE,
         p_amount: RATE * NAIRA_PER_CREDIT,
-        p_description: null,
+        p_description: undefined,
         p_log_transaction: false,
       });
       if (rpcErr) {
