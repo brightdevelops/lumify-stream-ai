@@ -1,6 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut } from "lucide-react";
 import { Logo } from "./Logo";
+import { supabase } from "@/integrations/supabase/client";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -41,7 +42,7 @@ export function AppSidebar() {
       </nav>
       <div className="p-3 border-t border-border">
         <button
-          onClick={() => { localStorage.removeItem("lumify_user"); navigate({ to: "/" }); }}
+          onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}
           className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
         >
           <LogOut className="h-4 w-4" /> Logout

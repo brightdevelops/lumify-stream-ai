@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Logo } from "@/components/Logo";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AuthShell({
   mode,
@@ -15,14 +16,34 @@ export function AuthShell({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    localStorage.setItem(
-      "lumify_user",
-      JSON.stringify({ name: name || email.split("@")[0] || "Creator", email, credits: 1240 })
-    );
-    navigate({ to: "/dashboard" });
+    setError(null);
+    setLoading(true);
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+            data: { full_name: name },
+          },
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+      navigate({ to: "/dashboard" });
+    } catch (err: any) {
+      setError(err?.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,8 +66,9 @@ export function AuthShell({
             <Field label="Password">
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="input" placeholder="••••••••" />
             </Field>
-            <button type="submit" className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
-              {mode === "login" ? "Log in" : "Create account"}
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <button type="submit" disabled={loading} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
+              {loading ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
             </button>
           </form>
 
