@@ -41,18 +41,21 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          stream_token: string
         }
         Insert: {
           created_at?: string
           email: string
           full_name?: string | null
           id: string
+          stream_token?: string
         }
         Update: {
           created_at?: string
           email?: string
           full_name?: string | null
           id?: string
+          stream_token?: string
         }
         Relationships: []
       }
@@ -117,6 +120,8 @@ export type Database = {
         }
         Returns: number
       }
+      regenerate_stream_token: { Args: never; Returns: string }
+      resolve_stream_token: { Args: { p_token: string }; Returns: string }
     }
     Enums: {
       transaction_type: "purchase" | "usage"

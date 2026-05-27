@@ -1,35 +1,49 @@
-// Cross-tab MediaStream sharing via BroadcastChannel signaling + WebRTC.
-// Used to mirror the AI output stream from /stream to /output (e.g. for OBS).
+// Cross-device MediaStream sharing via Supabase Realtime signaling + WebRTC.
+// Broadcaster (logged-in user on /stream) publishes; viewer (OBS browser on
+// /output?token=...) connects. Signaling channel is keyed by the user's id.
 
-const CHANNEL = "lumify-stream-output";
+import { supabase } from "@/integrations/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+
 const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
 };
 
-type Signal =
-  | { type: "viewer-ready"; viewerId: string }
-  | { type: "offer"; viewerId: string; sdp: RTCSessionDescriptionInit }
-  | { type: "answer"; viewerId: string; sdp: RTCSessionDescriptionInit }
-  | { type: "ice"; viewerId: string; from: "broadcaster" | "viewer"; candidate: RTCIceCandidateInit }
-  | { type: "broadcaster-online" }
-  | { type: "broadcaster-offline" };
+const channelName = (userId: string) => `stream-output:${userId}`;
 
-export function startBroadcaster(stream: MediaStream) {
-  const channel = new BroadcastChannel(CHANNEL);
+type Payload =
+  | { kind: "viewer-ready"; viewerId: string }
+  | { kind: "offer"; viewerId: string; sdp: RTCSessionDescriptionInit }
+  | { kind: "answer"; viewerId: string; sdp: RTCSessionDescriptionInit }
+  | { kind: "ice"; viewerId: string; from: "broadcaster" | "viewer"; candidate: RTCIceCandidateInit }
+  | { kind: "broadcaster-online" }
+  | { kind: "broadcaster-offline" };
+
+const send = (ch: RealtimeChannel, payload: Payload) =>
+  ch.send({ type: "broadcast", event: "signal", payload });
+
+export function startBroadcaster(userId: string, stream: MediaStream) {
+  const ch = supabase.channel(channelName(userId), {
+    config: { broadcast: { self: false, ack: false } },
+  });
   const peers = new Map<string, RTCPeerConnection>();
 
   const createPeer = async (viewerId: string) => {
+    peers.get(viewerId)?.close();
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peers.set(viewerId, pc);
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        channel.postMessage({
-          type: "ice",
+        send(ch, {
+          kind: "ice",
           viewerId,
           from: "broadcaster",
           candidate: e.candidate.toJSON(),
-        } satisfies Signal);
+        });
       }
     };
     pc.onconnectionstatechange = () => {
@@ -40,17 +54,17 @@ export function startBroadcaster(stream: MediaStream) {
     };
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    channel.postMessage({ type: "offer", viewerId, sdp: offer } satisfies Signal);
+    send(ch, { kind: "offer", viewerId, sdp: offer });
   };
 
-  channel.onmessage = async (e: MessageEvent<Signal>) => {
-    const msg = e.data;
-    if (msg.type === "viewer-ready") {
+  ch.on("broadcast", { event: "signal" }, async ({ payload }) => {
+    const msg = payload as Payload;
+    if (msg.kind === "viewer-ready") {
       await createPeer(msg.viewerId);
-    } else if (msg.type === "answer") {
+    } else if (msg.kind === "answer") {
       const pc = peers.get(msg.viewerId);
       if (pc) await pc.setRemoteDescription(msg.sdp);
-    } else if (msg.type === "ice" && msg.from === "viewer") {
+    } else if (msg.kind === "ice" && msg.from === "viewer") {
       const pc = peers.get(msg.viewerId);
       if (pc && msg.candidate) {
         try {
@@ -58,31 +72,38 @@ export function startBroadcaster(stream: MediaStream) {
         } catch {}
       }
     }
-  };
+  });
 
-  channel.postMessage({ type: "broadcaster-online" } satisfies Signal);
+  ch.subscribe((status) => {
+    if (status === "SUBSCRIBED") {
+      send(ch, { kind: "broadcaster-online" });
+    }
+  });
 
   return () => {
-    channel.postMessage({ type: "broadcaster-offline" } satisfies Signal);
+    try {
+      send(ch, { kind: "broadcaster-offline" });
+    } catch {}
     peers.forEach((p) => p.close());
     peers.clear();
-    channel.close();
+    supabase.removeChannel(ch);
   };
 }
 
-export function startViewer(onStream: (stream: MediaStream) => void) {
-  const channel = new BroadcastChannel(CHANNEL);
+export function startViewer(userId: string, onStream: (stream: MediaStream) => void) {
+  const ch = supabase.channel(channelName(userId), {
+    config: { broadcast: { self: false, ack: false } },
+  });
   const viewerId = Math.random().toString(36).slice(2);
   let pc: RTCPeerConnection | null = null;
 
-  const announce = () =>
-    channel.postMessage({ type: "viewer-ready", viewerId } satisfies Signal);
+  const announce = () => send(ch, { kind: "viewer-ready", viewerId });
 
-  channel.onmessage = async (e: MessageEvent<Signal>) => {
-    const msg = e.data;
-    if (msg.type === "broadcaster-online") {
+  ch.on("broadcast", { event: "signal" }, async ({ payload }) => {
+    const msg = payload as Payload;
+    if (msg.kind === "broadcaster-online") {
       announce();
-    } else if (msg.type === "offer" && msg.viewerId === viewerId) {
+    } else if (msg.kind === "offer" && msg.viewerId === viewerId) {
       pc?.close();
       pc = new RTCPeerConnection(RTC_CONFIG);
       pc.ontrack = (ev) => {
@@ -90,35 +111,43 @@ export function startViewer(onStream: (stream: MediaStream) => void) {
       };
       pc.onicecandidate = (ev) => {
         if (ev.candidate) {
-          channel.postMessage({
-            type: "ice",
+          send(ch, {
+            kind: "ice",
             viewerId,
             from: "viewer",
             candidate: ev.candidate.toJSON(),
-          } satisfies Signal);
+          });
         }
       };
       await pc.setRemoteDescription(msg.sdp);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      channel.postMessage({ type: "answer", viewerId, sdp: answer } satisfies Signal);
-    } else if (msg.type === "ice" && msg.from === "broadcaster" && msg.viewerId === viewerId) {
+      send(ch, { kind: "answer", viewerId, sdp: answer });
+    } else if (
+      msg.kind === "ice" &&
+      msg.from === "broadcaster" &&
+      msg.viewerId === viewerId
+    ) {
       if (pc && msg.candidate) {
         try {
           await pc.addIceCandidate(msg.candidate);
         } catch {}
       }
-    } else if (msg.type === "broadcaster-offline") {
+    } else if (msg.kind === "broadcaster-offline") {
       pc?.close();
       pc = null;
     }
-  };
+  });
 
-  // In case broadcaster is already running
-  announce();
+  ch.subscribe((status) => {
+    if (status === "SUBSCRIBED") {
+      // In case broadcaster is already running
+      announce();
+    }
+  });
 
   return () => {
     pc?.close();
-    channel.close();
+    supabase.removeChannel(ch);
   };
 }
