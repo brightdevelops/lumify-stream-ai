@@ -31,6 +31,16 @@ function StreamPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
+  const broadcasterStopRef = useRef<(() => void) | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyObsUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(`https://${OUTPUT_URL}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
 
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
