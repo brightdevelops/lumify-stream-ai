@@ -86,6 +86,13 @@ export function AuthShell({
                 </button>
               </div>
             </Field>
+            {mode === "login" && (
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+            )}
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button type="submit" disabled={loading} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
               {loading ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
