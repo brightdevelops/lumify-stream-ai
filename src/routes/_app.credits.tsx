@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { verifyPaystackAndCredit } from "@/lib/payments.functions";
+
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
