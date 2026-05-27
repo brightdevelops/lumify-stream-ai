@@ -75,7 +75,7 @@ function Dashboard() {
                 <tr key={i} className="border-t border-border">
                   <td className="px-6 py-4">{a.desc}</td>
                   <td className="px-6 py-4 text-muted-foreground">{a.date}</td>
-                  <td className={`px-6 py-4 text-right font-medium ${a.credits > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                  <td className={`px-6 py-4 text-right font-medium ${a.credits > 0 ? "text-primary" : "text-foreground"}`}>
                     {a.credits > 0 ? "+" : ""}{a.credits.toLocaleString()}
                   </td>
                   <td className="px-6 py-4"><StatusBadge status={a.status} /></td>
