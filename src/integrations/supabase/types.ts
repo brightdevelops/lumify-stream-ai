@@ -100,6 +100,10 @@ export type Database = {
         }
         Returns: number
       }
+      log_usage_transaction: {
+        Args: { p_amount: number; p_credits: number; p_description?: string }
+        Returns: undefined
+      }
       purchase_credits: {
         Args: { p_amount: number; p_credits: number; p_description?: string }
         Returns: number
