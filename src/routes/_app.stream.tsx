@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Play, Square, Sparkles, Plus, X } from "lucide-react";
+import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -12,12 +13,18 @@ const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "
 const RATE = 2; // credits/sec
 const NAIRA_PER_CREDIT = 23;
 const MIN_CREDITS_TO_START = 10;
+const DECART_API_KEY = "dct_lumify_wvFmmngQSbkAOeNvIwEFJAMMmIyNqNbjvgacliJWPQMEBjbFwxyezzeQQxcChbQn";
 
 function StreamPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const inputVideoRef = useRef<HTMLVideoElement>(null);
+  const outputVideoRef = useRef<HTMLVideoElement>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
+
   const [streaming, setStreaming] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [duration, setDuration] = useState(0);
   const [credits, setCredits] = useState(0);
@@ -25,6 +32,7 @@ function StreamPage() {
   const [used, setUsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showOutOfCredits, setShowOutOfCredits] = useState(false);
+
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
   const durationRef = useRef(0);
@@ -45,15 +53,28 @@ function StreamPage() {
       });
   }, [user]);
 
-  // Cleanup camera on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      const stream = videoRef.current?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach((t) => t.stop());
+      teardownStream();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tick loop
+  // Push prompt updates live to Decart whenever it changes during streaming
+  useEffect(() => {
+    if (!streaming || !decartClientRef.current) return;
+    const text = prompt.trim();
+    if (!text) return;
+    const t = setTimeout(() => {
+      decartClientRef.current?.set({ prompt: { text, enhance: true } }).catch((e) => {
+        console.error("Decart set prompt error", e);
+      });
+    }, 250); // debounce typing
+    return () => clearTimeout(t);
+  }, [prompt, streaming]);
+
+  // Credit tick loop
   useEffect(() => {
     if (!streaming || !user) return;
     const id = setInterval(async () => {
@@ -65,7 +86,6 @@ function StreamPage() {
       setUsed(usedRef.current);
       setDuration(durationRef.current);
 
-      // Persist new balance
       await supabase
         .from("credits")
         .update({ balance: newBalance, updated_at: new Date().toISOString() })
@@ -78,9 +98,29 @@ function StreamPage() {
     return () => clearInterval(id);
   }, [streaming, user]);
 
+  const teardownStream = () => {
+    try {
+      decartClientRef.current?.disconnect?.();
+    } catch (e) {
+      console.error("Decart disconnect error", e);
+    }
+    decartClientRef.current = null;
+    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    mediaStreamRef.current = null;
+    if (inputVideoRef.current) inputVideoRef.current.srcObject = null;
+    if (outputVideoRef.current) outputVideoRef.current.srcObject = null;
+  };
+
   const start = async () => {
     setError(null);
     if (!user) return;
+
+    const text = prompt.trim();
+    if (!text) {
+      setError("Please enter a transformation prompt first");
+      return;
+    }
+
     // Re-check fresh balance
     const { data } = await supabase
       .from("credits")
@@ -92,6 +132,59 @@ function StreamPage() {
       setError("Insufficient credits, please top up");
       return;
     }
+
+    setConnecting(true);
+
+    // 1. Camera
+    let stream: MediaStream;
+    try {
+      const model = models.realtime("lucy-2.1");
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          frameRate: model.fps,
+          width: model.width,
+          height: model.height,
+        },
+        audio: false,
+      });
+    } catch (e) {
+      console.error(e);
+      setConnecting(false);
+      setError("Camera access was denied. Please allow camera access in your browser to start streaming.");
+      return;
+    }
+    mediaStreamRef.current = stream;
+    if (inputVideoRef.current) {
+      inputVideoRef.current.srcObject = stream;
+      inputVideoRef.current.play().catch(() => {});
+    }
+
+    // 2. Decart
+    try {
+      const model = models.realtime("lucy-2.1");
+      const client = createDecartClient({ apiKey: DECART_API_KEY });
+      const realtimeClient = await client.realtime.connect(stream, {
+        model,
+        onRemoteStream: (transformedStream: MediaStream) => {
+          if (outputVideoRef.current) {
+            outputVideoRef.current.srcObject = transformedStream;
+            outputVideoRef.current.play().catch(() => {});
+          }
+        },
+        initialState: {
+          prompt: { text, enhance: true },
+        },
+      });
+      decartClientRef.current = realtimeClient;
+    } catch (e) {
+      console.error("Decart connect failed", e);
+      teardownStream();
+      setConnecting(false);
+      setError("Failed to connect to the AI transformation service. Please try again.");
+      return;
+    }
+
+    // 3. Begin session
     setCredits(bal);
     setStartingCredits(bal);
     creditsRef.current = bal;
@@ -99,23 +192,12 @@ function StreamPage() {
     durationRef.current = 0;
     setUsed(0);
     setDuration(0);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-    } catch {
-      // proceed even if camera denied
-    }
+    setConnecting(false);
     setStreaming(true);
   };
 
   const endStream = async (outOfCredits = false) => {
-    const stream = videoRef.current?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
-    if (videoRef.current) videoRef.current.srcObject = null;
+    teardownStream();
     setStreaming(false);
 
     const totalUsed = usedRef.current;
@@ -138,6 +220,17 @@ function StreamPage() {
     endStream(false);
   };
 
+  const selectPreset = (p: string) => {
+    setPrompt(p);
+    setError(null);
+    // Live apply handled by the prompt effect; for instant feedback also push now if streaming
+    if (streaming && decartClientRef.current) {
+      decartClientRef.current.set({ prompt: { text: p, enhance: true } }).catch((e) => {
+        console.error("Decart set prompt error", e);
+      });
+    }
+  };
+
   const mmss = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   const pct = startingCredits > 0 ? Math.max(0, Math.min(100, (credits / startingCredits) * 100)) : 0;
@@ -153,8 +246,8 @@ function StreamPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Panel label="Camera Input">
-              <video ref={videoRef} muted playsInline className="h-full w-full object-cover bg-black" />
+            <Panel label="Your Camera">
+              <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
               {!streaming && <PanelEmpty hint="Camera off" />}
               {streaming && (
                 <div className="absolute top-3 right-3 z-10 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-mono text-primary">
@@ -163,15 +256,15 @@ function StreamPage() {
               )}
             </Panel>
             <Panel label="AI Output" accent>
-              {streaming ? (
-                <div className="h-full w-full grid place-items-center bg-black">
+              <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
+              {!streaming && <PanelEmpty hint="Waiting for stream" />}
+              {connecting && (
+                <div className="absolute inset-0 grid place-items-center bg-black/60">
                   <div className="text-center">
                     <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
-                    <div className="mt-2 text-xs text-muted-foreground">Rendering {prompt || "scene"}…</div>
+                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy 2.1…</div>
                   </div>
                 </div>
-              ) : (
-                <PanelEmpty hint="Waiting for stream" />
               )}
             </Panel>
           </div>
@@ -187,7 +280,13 @@ function StreamPage() {
             />
             <div className="mt-4 flex flex-wrap gap-2">
               {PRESETS.map((p) => (
-                <button key={p} onClick={() => setPrompt(p)} className={`rounded-full border px-3 py-1 text-xs ${prompt === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}>{p}</button>
+                <button
+                  key={p}
+                  onClick={() => selectPreset(p)}
+                  className={`rounded-full border px-3 py-1 text-xs ${prompt === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
+                >
+                  {p}
+                </button>
               ))}
             </div>
             {error && (
@@ -196,8 +295,8 @@ function StreamPage() {
               </div>
             )}
             <div className="mt-5 flex gap-3">
-              <button onClick={start} disabled={streaming} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50">
-                <Play className="h-4 w-4" /> Start Stream
+              <button onClick={start} disabled={streaming || connecting} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50">
+                <Play className="h-4 w-4" /> {connecting ? "Connecting…" : "Start Stream"}
               </button>
               <button onClick={stop} disabled={!streaming} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-5 py-2.5 text-sm text-foreground hover:bg-secondary disabled:opacity-50">
                 <Square className="h-4 w-4" /> Stop
