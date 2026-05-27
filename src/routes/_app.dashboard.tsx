@@ -81,7 +81,7 @@ function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 mb-8">
         <QuickAction to="/stream" icon={Video} title="Start a Stream" desc="Open the studio and transform your camera with a prompt." cta="Open studio" />
-        <QuickAction to="/credits" icon={Plus} title="Top Up Credits" desc="Add credits to your balance. Pay with Paystack." cta="Buy credits" />
+        <QuickAction to="/credits" icon={Plus} title="Top Up Credits" desc="Add credits to your balance with Flutterwave." cta="Pay with Flutterwave" />
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">
