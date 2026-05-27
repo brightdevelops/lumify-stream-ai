@@ -1,10 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
 });
+
+const PAYSTACK_PUBLIC_KEY = "pk_test_c5b21595b0fe4752d5ea79cfdada9b17a49c1591";
 
 const PACKS = [
   { id: "starter", name: "Starter", credits: 500, price: 11500 },
@@ -14,10 +18,115 @@ const PACKS = [
 ];
 const METHODS = ["Bank Transfer", "Card", "USSD", "Opay"];
 
+declare global {
+  interface Window {
+    PaystackPop?: { setup: (opts: Record<string, unknown>) => { openIframe: () => void } };
+  }
+}
+
+function loadPaystack(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") return reject(new Error("no window"));
+    if (window.PaystackPop) return resolve();
+    const existing = document.getElementById("paystack-inline-js") as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("Failed to load Paystack")));
+      return;
+    }
+    const s = document.createElement("script");
+    s.id = "paystack-inline-js";
+    s.src = "https://js.paystack.co/v1/inline.js";
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Failed to load Paystack"));
+    document.body.appendChild(s);
+  });
+}
+
 function CreditsPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState("basic");
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
+
+  const handlePayment = async () => {
+    if (!user?.email) {
+      setError("You must be logged in.");
+      return;
+    }
+    setError(null);
+    setProcessing(true);
+    try {
+      await loadPaystack();
+      if (!window.PaystackPop) throw new Error("Paystack not available");
+
+      const handler = window.PaystackPop.setup({
+        key: PAYSTACK_PUBLIC_KEY,
+        email: user.email,
+        amount: pack.price * 100, // kobo
+        currency: "NGN",
+        ref: `lumify_${user.id.slice(0, 8)}_${Date.now()}`,
+        metadata: {
+          custom_fields: [
+            { display_name: "Package", variable_name: "package", value: pack.name },
+            { display_name: "Credits", variable_name: "credits", value: String(pack.credits) },
+          ],
+        },
+        callback: (_response: { reference: string }) => {
+          // Runs in Paystack's callback context — handle async work separately
+          void finalizePayment();
+        },
+        onClose: () => {
+          setProcessing(false);
+          setError("Payment was cancelled.");
+        },
+      });
+      handler.openIframe();
+    } catch (e: any) {
+      setProcessing(false);
+      setError(e?.message ?? "Could not start payment");
+    }
+  };
+
+  const finalizePayment = async () => {
+    try {
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch current balance
+      const { data: current, error: readErr } = await supabase
+        .from("credits")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (readErr) throw readErr;
+
+      const newBalance = (current?.balance ?? 0) + pack.credits;
+
+      const { error: updErr } = await supabase
+        .from("credits")
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+      if (updErr) throw updErr;
+
+      const { error: txErr } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        type: "purchase",
+        amount: pack.price,
+        credits: pack.credits,
+        description: `Credit purchase — ${pack.name} pack`,
+      });
+      if (txErr) throw txErr;
+
+      navigate({ to: "/dashboard" });
+    } catch (e: any) {
+      setProcessing(false);
+      setError(e?.message ?? "Payment succeeded but we couldn't update your balance. Contact support.");
+    }
+  };
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -61,8 +170,13 @@ function CreditsPage() {
             <div className="h-px bg-border my-3" />
             <Row k={<span className="text-foreground">Total</span>} v={<span className="text-foreground font-display text-xl">₦{pack.price.toLocaleString()}</span>} />
           </div>
-          <button className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90">
-            Pay with Paystack
+          {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+          <button
+            onClick={handlePayment}
+            disabled={processing}
+            className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          >
+            {processing ? "Processing…" : "Pay with Paystack"}
           </button>
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
