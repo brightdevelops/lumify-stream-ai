@@ -2,62 +2,60 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { verifyFlutterwaveAndCredit } from "@/lib/payments.functions";
-
+import { verifyPaystackAndCredit } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
 });
 
-const FLUTTERWAVE_PUBLIC_KEY = "FLWPUBK-1ea4bd4c5ae6794d6ef6aaea799d634b-X";
+const PAYSTACK_PUBLIC_KEY = "pk_live_8aa20c0306707d49e656e1fc5d8c44f27359046e";
 
 const PACKS = [
-  { id: "starter", name: "Starter", credits: 500, price: 11500 },
-  { id: "basic", name: "Basic", credits: 1000, price: 23000 },
-  { id: "pro", name: "Pro", credits: 2000, price: 46000 },
-  { id: "enterprise", name: "Enterprise", credits: 5000, price: 115000 },
+  { id: "starter", name: "Starter", credits: 500, price: 11500, amountKobo: 1_150_000 },
+  { id: "basic", name: "Basic", credits: 1000, price: 23000, amountKobo: 2_300_000 },
+  { id: "pro", name: "Pro", credits: 2000, price: 46000, amountKobo: 4_600_000 },
+  { id: "enterprise", name: "Enterprise", credits: 5000, price: 115000, amountKobo: 11_500_000 },
 ];
 const METHODS = ["Card", "Bank Transfer", "USSD", "Mobile Money"];
 
-type FlutterwaveResponse = {
-  status: string;
-  transaction_id: number | string;
-  tx_ref: string;
+type PaystackHandler = {
+  openIframe: () => void;
 };
 
 declare global {
   interface Window {
-    FlutterwaveCheckout?: (opts: {
-      public_key: string;
-      tx_ref: string;
-      amount: number;
-      currency: string;
-      payment_options?: string;
-      customer: { email: string; name?: string };
-      customizations?: { title?: string; description?: string; logo?: string };
-      meta?: Record<string, unknown>;
-      callback: (response: FlutterwaveResponse) => void;
-      onclose: () => void;
-    }) => void;
+    PaystackPop?: {
+      setup: (opts: {
+        key: string;
+        email: string;
+        amount: number;
+        currency?: string;
+        ref?: string;
+        metadata?: Record<string, unknown>;
+        channels?: string[];
+        callback: (response: { reference: string; status?: string }) => void;
+        onClose: () => void;
+      }) => PaystackHandler;
+    };
   }
 }
 
-function loadFlutterwave(): Promise<void> {
+function loadPaystack(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") return reject(new Error("no window"));
-    if (window.FlutterwaveCheckout) return resolve();
-    const existing = document.getElementById("flutterwave-inline-js") as HTMLScriptElement | null;
+    if (window.PaystackPop) return resolve();
+    const existing = document.getElementById("paystack-inline-js") as HTMLScriptElement | null;
     if (existing) {
       existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Failed to load Flutterwave")));
+      existing.addEventListener("error", () => reject(new Error("Failed to load Paystack")));
       return;
     }
     const s = document.createElement("script");
-    s.id = "flutterwave-inline-js";
-    s.src = "https://checkout.flutterwave.com/v3.js";
+    s.id = "paystack-inline-js";
+    s.src = "https://js.paystack.co/v1/inline.js";
     s.async = true;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Failed to load Flutterwave"));
+    s.onerror = () => reject(new Error("Failed to load Paystack"));
     document.body.appendChild(s);
   });
 }
@@ -79,68 +77,53 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      await loadFlutterwave();
-      if (!window.FlutterwaveCheckout) throw new Error("Flutterwave not available");
+      await loadPaystack();
+      if (!window.PaystackPop) throw new Error("Paystack not available");
 
-      const txRef = `lumify_${pack.id}_${user.id.slice(0, 8)}_${Date.now()}`;
+      const reference = `lumify_${pack.id}_${user.id.slice(0, 8)}_${Date.now()}`;
       let settled = false;
 
-      window.FlutterwaveCheckout({
-        public_key: FLUTTERWAVE_PUBLIC_KEY,
-        tx_ref: txRef,
-        amount: pack.price,
+      const handler = window.PaystackPop.setup({
+        key: PAYSTACK_PUBLIC_KEY,
+        email: user.email,
+        amount: pack.amountKobo,
         currency: "NGN",
-        payment_options: "card,banktransfer,ussd,mobilemoneyghana",
-        customer: {
-          email: user.email,
-          name: user.user_metadata?.full_name ?? undefined,
-        },
-        customizations: {
-          title: "Lumify Credits",
-          description: `${pack.name} pack — ${pack.credits.toLocaleString()} credits`,
-        },
-        meta: { packId: pack.id, userId: user.id },
+        ref: reference,
+        channels: ["card", "bank", "ussd", "mobile_money", "bank_transfer"],
+        metadata: { packId: pack.id, userId: user.id },
         callback: (response) => {
           settled = true;
-          if (response.status === "successful" || response.status === "completed") {
-            void finalizePayment(txRef, response.transaction_id);
-          } else {
-            setProcessing(false);
-            setError("Payment was not successful. Please try again.");
-          }
+          void finalizePayment(response.reference);
         },
-        onclose: () => {
+        onClose: () => {
           if (!settled) {
             setProcessing(false);
             setError("Payment was cancelled.");
           }
         },
       });
+      handler.openIframe();
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Could not start payment");
     }
   };
 
-  const finalizePayment = async (txRef: string, transactionId: number | string) => {
+  const finalizePayment = async (reference: string) => {
     try {
       if (!user) throw new Error("Not authenticated");
-
-      await verifyFlutterwaveAndCredit({
+      await verifyPaystackAndCredit({
         data: {
-          txRef,
-          transactionId: String(transactionId),
+          reference,
           packId: pack.id as "starter" | "basic" | "pro" | "enterprise",
         },
       });
-
       navigate({ to: "/dashboard" });
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
     }
   };
-
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -190,7 +173,7 @@ function CreditsPage() {
             disabled={processing}
             className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
           >
-            {processing ? "Processing…" : "Pay with Flutterwave"}
+            {processing ? "Processing…" : "Pay with Paystack"}
           </button>
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
