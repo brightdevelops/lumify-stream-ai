@@ -438,6 +438,43 @@ function StreamPage() {
             <Row k="Cost so far" v={`₦${cost.toLocaleString()}`} />
           </SidePanel>
 
+          <SidePanel title={
+            <span className="inline-flex items-center gap-1.5">
+              <Monitor className="h-3.5 w-3.5 text-primary" /> OBS Setup
+              <span className="ml-1 rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-primary">Live</span>
+            </span>
+          }>
+            <p className="text-xs text-muted-foreground -mt-1 mb-2">Pipe your AI face into OBS as a Browser Source.</p>
+            <ol className="text-xs text-foreground/90 space-y-1.5 list-decimal pl-4">
+              <li>Start your stream on Lumify</li>
+              <li>Open OBS</li>
+              <li>Click <span className="font-mono text-primary">+</span> under Sources</li>
+              <li>Select <span className="font-medium">Browser Source</span></li>
+              <li>Paste the URL below</li>
+              <li>Set width <span className="font-mono">1280</span> height <span className="font-mono">720</span></li>
+              <li>Click <span className="font-medium">OK</span> — your AI face is now in OBS</li>
+            </ol>
+            <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-background/60 p-2">
+              <code className="flex-1 truncate text-[11px] font-mono text-muted-foreground">{OUTPUT_URL}</code>
+              <button
+                onClick={copyObsUrl}
+                className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary"
+                title="Copy OBS URL"
+              >
+                {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <a
+              href={`https://${OUTPUT_URL}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" /> Open output preview
+            </a>
+          </SidePanel>
+
           <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-4 w-4" /> Top Up Credits
           </Link>
