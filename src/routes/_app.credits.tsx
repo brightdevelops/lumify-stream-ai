@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
 });
 
-const PAYSTACK_PUBLIC_KEY = "pk_test_c5b21595b0fe4752d5ea79cfdada9b17a49c1591";
+const PAYSTACK_PUBLIC_KEY = "pk_live_8aa20c0306707d49e656e1fc5d8c44f27359046e";
 
 const PACKS = [
   { id: "starter", name: "Starter", credits: 500, price: 11500 },
