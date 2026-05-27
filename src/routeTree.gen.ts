@@ -19,6 +19,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
+import { Route as AppAdminRouteImport } from './routes/_app.admin'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -69,12 +70,18 @@ const AppBillingRoute = AppBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/output': typeof OutputRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AppAdminRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/output': typeof OutputRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AppAdminRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/output': typeof OutputRoute
   '/signup': typeof SignupRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/billing': typeof AppBillingRoute
   '/_app/credits': typeof AppCreditsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/output'
     | '/signup'
+    | '/admin'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/output'
     | '/signup'
+    | '/admin'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/output'
     | '/signup'
+    | '/_app/admin'
     | '/_app/billing'
     | '/_app/credits'
     | '/_app/dashboard'
@@ -222,10 +234,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppBillingRoute: typeof AppBillingRoute
   AppCreditsRoute: typeof AppCreditsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -234,6 +254,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppBillingRoute: AppBillingRoute,
   AppCreditsRoute: AppCreditsRoute,
   AppDashboardRoute: AppDashboardRoute,
