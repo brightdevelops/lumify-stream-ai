@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,6 +19,7 @@ export function AuthShell({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -64,7 +66,25 @@ export function AuthShell({
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input" placeholder="you@studio.com" />
             </Field>
             <Field label="Password">
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="input" placeholder="••••••••" />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="input pr-10"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </Field>
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button type="submit" disabled={loading} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
