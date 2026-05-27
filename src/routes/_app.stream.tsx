@@ -6,8 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
 import { startBroadcaster } from "@/lib/stream-broadcast";
+import { getMyStreamToken } from "@/lib/stream-token.functions";
 
-const OUTPUT_URL = "lumify-stream-ai.lovable.app/output";
+const OUTPUT_ORIGIN = "https://lumify-stream-ai.lovable.app";
 
 
 export const Route = createFileRoute("/_app/stream")({
@@ -33,14 +34,25 @@ function StreamPage() {
   const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
   const broadcasterStopRef = useRef<(() => void) | null>(null);
   const [copied, setCopied] = useState(false);
+  const [streamToken, setStreamToken] = useState<string | null>(null);
+
+  const obsUrl = streamToken ? `${OUTPUT_ORIGIN}/output?token=${streamToken}` : "";
 
   const copyObsUrl = async () => {
+    if (!obsUrl) return;
     try {
-      await navigator.clipboard.writeText(`https://${OUTPUT_URL}`);
+      await navigator.clipboard.writeText(obsUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {}
   };
+
+  useEffect(() => {
+    if (!user) return;
+    getMyStreamToken()
+      .then(({ token }) => token && setStreamToken(token))
+      .catch(() => {});
+  }, [user]);
 
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -211,7 +223,9 @@ function StreamPage() {
           }
           try {
             broadcasterStopRef.current?.();
-            broadcasterStopRef.current = startBroadcaster(transformedStream);
+            if (user) {
+              broadcasterStopRef.current = startBroadcaster(user.id, transformedStream);
+            }
           } catch (e) {
             console.error("Broadcaster start failed", e);
           }
@@ -455,24 +469,32 @@ function StreamPage() {
               <li>Click <span className="font-medium">OK</span> — your AI face is now in OBS</li>
             </ol>
             <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-background/60 p-2">
-              <code className="flex-1 truncate text-[11px] font-mono text-muted-foreground">{OUTPUT_URL}</code>
+              <code className="flex-1 truncate text-[11px] font-mono text-muted-foreground">
+                {obsUrl || "Loading your unique URL…"}
+              </code>
               <button
                 onClick={copyObsUrl}
-                className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary"
+                disabled={!obsUrl}
+                className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary disabled:opacity-50"
                 title="Copy OBS URL"
               >
                 {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
                 {copied ? "Copied" : "Copy"}
               </button>
             </div>
-            <a
-              href={`https://${OUTPUT_URL}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
-            >
-              <ExternalLink className="h-3 w-3" /> Open output preview
-            </a>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              This URL is private to you and permanent. Regenerate it from Settings if you ever need to revoke OBS access.
+            </p>
+            {obsUrl && (
+              <a
+                href={obsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" /> Open output preview
+              </a>
+            )}
           </SidePanel>
 
           <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
