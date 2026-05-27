@@ -96,30 +96,12 @@ function CreditsPage() {
     try {
       if (!user) throw new Error("Not authenticated");
 
-      // Fetch current balance
-      const { data: current, error: readErr } = await supabase
-        .from("credits")
-        .select("balance")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (readErr) throw readErr;
-
-      const newBalance = (current?.balance ?? 0) + pack.credits;
-
-      const { error: updErr } = await supabase
-        .from("credits")
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id);
-      if (updErr) throw updErr;
-
-      const { error: txErr } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        type: "purchase",
-        amount: pack.price,
-        credits: pack.credits,
-        description: `Credit purchase — ${pack.name} pack`,
+      const { error: rpcErr } = await supabase.rpc("purchase_credits", {
+        p_credits: pack.credits,
+        p_amount: pack.price,
+        p_description: `Credit purchase — ${pack.name} pack`,
       });
-      if (txErr) throw txErr;
+      if (rpcErr) throw rpcErr;
 
       navigate({ to: "/dashboard" });
     } catch (e: any) {
