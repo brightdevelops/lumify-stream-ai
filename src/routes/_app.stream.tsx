@@ -4,6 +4,8 @@ import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon } from "luc
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { getDecartKey } from "@/lib/decart.functions";
+
 
 export const Route = createFileRoute("/_app/stream")({
   component: StreamPage,
@@ -13,7 +15,7 @@ const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "
 const RATE = 2; // credits/sec
 const NAIRA_PER_CREDIT = 23;
 const MIN_CREDITS_TO_START = 10;
-const DECART_API_KEY = "dct_lumify_wvFmmngQSbkAOeNvIwEFJAMMmIyNqNbjvgacliJWPQMEBjbFwxyezzeQQxcChbQn";
+// Decart API key is fetched at stream start from an authenticated server function.
 
 const buildPrompt = (preset: string | null) =>
   preset ? `Transform into this character in ${preset} style` : "Transform into this character";
@@ -178,8 +180,9 @@ function StreamPage() {
     }
 
     try {
+      const { apiKey } = await getDecartKey();
       const model = models.realtime("lucy-2.1");
-      const client = createDecartClient({ apiKey: DECART_API_KEY });
+      const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
         onRemoteStream: (transformedStream: MediaStream) => {
