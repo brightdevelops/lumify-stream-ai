@@ -71,18 +71,24 @@ function StreamPage() {
   useEffect(() => {
     if (!streaming || !user) return;
     const id = setInterval(async () => {
-      const newBalance = Math.max(0, creditsRef.current - RATE);
+      const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
+        p_credits: RATE,
+        p_amount: RATE * NAIRA_PER_CREDIT,
+        p_description: undefined,
+        p_log_transaction: false,
+      });
+      if (rpcErr) {
+        console.error("deduct_credits failed", rpcErr);
+        await endStream(false);
+        return;
+      }
+      const newBalance = typeof data === "number" ? data : 0;
       creditsRef.current = newBalance;
       usedRef.current = usedRef.current + RATE;
       durationRef.current = durationRef.current + 1;
       setCredits(newBalance);
       setUsed(usedRef.current);
       setDuration(durationRef.current);
-
-      await supabase
-        .from("credits")
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id);
 
       if (newBalance <= 0) {
         await endStream(true);
@@ -219,12 +225,11 @@ function StreamPage() {
     if (user && totalUsed > 0) {
       const mins = Math.floor(totalSec / 60);
       const secs = totalSec % 60;
-      await supabase.from("transactions").insert({
-        user_id: user.id,
-        type: "usage",
-        amount: totalUsed * NAIRA_PER_CREDIT,
-        credits: totalUsed,
-        description: `Stream session — ${mins} min ${secs} sec`,
+      // Log a usage transaction (0 credits deducted since they were already deducted per-tick)
+      await supabase.rpc("log_usage_transaction", {
+        p_credits: totalUsed,
+        p_amount: totalUsed * NAIRA_PER_CREDIT,
+        p_description: `Stream session — ${mins} min ${secs} sec`,
       });
     }
     if (outOfCredits) setShowOutOfCredits(true);

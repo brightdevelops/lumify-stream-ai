@@ -91,7 +91,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      deduct_credits: {
+        Args: {
+          p_amount: number
+          p_credits: number
+          p_description?: string
+          p_log_transaction?: boolean
+        }
+        Returns: number
+      }
+      log_usage_transaction: {
+        Args: { p_amount: number; p_credits: number; p_description?: string }
+        Returns: undefined
+      }
+      purchase_credits: {
+        Args: { p_amount: number; p_credits: number; p_description?: string }
+        Returns: number
+      }
     }
     Enums: {
       transaction_type: "purchase" | "usage"
