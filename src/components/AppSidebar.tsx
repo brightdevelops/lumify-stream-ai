@@ -1,7 +1,9 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -14,6 +16,25 @@ const items = [
 export function AppSidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    let cancelled = false;
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled) setIsAdmin(!!data); });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const navItems = isAdmin
+    ? [...items, { to: "/admin" as const, label: "Admin", icon: Shield }]
+    : items;
 
   return (
     <aside className="hidden md:flex h-screen sticky top-0 w-60 shrink-0 flex-col border-r border-border bg-card">
@@ -21,7 +42,7 @@ export function AppSidebar() {
         <Logo />
       </div>
       <nav className="flex-1 p-3 space-y-1">
-        {items.map((it) => {
+        {navItems.map((it) => {
           const active = path === it.to || path.startsWith(it.to + "/");
           const Icon = it.icon;
           return (
