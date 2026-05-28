@@ -21,8 +21,16 @@ const NAIRA_PER_CREDIT = 23;
 const MIN_CREDITS_TO_START = 10;
 // Decart API key is fetched at stream start from an authenticated server function.
 
-const buildPrompt = (preset: string | null) =>
-  preset ? `Transform into this character in ${preset} style` : "Transform into this character";
+const REALISM_KEYWORDS = "photorealistic, natural human skin texture, realistic lighting, high detail, lifelike";
+
+const buildPrompt = (preset: string | null, mode: "realistic" | "stylized", realism: number) => {
+  if (mode === "realistic") {
+    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
+  }
+  return preset
+    ? `Transform into this character in ${preset} style`
+    : "Transform into this character";
+};
 
 function StreamPage() {
   const { user } = useAuth();
