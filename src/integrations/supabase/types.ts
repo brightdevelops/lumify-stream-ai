@@ -71,7 +71,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
-          last_login: string | null
+          last_seen: string | null
           stream_token: string
         }
         Insert: {
@@ -79,7 +79,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
-          last_login?: string | null
+          last_seen?: string | null
           stream_token?: string
         }
         Update: {
@@ -87,7 +87,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
-          last_login?: string | null
+          last_seen?: string | null
           stream_token?: string
         }
         Relationships: []
@@ -258,7 +258,6 @@ export type Database = {
           full_name: string
           is_admin: boolean
           is_streaming: boolean
-          last_login: string
           last_seen: string
           total_credits_purchased: number
           total_credits_used: number
@@ -277,6 +276,14 @@ export type Database = {
           total_credits_used: number
           total_spent: number
           user_id: string
+        }[]
+      }
+      admin_registration_analytics: {
+        Args: { p_days?: number }
+        Returns: {
+          count: number
+          day: string
+          users: Json
         }[]
       }
       admin_top_pages: {
