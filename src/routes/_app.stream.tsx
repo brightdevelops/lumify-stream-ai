@@ -442,6 +442,58 @@ function StreamPage() {
         <p className="mt-1 text-sm text-muted-foreground">Upload a reference image and watch your camera transform in real time.</p>
       </div>
 
+      {/* Realistic vs Stylized mode toggle */}
+      <div className="mb-6 rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Output Mode</div>
+          <div className="inline-flex rounded-md border border-border bg-background/60 p-1">
+            <button
+              type="button"
+              onClick={() => setMode("realistic")}
+              className={`px-4 py-1.5 text-sm rounded ${mode === "realistic" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Realistic Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("stylized")}
+              className={`px-4 py-1.5 text-sm rounded ${mode === "stylized" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Stylized Mode
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground max-w-md">
+            {mode === "realistic"
+              ? "Keeps the person looking human and natural."
+              : "Allows cartoon, anime, and other stylized effects."}
+          </p>
+        </div>
+
+        {mode === "realistic" && (
+          <div className="sm:w-72">
+            <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              <span>Realism Strength</span>
+              <span className="text-primary font-mono">{realism}/10</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              value={realism}
+              onChange={(e) => setRealism(Number(e.target.value))}
+              className="w-full accent-primary"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+              <span>Subtle</span>
+              <span>Most realistic</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           {cameras.length > 1 && (
