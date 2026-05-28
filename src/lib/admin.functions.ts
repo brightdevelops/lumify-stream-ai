@@ -13,6 +13,23 @@ export type AdminUserRow = {
   is_admin: boolean;
 };
 
+export type VisitStats = {
+  total_visits: number;
+  visits_today: number;
+  visits_last_7_days: number;
+  unique_visitors_logged_in: number;
+};
+
+export type RecentVisit = {
+  id: string;
+  path: string;
+  referrer: string | null;
+  user_agent: string | null;
+  user_id: string | null;
+  user_email: string | null;
+  created_at: string;
+};
+
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("user_roles")
