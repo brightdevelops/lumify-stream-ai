@@ -21,8 +21,16 @@ const NAIRA_PER_CREDIT = 23;
 const MIN_CREDITS_TO_START = 10;
 // Decart API key is fetched at stream start from an authenticated server function.
 
-const buildPrompt = (preset: string | null) =>
-  preset ? `Transform into this character in ${preset} style` : "Transform into this character";
+const REALISM_KEYWORDS = "photorealistic, natural human skin texture, realistic lighting, high detail, lifelike";
+
+const buildPrompt = (preset: string | null, mode: "realistic" | "stylized", realism: number) => {
+  if (mode === "realistic") {
+    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
+  }
+  return preset
+    ? `Transform into this character in ${preset} style`
+    : "Transform into this character";
+};
 
 function StreamPage() {
   const { user } = useAuth();
@@ -68,6 +76,8 @@ function StreamPage() {
   const [showOutOfCredits, setShowOutOfCredits] = useState(false);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
+  const [realism, setRealism] = useState<number>(8);
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
@@ -247,7 +257,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset),
+        prompt: buildPrompt(preset, mode, realism),
         image,
         enhance: true,
       } as never);
@@ -340,7 +350,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset),
+        prompt: buildPrompt(selectedPreset, mode, realism),
         image: photo,
         enhance: true,
       } as never);
@@ -407,6 +417,12 @@ function StreamPage() {
     if (streaming) applyReference(next, referenceImage);
   };
 
+  // Re-apply prompt when realism settings change mid-stream
+  useEffect(() => {
+    if (streaming && referenceImage) applyReference(selectedPreset, referenceImage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, realism]);
+
   const clearReference = () => {
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
     setReferenceImage(null);
@@ -426,7 +442,58 @@ function StreamPage() {
         <p className="mt-1 text-sm text-muted-foreground">Upload a reference image and watch your camera transform in real time.</p>
       </div>
 
+      {/* Realistic vs Stylized mode toggle */}
+      <div className="mb-6 rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Output Mode</div>
+          <div className="inline-flex rounded-md border border-border bg-background/60 p-1">
+            <button
+              type="button"
+              onClick={() => setMode("realistic")}
+              className={`px-4 py-1.5 text-sm rounded ${mode === "realistic" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Realistic Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("stylized")}
+              className={`px-4 py-1.5 text-sm rounded ${mode === "stylized" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Stylized Mode
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground max-w-md">
+            {mode === "realistic"
+              ? "Keeps the person looking human and natural."
+              : "Allows cartoon, anime, and other stylized effects."}
+          </p>
+        </div>
+
+        {mode === "realistic" && (
+          <div className="sm:w-72">
+            <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              <span>Realism Strength</span>
+              <span className="text-primary font-mono">{realism}/10</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              value={realism}
+              onChange={(e) => setRealism(Number(e.target.value))}
+              className="w-full accent-primary"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+              <span>Subtle</span>
+              <span>Most realistic</span>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+
         <div className="space-y-5">
           {cameras.length > 1 && (
             <div>
@@ -532,20 +599,26 @@ function StreamPage() {
               </div>
             )}
 
-            <div className="mt-4">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Style (optional)</div>
-              <div className="flex flex-wrap gap-2">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => selectPreset(p)}
-                    className={`rounded-full border px-3 py-1 text-xs ${selectedPreset === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {p}
-                  </button>
-                ))}
+            {mode === "stylized" ? (
+              <div className="mt-4">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Style (optional)</div>
+                <div className="flex flex-wrap gap-2">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => selectPreset(p)}
+                      className={`rounded-full border px-3 py-1 text-xs ${selectedPreset === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+                Realistic Mode is on — style presets are disabled to keep the result natural and human.
+              </div>
+            )}
 
             {error && (
               <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
