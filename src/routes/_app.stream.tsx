@@ -65,11 +65,9 @@ function StreamPage() {
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [showOutOfCredits, setShowOutOfCredits] = useState(false);
-  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
-  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
-  const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
-  const [realism, setRealism] = useState<number>(8);
+  const [referenceUrl, setReferenceUrl] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [duration, setDuration] = useState(0);
   const [credits, setCredits] = useState(0);
   const [startingCredits, setStartingCredits] = useState(0);
@@ -78,6 +76,8 @@ function StreamPage() {
   const [showOutOfCredits, setShowOutOfCredits] = useState(false);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
+  const [realism, setRealism] = useState<number>(8);
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
