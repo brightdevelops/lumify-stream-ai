@@ -310,16 +310,27 @@ function AdminPage() {
           title="Users"
           icon={Users}
           actions={
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search email or name…"
-                className="h-8 w-56 pl-7 rounded-md border border-border bg-background px-3 text-xs" />
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 text-xs">
+                {(["all", "active", "inactive"] as const).map((t) => (
+                  <button key={t} onClick={() => setUserFilter(t)}
+                    className={`px-3 py-1 rounded-md border capitalize ${userFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                    {t === "all" ? "All users" : t === "active" ? "Active users" : "Inactive users"}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search email or name…"
+                  className="h-8 w-56 pl-7 rounded-md border border-border bg-background px-3 text-xs" />
+              </div>
             </div>
           }
         >
           <Tbl headers={[
             { k: "email", l: "User" },
             { k: "created_at", l: "Joined" },
+            { k: "last_login", l: "Last login" },
             { k: "balance", l: "Balance" },
             { k: "total_credits_purchased", l: "Purchased" },
             { k: "total_credits_used", l: "Used" },
@@ -328,7 +339,7 @@ function AdminPage() {
             { k: "none", l: "Status" },
           ]} sort={sort} onSort={toggleSort}>
             {filteredUsers.length === 0 ? (
-              <tr><Td colSpan={8} className="text-center text-muted-foreground py-8">No users.</Td></tr>
+              <tr><Td colSpan={9} className="text-center text-muted-foreground py-8">No users.</Td></tr>
             ) : filteredUsers.map((u) => (
               <tr key={u.user_id} className="border-t border-border hover:bg-secondary/40 cursor-pointer" onClick={() => setSelectedUser(u)}>
                 <Td>
@@ -338,14 +349,15 @@ function AdminPage() {
                   <div className="text-xs text-muted-foreground">{u.email}</div>
                 </Td>
                 <Td className="text-muted-foreground">{fmtDate(u.created_at)}</Td>
+                <Td className={`text-xs ${u.last_login ? "text-foreground" : "text-muted-foreground italic"}`}>{u.last_login ? fmtDate(u.last_login) : "Never"}</Td>
                 <Td className="text-primary font-medium">{fmtNum(u.balance)}</Td>
                 <Td>{fmtNum(u.total_credits_purchased)}</Td>
                 <Td className="text-muted-foreground">{fmtNum(u.total_credits_used)}</Td>
                 <Td>{fmtMoney(u.total_spent)}</Td>
                 <Td className="text-muted-foreground text-xs">{fmtDate(u.last_seen)}</Td>
                 <Td>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
-                    {u.is_streaming ? "Streaming" : isActive(u) ? "Active" : "Inactive"}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : u.last_login == null ? "bg-muted text-muted-foreground" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
+                    {u.is_streaming ? "Streaming" : u.last_login == null ? "Never logged in" : isActive(u) ? "Active" : "Idle"}
                   </span>
                 </Td>
               </tr>
