@@ -201,6 +201,9 @@ function AdminPage() {
           </div>
         )}
 
+        {/* Overview */}
+        <section>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — All Time</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-6">
             <Stat label="Total active users" value={fmtNum(stats?.active_users_total ?? 0)} sub={`of ${fmtNum(stats?.total_users ?? users.length)} signups`} icon={Users} highlight />
             <Stat label="Total credits ever sold" value={fmtNum(stats?.credits_sold_all_time ?? 0)} icon={Coins} />
@@ -208,7 +211,7 @@ function AdminPage() {
             <Stat label="Total revenue all time" value={fmtMoney(stats?.revenue_all_time ?? 0)} icon={Wallet} highlight />
             <Stat label="Credits currently active" value={fmtNum(stats?.total_credits_held ?? 0)} sub="(unused in wallets)" icon={Coins} />
             <Stat
-              label="Average credits per user"
+              label="Average credits per active user"
               value={fmtNum(
                 (stats?.active_users_total ?? 0) > 0
                   ? Math.round((stats?.total_credits_held ?? 0) / (stats?.active_users_total ?? 1))
@@ -217,8 +220,12 @@ function AdminPage() {
               icon={Activity}
             />
           </div>
-              icon={Activity}
-            />
+
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Active users</h2>
+          <div className="grid gap-3 sm:grid-cols-3 mb-6">
+            <Stat label="Active today" value={fmtNum(stats?.active_today ?? 0)} icon={Users} highlight />
+            <Stat label="Active this week" value={fmtNum(stats?.active_week ?? 0)} icon={Users} />
+            <Stat label="Active this month" value={fmtNum(stats?.active_month ?? 0)} icon={Users} />
           </div>
 
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — Recent</h2>
@@ -227,6 +234,7 @@ function AdminPage() {
             <Stat label="Credits sold today" value={fmtNum(stats?.credits_sold_today ?? 0)} sub={`${fmtNum(stats?.credits_sold_week ?? 0)} week · ${fmtNum(stats?.credits_sold_month ?? 0)} month`} icon={Coins} />
             <Stat label="Revenue today" value={fmtMoney(stats?.revenue_today ?? 0)} sub={`${fmtMoney(stats?.revenue_week ?? 0)} week · ${fmtMoney(stats?.revenue_month ?? 0)} month`} icon={Wallet} />
           </div>
+        </section>
         </section>
 
         {/* Profit */}
