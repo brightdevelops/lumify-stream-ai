@@ -201,11 +201,8 @@ function AdminPage() {
           </div>
         )}
 
-        {/* Overview */}
-        <section>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — All Time</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-            <Stat label="Total registered users" value={fmtNum(stats?.total_users ?? users.length)} icon={Users} />
+            <Stat label="Total active users" value={fmtNum(stats?.active_users_total ?? 0)} sub={`of ${fmtNum(stats?.total_users ?? users.length)} signups`} icon={Users} highlight />
             <Stat label="Total credits ever sold" value={fmtNum(stats?.credits_sold_all_time ?? 0)} icon={Coins} />
             <Stat label="Total credits ever used" value={fmtNum(stats?.total_credits_used ?? 0)} icon={Activity} />
             <Stat label="Total revenue all time" value={fmtMoney(stats?.revenue_all_time ?? 0)} icon={Wallet} highlight />
@@ -213,10 +210,13 @@ function AdminPage() {
             <Stat
               label="Average credits per user"
               value={fmtNum(
-                (stats?.total_users ?? users.length) > 0
-                  ? Math.round((stats?.total_credits_held ?? 0) / (stats?.total_users ?? users.length))
+                (stats?.active_users_total ?? 0) > 0
+                  ? Math.round((stats?.total_credits_held ?? 0) / (stats?.active_users_total ?? 1))
                   : 0
               )}
+              icon={Activity}
+            />
+          </div>
               icon={Activity}
             />
           </div>
