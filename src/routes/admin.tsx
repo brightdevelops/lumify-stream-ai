@@ -276,7 +276,6 @@ function AdminPage() {
         </Section>
 
       </div>
-      </div>
 
       {/* User drill-down modal */}
       {selectedUser && (
