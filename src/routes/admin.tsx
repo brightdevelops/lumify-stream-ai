@@ -48,6 +48,9 @@ function AdminPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState<CreditStats | null>(null);
   const [dailyProfit, setDailyProfit] = useState<DailyProfitPoint[]>([]);
+  const [creditsUsedToday, setCreditsUsedToday] = useState(0);
+  const [creditsUsedMonth, setCreditsUsedMonth] = useState(0);
+
 
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
