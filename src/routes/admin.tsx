@@ -84,7 +84,9 @@ function AdminPage() {
     setRefreshing(true);
     try {
       const [s, u, a, p] = await Promise.all([statsFn(), usersFn(), activeFn(), profitFn()]);
-      setStats(s.stats); setUsers(u.users); setActive(a.streams); setDailyProfit(p.points);
+      setStats(s.stats); setUsers(u.users); setActive(a.streams);
+      setDailyProfit(p.points); setCreditsUsedToday(p.credits_used_today); setCreditsUsedMonth(p.credits_used_month);
+
       setLastUpdated(new Date());
       setError(null);
     } catch (e) {
