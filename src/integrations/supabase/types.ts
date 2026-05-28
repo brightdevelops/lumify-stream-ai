@@ -71,6 +71,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          last_login: string | null
           stream_token: string
         }
         Insert: {
@@ -78,6 +79,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          last_login?: string | null
           stream_token?: string
         }
         Update: {
@@ -85,6 +87,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          last_login?: string | null
           stream_token?: string
         }
         Relationships: []
@@ -342,6 +345,7 @@ export type Database = {
         }
         Returns: number
       }
+      record_login: { Args: never; Returns: undefined }
       regenerate_stream_token: { Args: never; Returns: string }
       resolve_stream_token: { Args: { p_token: string }; Returns: string }
     }
