@@ -14,6 +14,7 @@ export type AdminUserRow = {
   total_credits_used: number;
   total_spent: number;
   last_seen: string | null;
+  last_login: string | null;
   is_admin: boolean;
   is_streaming: boolean;
 };
@@ -31,6 +32,10 @@ export type CreditStats = {
   credits_sold_all_time: number;
   revenue_all_time: number;
   total_users: number;
+  active_users_total: number;
+  active_today: number;
+  active_week: number;
+  active_month: number;
 };
 
 export type VisitorOverview = {

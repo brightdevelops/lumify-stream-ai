@@ -39,6 +39,7 @@ export function AuthShell({
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        (supabase.rpc as any)("record_login").then(() => {}, () => {});
       }
       navigate({ to: "/dashboard" });
     } catch (err: any) {

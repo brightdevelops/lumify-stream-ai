@@ -63,6 +63,7 @@ function AdminPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "created_at", dir: "desc" });
   const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage">("all");
+  const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive">("all");
   const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
@@ -133,6 +134,8 @@ function AdminPage() {
     let list = !q ? [...users] : users.filter(
       (u) => u.email.toLowerCase().includes(q) || (u.full_name ?? "").toLowerCase().includes(q),
     );
+    if (userFilter === "active") list = list.filter((u) => u.last_login != null);
+    else if (userFilter === "inactive") list = list.filter((u) => u.last_login == null);
     if (sort.key !== "none") {
       const k = sort.key as keyof AdminUserRow;
       list.sort((a, b) => {
@@ -142,7 +145,7 @@ function AdminPage() {
       });
     }
     return list;
-  }, [users, search, sort]);
+  }, [users, search, sort, userFilter]);
 
   const toggleSort = (k: SortKey) => {
     setSort((s) => s.key === k ? { key: k, dir: s.dir === "asc" ? "desc" : "asc" } : { key: k, dir: "desc" });
@@ -202,20 +205,27 @@ function AdminPage() {
         <section>
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — All Time</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-            <Stat label="Total registered users" value={fmtNum(stats?.total_users ?? users.length)} icon={Users} />
+            <Stat label="Total active users" value={fmtNum(stats?.active_users_total ?? 0)} sub={`of ${fmtNum(stats?.total_users ?? users.length)} signups`} icon={Users} highlight />
             <Stat label="Total credits ever sold" value={fmtNum(stats?.credits_sold_all_time ?? 0)} icon={Coins} />
             <Stat label="Total credits ever used" value={fmtNum(stats?.total_credits_used ?? 0)} icon={Activity} />
             <Stat label="Total revenue all time" value={fmtMoney(stats?.revenue_all_time ?? 0)} icon={Wallet} highlight />
             <Stat label="Credits currently active" value={fmtNum(stats?.total_credits_held ?? 0)} sub="(unused in wallets)" icon={Coins} />
             <Stat
-              label="Average credits per user"
+              label="Average credits per active user"
               value={fmtNum(
-                (stats?.total_users ?? users.length) > 0
-                  ? Math.round((stats?.total_credits_held ?? 0) / (stats?.total_users ?? users.length))
+                (stats?.active_users_total ?? 0) > 0
+                  ? Math.round((stats?.total_credits_held ?? 0) / (stats?.active_users_total ?? 1))
                   : 0
               )}
               icon={Activity}
             />
+          </div>
+
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Active users</h2>
+          <div className="grid gap-3 sm:grid-cols-3 mb-6">
+            <Stat label="Active today" value={fmtNum(stats?.active_today ?? 0)} icon={Users} highlight />
+            <Stat label="Active this week" value={fmtNum(stats?.active_week ?? 0)} icon={Users} />
+            <Stat label="Active this month" value={fmtNum(stats?.active_month ?? 0)} icon={Users} />
           </div>
 
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — Recent</h2>
@@ -300,16 +310,27 @@ function AdminPage() {
           title="Users"
           icon={Users}
           actions={
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search email or name…"
-                className="h-8 w-56 pl-7 rounded-md border border-border bg-background px-3 text-xs" />
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 text-xs">
+                {(["all", "active", "inactive"] as const).map((t) => (
+                  <button key={t} onClick={() => setUserFilter(t)}
+                    className={`px-3 py-1 rounded-md border capitalize ${userFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                    {t === "all" ? "All users" : t === "active" ? "Active users" : "Inactive users"}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search email or name…"
+                  className="h-8 w-56 pl-7 rounded-md border border-border bg-background px-3 text-xs" />
+              </div>
             </div>
           }
         >
           <Tbl headers={[
             { k: "email", l: "User" },
             { k: "created_at", l: "Joined" },
+            { k: "last_login", l: "Last login" },
             { k: "balance", l: "Balance" },
             { k: "total_credits_purchased", l: "Purchased" },
             { k: "total_credits_used", l: "Used" },
@@ -318,7 +339,7 @@ function AdminPage() {
             { k: "none", l: "Status" },
           ]} sort={sort} onSort={toggleSort}>
             {filteredUsers.length === 0 ? (
-              <tr><Td colSpan={8} className="text-center text-muted-foreground py-8">No users.</Td></tr>
+              <tr><Td colSpan={9} className="text-center text-muted-foreground py-8">No users.</Td></tr>
             ) : filteredUsers.map((u) => (
               <tr key={u.user_id} className="border-t border-border hover:bg-secondary/40 cursor-pointer" onClick={() => setSelectedUser(u)}>
                 <Td>
@@ -328,14 +349,15 @@ function AdminPage() {
                   <div className="text-xs text-muted-foreground">{u.email}</div>
                 </Td>
                 <Td className="text-muted-foreground">{fmtDate(u.created_at)}</Td>
+                <Td className={`text-xs ${u.last_login ? "text-foreground" : "text-muted-foreground italic"}`}>{u.last_login ? fmtDate(u.last_login) : "Never"}</Td>
                 <Td className="text-primary font-medium">{fmtNum(u.balance)}</Td>
                 <Td>{fmtNum(u.total_credits_purchased)}</Td>
                 <Td className="text-muted-foreground">{fmtNum(u.total_credits_used)}</Td>
                 <Td>{fmtMoney(u.total_spent)}</Td>
                 <Td className="text-muted-foreground text-xs">{fmtDate(u.last_seen)}</Td>
                 <Td>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
-                    {u.is_streaming ? "Streaming" : isActive(u) ? "Active" : "Inactive"}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : u.last_login == null ? "bg-muted text-muted-foreground" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
+                    {u.is_streaming ? "Streaming" : u.last_login == null ? "Never logged in" : isActive(u) ? "Active" : "Idle"}
                   </span>
                 </Td>
               </tr>
