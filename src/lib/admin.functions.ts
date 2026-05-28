@@ -28,6 +28,9 @@ export type CreditStats = {
   total_credits_held: number;
   total_credits_used: number;
   active_streams: number;
+  credits_sold_all_time: number;
+  revenue_all_time: number;
+  total_users: number;
 };
 
 export type VisitorOverview = {

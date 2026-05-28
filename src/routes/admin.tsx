@@ -164,15 +164,28 @@ function AdminPage() {
 
         {/* Overview */}
         <section>
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Registered users" value={fmtNum(users.length)} icon={Users} />
-            <Stat label="Active streams now" value={fmtNum(stats?.active_streams ?? 0)} icon={Radio} highlight />
-            <Stat label="Total credits held" value={fmtNum(stats?.total_credits_held ?? 0)} icon={Coins} />
-            <Stat label="Lifetime credits used" value={fmtNum(stats?.total_credits_used ?? 0)} icon={Activity} />
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — All Time</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+            <Stat label="Total registered users" value={fmtNum(stats?.total_users ?? users.length)} icon={Users} />
+            <Stat label="Total credits ever sold" value={fmtNum(stats?.credits_sold_all_time ?? 0)} icon={Coins} />
+            <Stat label="Total credits ever used" value={fmtNum(stats?.total_credits_used ?? 0)} icon={Activity} />
+            <Stat label="Total revenue all time" value={fmtMoney(stats?.revenue_all_time ?? 0)} icon={Wallet} highlight />
+            <Stat label="Credits currently active" value={fmtNum(stats?.total_credits_held ?? 0)} sub="(unused in wallets)" icon={Coins} />
+            <Stat
+              label="Average credits per user"
+              value={fmtNum(
+                (stats?.total_users ?? users.length) > 0
+                  ? Math.round((stats?.total_credits_held ?? 0) / (stats?.total_users ?? users.length))
+                  : 0
+              )}
+              icon={Activity}
+            />
           </div>
-          <div className="grid gap-3 sm:grid-cols-3 mt-3">
-            <Stat label="Credits sold today" value={fmtNum(stats?.credits_sold_today ?? 0)} sub={`${fmtNum(stats?.credits_sold_week ?? 0)} this week · ${fmtNum(stats?.credits_sold_month ?? 0)} this month`} icon={Coins} />
+
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — Recent</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="Active streams now" value={fmtNum(stats?.active_streams ?? 0)} icon={Radio} highlight />
+            <Stat label="Credits sold today" value={fmtNum(stats?.credits_sold_today ?? 0)} sub={`${fmtNum(stats?.credits_sold_week ?? 0)} week · ${fmtNum(stats?.credits_sold_month ?? 0)} month`} icon={Coins} />
             <Stat label="Revenue today" value={fmtMoney(stats?.revenue_today ?? 0)} sub={`${fmtMoney(stats?.revenue_week ?? 0)} week · ${fmtMoney(stats?.revenue_month ?? 0)} month`} icon={Wallet} />
             <Stat label="Visits today" value={fmtNum(visitors?.visits_today ?? 0)} sub={`${fmtNum(visitors?.unique_today ?? 0)} unique`} icon={Eye} />
           </div>
