@@ -175,14 +175,3 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
     });
     return { points };
   });
-
-  });
-
-export const adminTopPages = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
-    const { data, error } = await context.supabase.rpc("admin_top_pages", { p_limit: 20 });
-    if (error) throw new Error(error.message);
-    return { pages: (data ?? []) as TopPage[] };
-  });
