@@ -187,7 +187,6 @@ function StreamPage() {
     }
   };
 
-  }, []);
 
   // Credit tick loop
   useEffect(() => {
