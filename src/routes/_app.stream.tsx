@@ -8,7 +8,7 @@ import { getDecartKey } from "@/lib/decart.functions";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 
-const OUTPUT_ORIGIN = "https://lumify-stream-ai.lovable.app";
+const OUTPUT_ORIGIN = "https://lumifylive.com";
 
 
 export const Route = createFileRoute("/_app/stream")({
