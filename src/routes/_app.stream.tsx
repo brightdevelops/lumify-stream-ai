@@ -70,6 +70,7 @@ function StreamPage() {
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
   const durationRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -117,6 +118,12 @@ function StreamPage() {
       setUsed(usedRef.current);
       setDuration(durationRef.current);
 
+      if (sessionIdRef.current) {
+        supabase.from("stream_sessions").update({
+          last_heartbeat: new Date().toISOString(),
+          credits_used: usedRef.current,
+        }).eq("id", sessionIdRef.current).then(() => {});
+      }
       if (newBalance <= 0) {
         await endStream(true);
       }
