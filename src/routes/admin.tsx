@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle } from "lucide-react";
+import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import {
   amIAdmin,
@@ -10,11 +11,14 @@ import {
   adminListTransactions,
   adminUserTransactions,
   adminGetActiveStreams,
+  adminDailyProfit,
   type AdminUserRow,
   type CreditStats,
   type TransactionRow,
   type ActiveStream,
+  type DailyProfitPoint,
 } from "@/lib/admin.functions";
+
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -39,9 +43,15 @@ function AdminPage() {
   const txFn = useServerFn(adminListTransactions);
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
+  const profitFn = useServerFn(adminDailyProfit);
 
   const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState<CreditStats | null>(null);
+  const [dailyProfit, setDailyProfit] = useState<DailyProfitPoint[]>([]);
+  const [creditsUsedToday, setCreditsUsedToday] = useState(0);
+  const [creditsUsedMonth, setCreditsUsedMonth] = useState(0);
+
+
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [active, setActive] = useState<ActiveStream[]>([]);
@@ -73,8 +83,10 @@ function AdminPage() {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [s, u, a] = await Promise.all([statsFn(), usersFn(), activeFn()]);
+      const [s, u, a, p] = await Promise.all([statsFn(), usersFn(), activeFn(), profitFn()]);
       setStats(s.stats); setUsers(u.users); setActive(a.streams);
+      setDailyProfit(p.points); setCreditsUsedToday(p.credits_used_today); setCreditsUsedMonth(p.credits_used_month);
+
       setLastUpdated(new Date());
       setError(null);
     } catch (e) {
@@ -82,7 +94,8 @@ function AdminPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [statsFn, usersFn, activeFn]);
+  }, [statsFn, usersFn, activeFn, profitFn]);
+
 
   // Initial + interval refresh of dynamic data
   useEffect(() => {
@@ -212,6 +225,56 @@ function AdminPage() {
             <Stat label="Revenue today" value={fmtMoney(stats?.revenue_today ?? 0)} sub={`${fmtMoney(stats?.revenue_week ?? 0)} week · ${fmtMoney(stats?.revenue_month ?? 0)} month`} icon={Wallet} />
           </div>
         </section>
+
+        {/* Profit */}
+        {(() => {
+          const totalRevenue = stats?.revenue_all_time ?? 0;
+          const totalDecartCost = ((stats?.total_credits_used ?? 0) / 2) * 27;
+          const grossProfit = totalRevenue - totalDecartCost;
+          const margin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+          const todayProfit = (stats?.revenue_today ?? 0) - (creditsUsedToday / 2) * 27;
+          const monthProfit = (stats?.revenue_month ?? 0) - (creditsUsedMonth / 2) * 27;
+          return (
+            <section>
+              <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-emerald-500" /> Profit tracking
+                <span className="text-[10px] normal-case tracking-normal text-muted-foreground/70">(Decart ₦27/sec · we charge ₦46/sec)</span>
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-4">
+                <ProfitStat label="Total revenue" value={fmtMoney(totalRevenue)} />
+                <ProfitStat label="Total Decart cost" value={fmtMoney(totalDecartCost)} tone="cost" />
+                <ProfitStat label="Total gross profit" value={fmtMoney(grossProfit)} tone="profit" />
+                <ProfitStat label="Profit margin" value={`${margin.toFixed(1)}%`} tone="profit" />
+                <ProfitStat label="Today's profit" value={fmtMoney(todayProfit)} sub={`Rev ${fmtMoney(stats?.revenue_today ?? 0)} − Cost ${fmtMoney((creditsUsedToday / 2) * 27)}`} tone="profit" />
+                <ProfitStat label="This month's profit (30d)" value={fmtMoney(monthProfit)} sub={`Rev ${fmtMoney(stats?.revenue_month ?? 0)} − Cost ${fmtMoney((creditsUsedMonth / 2) * 27)}`} tone="profit" />
+              </div>
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium">Daily profit · last 7 days</h3>
+                  <span className="text-xs text-muted-foreground">
+                    7d total: {fmtMoney(dailyProfit.reduce((s, p) => s + p.profit, 0))}
+                  </span>
+                </div>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyProfit.map((p) => ({ ...p, day: new Date(p.date).toLocaleDateString(undefined, { weekday: "short" }) }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="day" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                        formatter={(v: number) => fmtMoney(v)}
+                        labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ""}
+                      />
+                      <Bar dataKey="profit" fill="rgb(16 185 129)" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
 
         {/* Real-time streams */}
         <Section title="Live streams right now" icon={Radio}>
@@ -408,4 +471,22 @@ function Td({ children, className = "", colSpan }: { children: React.ReactNode; 
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="px-5 py-8 text-center text-sm text-muted-foreground">{children}</div>;
+}
+
+function ProfitStat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "profit" | "cost" }) {
+  const color =
+    tone === "profit" ? "border-emerald-500/40 bg-emerald-500/10" :
+    tone === "cost" ? "border-rose-500/40 bg-rose-500/5" :
+    "border-border bg-card";
+  const valueColor =
+    tone === "profit" ? "text-emerald-500" :
+    tone === "cost" ? "text-rose-500" :
+    "";
+  return (
+    <div className={`rounded-xl border p-4 ${color}`}>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-2 text-2xl font-display ${valueColor}`}>{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+    </div>
+  );
 }
