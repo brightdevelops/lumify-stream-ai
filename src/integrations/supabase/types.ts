@@ -35,6 +35,33 @@ export type Database = {
         }
         Relationships: []
       }
+      page_visits: {
+        Row: {
+          created_at: string
+          id: string
+          path: string
+          referrer: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          path: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          path?: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -115,6 +142,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_visit_stats: {
+        Args: never
+        Returns: {
+          total_visits: number
+          unique_visitors_logged_in: number
+          visits_last_7_days: number
+          visits_today: number
+        }[]
+      }
+      admin_list_recent_visits: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          id: string
+          path: string
+          referrer: string
+          user_agent: string
+          user_email: string
+          user_id: string
+        }[]
+      }
       admin_list_users_with_credits: {
         Args: never
         Returns: {
