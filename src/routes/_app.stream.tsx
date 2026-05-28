@@ -257,7 +257,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset),
+        prompt: buildPrompt(preset, mode, realism),
         image,
         enhance: true,
       } as never);
