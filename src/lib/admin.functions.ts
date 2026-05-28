@@ -132,6 +132,8 @@ export const adminVisitorOverview = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase.rpc("admin_visitor_overview");
     if (error) throw new Error(error.message);
     return { overview: ((data ?? [])[0] ?? null) as VisitorOverview | null };
+  });
+
 export const adminTopPages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
