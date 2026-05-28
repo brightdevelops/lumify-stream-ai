@@ -37,6 +37,11 @@ type SortKey = keyof AdminUserRow | "none";
 
 function AdminPage() {
   const navigate = useNavigate();
+  const checkFn = useServerFn(amIAdmin);
+  const statsFn = useServerFn(adminGetCreditStats);
+  const usersFn = useServerFn(adminListUsersFull);
+  const txFn = useServerFn(adminListTransactions);
+  const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
   const profitFn = useServerFn(adminDailyProfit);
 
@@ -44,10 +49,6 @@ function AdminPage() {
   const [stats, setStats] = useState<CreditStats | null>(null);
   const [dailyProfit, setDailyProfit] = useState<DailyProfitPoint[]>([]);
 
-  const activeFn = useServerFn(adminGetActiveStreams);
-
-  const [authChecked, setAuthChecked] = useState(false);
-  const [stats, setStats] = useState<CreditStats | null>(null);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [active, setActive] = useState<ActiveStream[]>([]);
