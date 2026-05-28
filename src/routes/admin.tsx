@@ -472,3 +472,21 @@ function Td({ children, className = "", colSpan }: { children: React.ReactNode; 
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="px-5 py-8 text-center text-sm text-muted-foreground">{children}</div>;
 }
+
+function ProfitStat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "profit" | "cost" }) {
+  const color =
+    tone === "profit" ? "border-emerald-500/40 bg-emerald-500/10" :
+    tone === "cost" ? "border-rose-500/40 bg-rose-500/5" :
+    "border-border bg-card";
+  const valueColor =
+    tone === "profit" ? "text-emerald-500" :
+    tone === "cost" ? "text-rose-500" :
+    "";
+  return (
+    <div className={`rounded-xl border p-4 ${color}`}>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-2 text-2xl font-display ${valueColor}`}>{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+    </div>
+  );
+}
