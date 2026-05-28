@@ -29,7 +29,6 @@ const features = [
 ];
 
 function Landing() {
-function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const { user, loading } = useAuth();
   const navigate = useNavigate();
