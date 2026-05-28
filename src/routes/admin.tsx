@@ -71,6 +71,10 @@ function AdminPage() {
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
 
+  const [regRange, setRegRange] = useState<7 | 30 | 90 | 0>(30);
+  const [regData, setRegData] = useState<RegistrationDay[]>([]);
+  const [selectedRegDay, setSelectedRegDay] = useState<RegistrationDay | null>(null);
+
   // Auth gate
   useEffect(() => {
     (async () => {
