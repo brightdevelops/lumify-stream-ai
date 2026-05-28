@@ -50,6 +50,8 @@ export type ActiveStream = {
   started_at: string; last_heartbeat: string;
   credits_used: number; credits_remaining: number; duration_seconds: number;
 };
+export type DailyProfitPoint = { date: string; revenue: number; credits_used: number; decart_cost: number; profit: number };
+
 
 export type RecentVisit = {
   id: string; path: string; referrer: string | null; user_agent: string | null;
