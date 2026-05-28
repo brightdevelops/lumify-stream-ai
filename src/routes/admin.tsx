@@ -90,7 +90,6 @@ function AdminPage() {
         ]);
         if (cancelled) return;
         setStats(s.stats); setUsers(u.users); setVisitors(v.overview);
-        setVisits(v.visits ?? []); // safety; ignored
         setVisits(vis.visits); setTopPages(p.pages); setActive(a.streams);
       } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load"); }
     };
