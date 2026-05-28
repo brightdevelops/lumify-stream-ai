@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, Eye, Activity, ShieldCheck, ArrowLeft, Radio, Search, X } from "lucide-react";
+import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   amIAdmin,
@@ -10,16 +10,10 @@ import {
   adminListTransactions,
   adminUserTransactions,
   adminGetActiveStreams,
-  adminVisitorOverview,
-  adminListRecentVisits,
-  adminTopPages,
   type AdminUserRow,
   type CreditStats,
-  type VisitorOverview,
   type TransactionRow,
   type ActiveStream,
-  type RecentVisit,
-  type TopPage,
 } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
@@ -45,18 +39,12 @@ function AdminPage() {
   const txFn = useServerFn(adminListTransactions);
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
-  const visitorFn = useServerFn(adminVisitorOverview);
-  const visitsFn = useServerFn(adminListRecentVisits);
-  const pagesFn = useServerFn(adminTopPages);
 
   const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState<CreditStats | null>(null);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [active, setActive] = useState<ActiveStream[]>([]);
-  const [visitors, setVisitors] = useState<VisitorOverview | null>(null);
-  const [visits, setVisits] = useState<RecentVisit[]>([]);
-  const [topPages, setTopPages] = useState<TopPage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
@@ -85,18 +73,17 @@ function AdminPage() {
     let cancelled = false;
     const load = async () => {
       try {
-        const [s, u, v, vis, p, a] = await Promise.all([
-          statsFn(), usersFn(), visitorFn(), visitsFn(), pagesFn(), activeFn(),
+        const [s, u, a] = await Promise.all([
+          statsFn(), usersFn(), activeFn(),
         ]);
         if (cancelled) return;
-        setStats(s.stats); setUsers(u.users); setVisitors(v.overview);
-        setVisits(vis.visits); setTopPages(p.pages); setActive(a.streams);
+        setStats(s.stats); setUsers(u.users); setActive(a.streams);
       } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load"); }
     };
     load();
     const id = setInterval(load, 5000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [authChecked, statsFn, usersFn, visitorFn, visitsFn, pagesFn, activeFn]);
+  }, [authChecked, statsFn, usersFn, activeFn]);
 
   // Transactions on filter change
   useEffect(() => {
@@ -183,11 +170,10 @@ function AdminPage() {
           </div>
 
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — Recent</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Stat label="Active streams now" value={fmtNum(stats?.active_streams ?? 0)} icon={Radio} highlight />
             <Stat label="Credits sold today" value={fmtNum(stats?.credits_sold_today ?? 0)} sub={`${fmtNum(stats?.credits_sold_week ?? 0)} week · ${fmtNum(stats?.credits_sold_month ?? 0)} month`} icon={Coins} />
             <Stat label="Revenue today" value={fmtMoney(stats?.revenue_today ?? 0)} sub={`${fmtMoney(stats?.revenue_week ?? 0)} week · ${fmtMoney(stats?.revenue_month ?? 0)} month`} icon={Wallet} />
-            <Stat label="Visits today" value={fmtNum(visitors?.visits_today ?? 0)} sub={`${fmtNum(visitors?.unique_today ?? 0)} unique`} icon={Eye} />
           </div>
         </section>
 
@@ -289,48 +275,6 @@ function AdminPage() {
           </Tbl>
         </Section>
 
-        {/* Visitor analytics */}
-        <Section title="Visitor analytics" icon={Eye}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-4">
-            <Stat label="Visits today" value={fmtNum(visitors?.visits_today ?? 0)} />
-            <Stat label="Visits this week" value={fmtNum(visitors?.visits_week ?? 0)} />
-            <Stat label="Visits this month" value={fmtNum(visitors?.visits_month ?? 0)} />
-            <Stat label="Returning visitors" value={fmtNum(visitors?.returning_visitors ?? 0)} sub={`${fmtNum(visitors?.unique_month ?? 0)} unique / 30d`} />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 mb-4">
-            <Stat label="Registered visitors" value={fmtNum(visitors?.registered_visitors ?? 0)} sub="(deduped by account)" />
-            <Stat label="Anonymous visitors" value={fmtNum(visitors?.anonymous_visitors ?? 0)} sub="(deduped by IP)" />
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="px-4 py-2 border-b border-border text-xs uppercase tracking-wide text-muted-foreground">Top pages</div>
-              <Tbl headers={["Path", "Visits", "Unique"]}>
-                {topPages.map((p) => (
-                  <tr key={p.path} className="border-t border-border">
-                    <Td className="font-mono text-xs">{p.path}</Td>
-                    <Td>{fmtNum(p.visits)}</Td>
-                    <Td className="text-muted-foreground">{fmtNum(p.unique_visitors)}</Td>
-                  </tr>
-                ))}
-              </Tbl>
-            </div>
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="px-4 py-2 border-b border-border text-xs uppercase tracking-wide text-muted-foreground">Recent unique devices</div>
-              <Tbl headers={["Last seen", "Visitor", "IP", "Visits", "Path"]}>
-                {visits.slice(0, 30).map((v) => (
-                  <tr key={v.id} className="border-t border-border">
-                    <Td className="text-muted-foreground text-xs whitespace-nowrap">{fmtDate(v.created_at)}</Td>
-                    <Td>{v.user_email ?? <span className="text-muted-foreground italic">anonymous</span>}</Td>
-                    <Td className="font-mono text-xs">{v.ip ?? "—"}</Td>
-                    <Td>{v.visit_count}</Td>
-                    <Td className="font-mono text-xs">{v.path}</Td>
-                  </tr>
-                ))}
-              </Tbl>
-            </div>
-          </div>
-        </Section>
       </div>
 
       {/* User drill-down modal */}
