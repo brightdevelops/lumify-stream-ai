@@ -70,6 +70,7 @@ function StreamPage() {
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
   const durationRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -117,6 +118,12 @@ function StreamPage() {
       setUsed(usedRef.current);
       setDuration(durationRef.current);
 
+      if (sessionIdRef.current) {
+        supabase.from("stream_sessions").update({
+          last_heartbeat: new Date().toISOString(),
+          credits_used: usedRef.current,
+        }).eq("id", sessionIdRef.current).then(() => {});
+      }
       if (newBalance <= 0) {
         await endStream(true);
       }
@@ -256,6 +263,13 @@ function StreamPage() {
     setDuration(0);
     setConnecting(false);
     setStreaming(true);
+
+    if (user) {
+      const { data: sess } = await supabase.from("stream_sessions").insert({
+        user_id: user.id,
+      } as never).select("id").maybeSingle();
+      sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
+    }
   };
 
   const endStream = async (outOfCredits = false) => {
@@ -273,6 +287,13 @@ function StreamPage() {
         p_amount: totalUsed * NAIRA_PER_CREDIT,
         p_description: `Stream session — ${mins} min ${secs} sec`,
       });
+    }
+    if (sessionIdRef.current) {
+      await supabase.from("stream_sessions").update({
+        ended_at: new Date().toISOString(),
+        credits_used: totalUsed,
+      }).eq("id", sessionIdRef.current);
+      sessionIdRef.current = null;
     }
     if (outOfCredits) setShowOutOfCredits(true);
   };
