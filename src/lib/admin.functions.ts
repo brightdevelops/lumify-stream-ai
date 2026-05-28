@@ -62,3 +62,24 @@ export const amIAdmin = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return { isAdmin: !!data };
   });
+
+export const adminGetVisitStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data, error } = await supabaseAdmin.rpc("admin_get_visit_stats");
+    if (error) throw new Error(error.message);
+    const row = (data ?? [])[0] as VisitStats | undefined;
+    return {
+      stats: row ?? { total_visits: 0, visits_today: 0, visits_last_7_days: 0, unique_visitors_logged_in: 0 },
+    };
+  });
+
+export const adminListRecentVisits = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data, error } = await supabaseAdmin.rpc("admin_list_recent_visits", { p_limit: 100 });
+    if (error) throw new Error(error.message);
+    return { visits: (data ?? []) as RecentVisit[] };
+  });
