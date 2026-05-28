@@ -599,20 +599,26 @@ function StreamPage() {
               </div>
             )}
 
-            <div className="mt-4">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Style (optional)</div>
-              <div className="flex flex-wrap gap-2">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => selectPreset(p)}
-                    className={`rounded-full border px-3 py-1 text-xs ${selectedPreset === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {p}
-                  </button>
-                ))}
+            {mode === "stylized" ? (
+              <div className="mt-4">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Style (optional)</div>
+                <div className="flex flex-wrap gap-2">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => selectPreset(p)}
+                      className={`rounded-full border px-3 py-1 text-xs ${selectedPreset === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+                Realistic Mode is on — style presets are disabled to keep the result natural and human.
+              </div>
+            )}
 
             {error && (
               <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
