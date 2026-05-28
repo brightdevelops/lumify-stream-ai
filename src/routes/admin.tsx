@@ -73,18 +73,17 @@ function AdminPage() {
     let cancelled = false;
     const load = async () => {
       try {
-        const [s, u, v, vis, p, a] = await Promise.all([
-          statsFn(), usersFn(), visitorFn(), visitsFn(), pagesFn(), activeFn(),
+        const [s, u, a] = await Promise.all([
+          statsFn(), usersFn(), activeFn(),
         ]);
         if (cancelled) return;
-        setStats(s.stats); setUsers(u.users); setVisitors(v.overview);
-        setVisits(vis.visits); setTopPages(p.pages); setActive(a.streams);
+        setStats(s.stats); setUsers(u.users); setActive(a.streams);
       } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load"); }
     };
     load();
     const id = setInterval(load, 5000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [authChecked, statsFn, usersFn, visitorFn, visitsFn, pagesFn, activeFn]);
+  }, [authChecked, statsFn, usersFn, activeFn]);
 
   // Transactions on filter change
   useEffect(() => {
