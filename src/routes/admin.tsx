@@ -80,8 +80,8 @@ function AdminPage() {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [s, u, a] = await Promise.all([statsFn(), usersFn(), activeFn()]);
-      setStats(s.stats); setUsers(u.users); setActive(a.streams);
+      const [s, u, a, p] = await Promise.all([statsFn(), usersFn(), activeFn(), profitFn()]);
+      setStats(s.stats); setUsers(u.users); setActive(a.streams); setDailyProfit(p.points);
       setLastUpdated(new Date());
       setError(null);
     } catch (e) {
@@ -89,7 +89,8 @@ function AdminPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [statsFn, usersFn, activeFn]);
+  }, [statsFn, usersFn, activeFn, profitFn]);
+
 
   // Initial + interval refresh of dynamic data
   useEffect(() => {
