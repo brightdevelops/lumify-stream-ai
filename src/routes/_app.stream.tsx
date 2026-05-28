@@ -494,7 +494,6 @@ function StreamPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           {cameras.length > 1 && (
             <div>
