@@ -28,7 +28,7 @@ export const Route = createFileRoute("/api/public/track-visit")({
             user_agent: userAgent,
             user_id: userId,
             ip,
-          });
+          } as never);
           return new Response("ok", { status: 200 });
         } catch (err) {
           console.error("track-visit failed", err);
