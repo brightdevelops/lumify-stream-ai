@@ -235,7 +235,6 @@ function AdminPage() {
             <Stat label="Revenue today" value={fmtMoney(stats?.revenue_today ?? 0)} sub={`${fmtMoney(stats?.revenue_week ?? 0)} week · ${fmtMoney(stats?.revenue_month ?? 0)} month`} icon={Wallet} />
           </div>
         </section>
-        </section>
 
         {/* Profit */}
         {(() => {
