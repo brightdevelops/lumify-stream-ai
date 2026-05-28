@@ -1,8 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, ShieldCheck } from "lucide-react";
-import { adminListUsers, amIAdmin, type AdminUserRow } from "@/lib/admin.functions";
+import { Shield, Users, Coins, Wallet, ShieldCheck, Eye, Globe } from "lucide-react";
+import {
+  adminListUsers,
+  amIAdmin,
+  adminGetVisitStats,
+  adminListRecentVisits,
+  type AdminUserRow,
+  type VisitStats,
+  type RecentVisit,
+} from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_app/admin")({
   component: AdminPage,
@@ -12,12 +20,24 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function fmtDateTime(iso: string) {
+  return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 function AdminPage() {
   const navigate = useNavigate();
   const listFn = useServerFn(adminListUsers);
   const checkFn = useServerFn(amIAdmin);
+  const statsFn = useServerFn(adminGetVisitStats);
+  const visitsFn = useServerFn(adminListRecentVisits);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [visitStats, setVisitStats] = useState<VisitStats | null>(null);
+  const [visits, setVisits] = useState<RecentVisit[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -30,9 +50,11 @@ function AdminPage() {
           navigate({ to: "/dashboard" });
           return;
         }
-        const res = await listFn();
+        const [u, s, v] = await Promise.all([listFn(), statsFn(), visitsFn()]);
         if (cancelled) return;
-        setUsers(res.users);
+        setUsers(u.users);
+        setVisitStats(s.stats);
+        setVisits(v.visits);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -40,7 +62,7 @@ function AdminPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [listFn, checkFn, navigate]);
+  }, [listFn, checkFn, statsFn, visitsFn, navigate]);
 
   const filtered = users.filter((u) =>
     !search ||
@@ -71,8 +93,14 @@ function AdminPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 my-8">
-        <Stat label="Total Users" value={users.length.toLocaleString()} icon={Users} />
-        <Stat label="Total Credits Held" value={totals.balance.toLocaleString()} icon={Coins} highlight />
+        <Stat label="Registered Users" value={users.length.toLocaleString()} icon={Users} />
+        <Stat label="Total Page Views" value={(visitStats?.total_visits ?? 0).toLocaleString()} icon={Eye} highlight />
+        <Stat label="Visits Today" value={(visitStats?.visits_today ?? 0).toLocaleString()} icon={Globe} />
+        <Stat label="Visits (7 days)" value={(visitStats?.visits_last_7_days ?? 0).toLocaleString()} icon={Globe} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <Stat label="Total Credits Held" value={totals.balance.toLocaleString()} icon={Coins} />
         <Stat label="Lifetime Revenue" value={`₦${totals.spent.toLocaleString()}`} icon={Wallet} />
         <Stat label="Credits Used" value={totals.used.toLocaleString()} icon={Coins} />
       </div>
