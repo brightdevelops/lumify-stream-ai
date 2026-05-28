@@ -350,7 +350,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset),
+        prompt: buildPrompt(selectedPreset, mode, realism),
         image: photo,
         enhance: true,
       } as never);
