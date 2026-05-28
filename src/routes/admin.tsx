@@ -134,6 +134,8 @@ function AdminPage() {
     let list = !q ? [...users] : users.filter(
       (u) => u.email.toLowerCase().includes(q) || (u.full_name ?? "").toLowerCase().includes(q),
     );
+    if (userFilter === "active") list = list.filter((u) => u.last_login != null);
+    else if (userFilter === "inactive") list = list.filter((u) => u.last_login == null);
     if (sort.key !== "none") {
       const k = sort.key as keyof AdminUserRow;
       list.sort((a, b) => {
@@ -143,7 +145,7 @@ function AdminPage() {
       });
     }
     return list;
-  }, [users, search, sort]);
+  }, [users, search, sort, userFilter]);
 
   const toggleSort = (k: SortKey) => {
     setSort((s) => s.key === k ? { key: k, dir: s.dir === "asc" ? "desc" : "asc" } : { key: k, dir: "desc" });
