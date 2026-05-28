@@ -28,6 +28,8 @@ export type RecentVisit = {
   user_id: string | null;
   user_email: string | null;
   created_at: string;
+  ip: string | null;
+  visit_count: number;
 };
 
 async function assertAdmin(userId: string) {

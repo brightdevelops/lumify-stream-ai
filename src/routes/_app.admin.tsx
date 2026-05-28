@@ -155,27 +155,31 @@ function AdminPage() {
 
       <div className="rounded-xl border border-border bg-card overflow-hidden mt-8">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-4">
-          <h2 className="text-lg flex items-center gap-2"><Eye className="h-4 w-4" /> Recent page visits</h2>
-          <span className="text-xs text-muted-foreground">Last {visits.length}</span>
+          <h2 className="text-lg flex items-center gap-2"><Eye className="h-4 w-4" /> Unique visitors</h2>
+          <span className="text-xs text-muted-foreground">{visits.length} devices</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-6 py-3">When</th>
-                <th className="px-6 py-3">Path</th>
+                <th className="px-6 py-3">Last seen</th>
+                <th className="px-6 py-3">IP</th>
+                <th className="px-6 py-3">Visits</th>
+                <th className="px-6 py-3">Last path</th>
                 <th className="px-6 py-3">Visitor</th>
                 <th className="px-6 py-3">Referrer</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">Loading…</td></tr>
               ) : visits.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground">No visits recorded yet.</td></tr>
+                <tr><td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">No visits recorded yet.</td></tr>
               ) : visits.map((v) => (
                 <tr key={v.id} className="border-t border-border">
                   <td className="px-6 py-3 text-muted-foreground whitespace-nowrap">{fmtDateTime(v.created_at)}</td>
+                  <td className="px-6 py-3 font-mono text-xs">{v.ip ?? <span className="text-muted-foreground italic">unknown</span>}</td>
+                  <td className="px-6 py-3 text-muted-foreground">{v.visit_count}</td>
                   <td className="px-6 py-3 font-mono text-xs">{v.path}</td>
                   <td className="px-6 py-3">{v.user_email ?? <span className="text-muted-foreground italic">anonymous</span>}</td>
                   <td className="px-6 py-3 text-muted-foreground truncate max-w-xs">{v.referrer || "—"}</td>

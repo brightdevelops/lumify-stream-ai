@@ -156,11 +156,13 @@ export type Database = {
         Returns: {
           created_at: string
           id: string
+          ip: string
           path: string
           referrer: string
           user_agent: string
           user_email: string
           user_id: string
+          visit_count: number
         }[]
       }
       admin_list_users_with_credits: {
