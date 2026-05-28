@@ -87,6 +87,9 @@ function StreamPage() {
         setStartingCredits(bal || 1);
         creditsRef.current = bal;
       });
+  }, [user]);
+
+
   useEffect(() => {
     return () => {
       teardownStream();
