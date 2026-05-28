@@ -170,11 +170,10 @@ function AdminPage() {
           </div>
 
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — Recent</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Stat label="Active streams now" value={fmtNum(stats?.active_streams ?? 0)} icon={Radio} highlight />
             <Stat label="Credits sold today" value={fmtNum(stats?.credits_sold_today ?? 0)} sub={`${fmtNum(stats?.credits_sold_week ?? 0)} week · ${fmtNum(stats?.credits_sold_month ?? 0)} month`} icon={Coins} />
             <Stat label="Revenue today" value={fmtMoney(stats?.revenue_today ?? 0)} sub={`${fmtMoney(stats?.revenue_week ?? 0)} week · ${fmtMoney(stats?.revenue_month ?? 0)} month`} icon={Wallet} />
-            <Stat label="Visits today" value={fmtNum(visitors?.visits_today ?? 0)} sub={`${fmtNum(visitors?.unique_today ?? 0)} unique`} icon={Eye} />
           </div>
         </section>
 
