@@ -136,13 +136,27 @@ function AdminPage() {
       .finally(() => setUserTxLoading(false));
   }, [selectedUser, userTxFn]);
 
+  // Registration analytics — refresh continuously like the rest of the dashboard
+  useEffect(() => {
+    if (!authChecked) return;
+    let cancelled = false;
+    const fetchReg = () => {
+      regFn({ data: { days: regRange } })
+        .then((r) => { if (!cancelled) setRegData(r.days); })
+        .catch(() => {});
+    };
+    fetchReg();
+    const id = setInterval(fetchReg, 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [authChecked, regRange, regFn]);
+
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase().trim();
     let list = !q ? [...users] : users.filter(
       (u) => u.email.toLowerCase().includes(q) || (u.full_name ?? "").toLowerCase().includes(q),
     );
-    if (userFilter === "active") list = list.filter((u) => u.last_login != null);
-    else if (userFilter === "inactive") list = list.filter((u) => u.last_login == null);
+    if (userFilter === "active") list = list.filter((u) => u.last_seen != null);
+    else if (userFilter === "inactive") list = list.filter((u) => u.last_seen == null);
     if (sort.key !== "none") {
       const k = sort.key as keyof AdminUserRow;
       list.sort((a, b) => {
