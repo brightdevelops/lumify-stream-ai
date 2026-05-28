@@ -5,7 +5,6 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const ADMIN_EMAIL = "brightsolutionslab@gmail.com";
 
 export type AdminUserRow = {
-export type AdminUserRow = {
   user_id: string;
   email: string;
   full_name: string | null;
