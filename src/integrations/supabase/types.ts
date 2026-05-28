@@ -192,7 +192,11 @@ export type Database = {
       admin_get_credit_stats: {
         Args: never
         Returns: {
+          active_month: number
           active_streams: number
+          active_today: number
+          active_users_total: number
+          active_week: number
           credits_sold_all_time: number
           credits_sold_month: number
           credits_sold_today: number
@@ -251,6 +255,7 @@ export type Database = {
           full_name: string
           is_admin: boolean
           is_streaming: boolean
+          last_login: string
           last_seen: string
           total_credits_purchased: number
           total_credits_used: number
