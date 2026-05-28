@@ -87,7 +87,7 @@ function AdminPage() {
   // Initial + interval refresh of dynamic data
   useEffect(() => {
     if (!authChecked) return;
-    load();
+    const id = setInterval(load, 1000);
     const id = setInterval(load, 5000);
     return () => clearInterval(id);
   }, [authChecked, load]);
