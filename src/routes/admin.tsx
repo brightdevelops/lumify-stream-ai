@@ -150,9 +150,27 @@ function AdminPage() {
             <Shield className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-semibold flex items-center gap-2">Lumify Admin <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">private</span></h1>
-            <p className="text-xs text-muted-foreground">Real-time operations dashboard</p>
+            <h1 className="text-xl sm:text-2xl font-semibold flex items-center gap-2">
+              Lumify Admin
+              <span className="relative inline-flex h-2.5 w-2.5" title="Live">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">private</span>
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Real-time operations dashboard · Last updated:{" "}
+              {lastUpdated ? `${Math.max(0, Math.floor((Date.now() - lastUpdated.getTime()) / 1000))}s ago` : "—"}
+              <span className="sr-only">{tick}</span>
+            </p>
           </div>
+          <button
+            onClick={load}
+            disabled={refreshing}
+            className="text-xs inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 hover:bg-secondary/60 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Refresh
+          </button>
           <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <ArrowLeft className="h-3 w-3" /> Back to app
           </Link>
@@ -160,7 +178,12 @@ function AdminPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8">
-        {error && <div className="rounded-md border border-destructive/40 bg-destructive/10 text-destructive px-4 py-3 text-sm">{error}</div>}
+        {error && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-4 py-2 text-xs flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Refresh failed — showing last known values. ({error})
+          </div>
+        )}
 
         {/* Overview */}
         <section>
