@@ -3,10 +3,13 @@ import {
   Outlet,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   Link,
 } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 
@@ -88,7 +91,36 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
+      <VisitTracker />
       <Outlet />
     </QueryClientProvider>
   );
+}
+
+function VisitTracker() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const lastPath = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (lastPath.current === pathname) return;
+    lastPath.current = pathname;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        await fetch("/api/public/track-visit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            path: pathname,
+            referrer: document.referrer || null,
+            user_id: data.session?.user.id ?? null,
+          }),
+          keepalive: true,
+        });
+      } catch {
+        // ignore
+      }
+    })();
+  }, [pathname]);
+  return null;
 }
