@@ -1,7 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/hooks/use-auth";
 import { Zap, CreditCard, Wand2, Check } from "lucide-react";
+
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -27,12 +29,25 @@ const features = [
 ];
 
 function Landing() {
+function Landing() {
   const [scrolled, setScrolled] = useState(false);
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }, [loading, user, navigate]);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  if (!loading && user) return null;
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
