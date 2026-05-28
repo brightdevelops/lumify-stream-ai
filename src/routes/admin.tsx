@@ -39,24 +39,19 @@ function AdminPage() {
   const txFn = useServerFn(adminListTransactions);
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
-  const visitorFn = useServerFn(adminVisitorOverview);
-  const visitsFn = useServerFn(adminListRecentVisits);
-  const pagesFn = useServerFn(adminTopPages);
+  const checkFn = useServerFn(amIAdmin);
+  const statsFn = useServerFn(adminGetCreditStats);
+  const usersFn = useServerFn(adminListUsersFull);
+  const txFn = useServerFn(adminListTransactions);
+  const userTxFn = useServerFn(adminUserTransactions);
+  const activeFn = useServerFn(adminGetActiveStreams);
 
   const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState<CreditStats | null>(null);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [active, setActive] = useState<ActiveStream[]>([]);
-  const [visitors, setVisitors] = useState<VisitorOverview | null>(null);
-  const [visits, setVisits] = useState<RecentVisit[]>([]);
-  const [topPages, setTopPages] = useState<TopPage[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "created_at", dir: "desc" });
-  const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage">("all");
-  const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
 
