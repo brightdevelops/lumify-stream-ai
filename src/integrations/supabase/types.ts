@@ -86,6 +86,36 @@ export type Database = {
         }
         Relationships: []
       }
+      stream_sessions: {
+        Row: {
+          created_at: string
+          credits_used: number
+          ended_at: string | null
+          id: string
+          last_heartbeat: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number
+          ended_at?: string | null
+          id?: string
+          last_heartbeat?: string
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number
+          ended_at?: string | null
+          id?: string
+          last_heartbeat?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -142,6 +172,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_active_streams: {
+        Args: never
+        Returns: {
+          credits_remaining: number
+          credits_used: number
+          duration_seconds: number
+          full_name: string
+          last_heartbeat: string
+          session_id: string
+          started_at: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_get_credit_stats: {
+        Args: never
+        Returns: {
+          active_streams: number
+          credits_sold_month: number
+          credits_sold_today: number
+          credits_sold_week: number
+          revenue_month: number
+          revenue_today: number
+          revenue_week: number
+          total_credits_held: number
+          total_credits_used: number
+        }[]
+      }
       admin_get_visit_stats: {
         Args: never
         Returns: {
@@ -165,6 +223,35 @@ export type Database = {
           visit_count: number
         }[]
       }
+      admin_list_transactions: {
+        Args: { p_limit?: number; p_type?: string }
+        Returns: {
+          amount: number
+          created_at: string
+          credits: number
+          description: string
+          id: string
+          type: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_list_users_full: {
+        Args: never
+        Returns: {
+          balance: number
+          created_at: string
+          email: string
+          full_name: string
+          is_admin: boolean
+          is_streaming: boolean
+          last_seen: string
+          total_credits_purchased: number
+          total_credits_used: number
+          total_spent: number
+          user_id: string
+        }[]
+      }
       admin_list_users_with_credits: {
         Args: never
         Returns: {
@@ -176,6 +263,39 @@ export type Database = {
           total_credits_used: number
           total_spent: number
           user_id: string
+        }[]
+      }
+      admin_top_pages: {
+        Args: { p_limit?: number }
+        Returns: {
+          path: string
+          unique_visitors: number
+          visits: number
+        }[]
+      }
+      admin_user_transactions: {
+        Args: { p_user: string }
+        Returns: {
+          amount: number
+          created_at: string
+          credits: number
+          description: string
+          id: string
+          type: string
+        }[]
+      }
+      admin_visitor_overview: {
+        Args: never
+        Returns: {
+          anonymous_visitors: number
+          registered_visitors: number
+          returning_visitors: number
+          unique_month: number
+          unique_today: number
+          unique_week: number
+          visits_month: number
+          visits_today: number
+          visits_week: number
         }[]
       }
       deduct_credits: {
