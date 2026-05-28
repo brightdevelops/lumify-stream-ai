@@ -293,7 +293,12 @@ function StreamPage() {
     try {
       const model = models.realtime("lucy-2.1");
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { frameRate: model.fps, width: model.width, height: model.height },
+        video: {
+          ...(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {}),
+          frameRate: model.fps,
+          width: model.width,
+          height: model.height,
+        },
         audio: false,
       });
     } catch (e) {
