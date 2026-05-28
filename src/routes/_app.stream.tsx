@@ -66,6 +66,8 @@ function StreamPage() {
   const [used, setUsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showOutOfCredits, setShowOutOfCredits] = useState(false);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
