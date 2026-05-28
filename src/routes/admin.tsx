@@ -63,6 +63,7 @@ function AdminPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "created_at", dir: "desc" });
   const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage">("all");
+  const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive">("all");
   const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
