@@ -13,6 +13,23 @@ export type AdminUserRow = {
   is_admin: boolean;
 };
 
+export type VisitStats = {
+  total_visits: number;
+  visits_today: number;
+  visits_last_7_days: number;
+  unique_visitors_logged_in: number;
+};
+
+export type RecentVisit = {
+  id: string;
+  path: string;
+  referrer: string | null;
+  user_agent: string | null;
+  user_id: string | null;
+  user_email: string | null;
+  created_at: string;
+};
+
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("user_roles")
@@ -44,4 +61,25 @@ export const amIAdmin = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     return { isAdmin: !!data };
+  });
+
+export const adminGetVisitStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data, error } = await supabaseAdmin.rpc("admin_get_visit_stats");
+    if (error) throw new Error(error.message);
+    const row = (data ?? [])[0] as VisitStats | undefined;
+    return {
+      stats: row ?? { total_visits: 0, visits_today: 0, visits_last_7_days: 0, unique_visitors_logged_in: 0 },
+    };
+  });
+
+export const adminListRecentVisits = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { data, error } = await supabaseAdmin.rpc("admin_list_recent_visits", { p_limit: 100 });
+    if (error) throw new Error(error.message);
+    return { visits: (data ?? []) as RecentVisit[] };
   });

@@ -22,6 +22,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
+import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -87,6 +88,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
+  id: '/api/public/track-visit',
+  path: '/api/public/track-visit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stream': typeof AppStreamRoute
+  '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/api/public/track-visit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/api/public/track-visit'
   id:
     | '__root__'
     | '/'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/settings'
     | '/_app/stream'
+    | '/api/public/track-visit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -186,6 +198,7 @@ export interface RootRouteChildren {
   OutputRoute: typeof OutputRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -281,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/track-visit': {
+      id: '/api/public/track-visit'
+      path: '/api/public/track-visit'
+      fullPath: '/api/public/track-visit'
+      preLoaderRoute: typeof ApiPublicTrackVisitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -312,6 +332,7 @@ const rootRouteChildren: RootRouteChildren = {
   OutputRoute: OutputRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
