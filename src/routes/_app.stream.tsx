@@ -66,6 +66,8 @@ function StreamPage() {
   const [used, setUsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showOutOfCredits, setShowOutOfCredits] = useState(false);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
@@ -87,6 +89,7 @@ function StreamPage() {
       });
   }, [user]);
 
+
   useEffect(() => {
     return () => {
       teardownStream();
@@ -94,6 +97,96 @@ function StreamPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Enumerate available cameras
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
+
+    const loadCameras = async () => {
+      try {
+        let devices = await navigator.mediaDevices.enumerateDevices();
+        let videoInputs = devices.filter((d) => d.kind === "videoinput");
+        // Labels are empty until camera permission has been granted at least once.
+        if (videoInputs.length > 0 && videoInputs.every((d) => !d.label)) {
+          try {
+            const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            tmp.getTracks().forEach((t) => t.stop());
+            devices = await navigator.mediaDevices.enumerateDevices();
+            videoInputs = devices.filter((d) => d.kind === "videoinput");
+          } catch {
+            // Permission not granted yet — labels stay generic.
+          }
+        }
+        setCameras(videoInputs);
+        setSelectedCameraId((prev) => prev || videoInputs[0]?.deviceId || "");
+      } catch (e) {
+        console.error("enumerateDevices failed", e);
+      }
+    };
+
+    loadCameras();
+    navigator.mediaDevices.addEventListener?.("devicechange", loadCameras);
+    return () => navigator.mediaDevices.removeEventListener?.("devicechange", loadCameras);
+  }, []);
+
+  // Find an RTCPeerConnection inside the Decart client so we can hot-swap the camera track.
+  const findPeerConnection = (): RTCPeerConnection | null => {
+    const client = decartClientRef.current as unknown as Record<string, unknown> | null;
+    if (!client) return null;
+    const seen = new Set<unknown>();
+    const walk = (obj: unknown, depth: number): RTCPeerConnection | null => {
+      if (!obj || depth > 4 || seen.has(obj)) return null;
+      if (typeof obj !== "object") return null;
+      seen.add(obj);
+      if (typeof RTCPeerConnection !== "undefined" && obj instanceof RTCPeerConnection) return obj;
+      for (const key of Object.keys(obj as Record<string, unknown>)) {
+        try {
+          const found = walk((obj as Record<string, unknown>)[key], depth + 1);
+          if (found) return found;
+        } catch {}
+      }
+      return null;
+    };
+    return walk(client, 0);
+  };
+
+  const handleCameraChange = async (deviceId: string) => {
+    setSelectedCameraId(deviceId);
+    if (!mediaStreamRef.current) return; // not streaming yet — selection saved for next start
+
+    try {
+      const model = models.realtime("lucy-2.1");
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: model.width, height: model.height },
+        audio: false,
+      });
+      const newTrack = newStream.getVideoTracks()[0];
+      if (!newTrack) return;
+
+      // Hot-swap on the WebRTC sender so streaming + credit deduction never stops.
+      const pc = findPeerConnection();
+      if (pc) {
+        const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+        if (sender) await sender.replaceTrack(newTrack);
+      }
+
+      // Swap on the local MediaStream + preview.
+      const oldStream = mediaStreamRef.current;
+      oldStream.getVideoTracks().forEach((t) => {
+        oldStream.removeTrack(t);
+        t.stop();
+      });
+      oldStream.addTrack(newTrack);
+      if (inputVideoRef.current) {
+        inputVideoRef.current.srcObject = oldStream;
+        inputVideoRef.current.play().catch(() => {});
+      }
+    } catch (e) {
+      console.error("Camera switch failed", e);
+      setError("Could not switch to that camera.");
+    }
+  };
+
 
   // Credit tick loop
   useEffect(() => {
@@ -202,7 +295,12 @@ function StreamPage() {
     try {
       const model = models.realtime("lucy-2.1");
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { frameRate: model.fps, width: model.width, height: model.height },
+        video: {
+          ...(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {}),
+          frameRate: model.fps,
+          width: model.width,
+          height: model.height,
+        },
         audio: false,
       });
     } catch (e) {
@@ -330,6 +428,25 @@ function StreamPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
+          {cameras.length > 1 && (
+            <div>
+              <label htmlFor="camera-select" className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                Select Camera
+              </label>
+              <select
+                id="camera-select"
+                value={selectedCameraId}
+                onChange={(e) => handleCameraChange(e.target.value)}
+                className="w-full sm:w-auto min-w-[260px] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary hover:border-primary/60 transition-colors"
+              >
+                {cameras.map((cam, i) => (
+                  <option key={cam.deviceId || i} value={cam.deviceId}>
+                    {cam.label || `Camera ${i + 1}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Panel label="Your Camera">
               <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
