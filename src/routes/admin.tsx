@@ -12,11 +12,13 @@ import {
   adminUserTransactions,
   adminGetActiveStreams,
   adminDailyProfit,
+  adminRegistrationAnalytics,
   type AdminUserRow,
   type CreditStats,
   type TransactionRow,
   type ActiveStream,
   type DailyProfitPoint,
+  type RegistrationDay,
 } from "@/lib/admin.functions";
 
 
@@ -44,6 +46,7 @@ function AdminPage() {
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
   const profitFn = useServerFn(adminDailyProfit);
+  const regFn = useServerFn(adminRegistrationAnalytics);
 
   const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState<CreditStats | null>(null);
@@ -67,6 +70,10 @@ function AdminPage() {
   const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
+
+  const [regRange, setRegRange] = useState<7 | 30 | 90 | 0>(30);
+  const [regData, setRegData] = useState<RegistrationDay[]>([]);
+  const [selectedRegDay, setSelectedRegDay] = useState<RegistrationDay | null>(null);
 
   // Auth gate
   useEffect(() => {
@@ -129,13 +136,27 @@ function AdminPage() {
       .finally(() => setUserTxLoading(false));
   }, [selectedUser, userTxFn]);
 
+  // Registration analytics — refresh continuously like the rest of the dashboard
+  useEffect(() => {
+    if (!authChecked) return;
+    let cancelled = false;
+    const fetchReg = () => {
+      regFn({ data: { days: regRange } })
+        .then((r) => { if (!cancelled) setRegData(r.days); })
+        .catch(() => {});
+    };
+    fetchReg();
+    const id = setInterval(fetchReg, 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [authChecked, regRange, regFn]);
+
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase().trim();
     let list = !q ? [...users] : users.filter(
       (u) => u.email.toLowerCase().includes(q) || (u.full_name ?? "").toLowerCase().includes(q),
     );
-    if (userFilter === "active") list = list.filter((u) => u.last_login != null);
-    else if (userFilter === "inactive") list = list.filter((u) => u.last_login == null);
+    if (userFilter === "active") list = list.filter((u) => u.last_seen != null);
+    else if (userFilter === "inactive") list = list.filter((u) => u.last_seen == null);
     if (sort.key !== "none") {
       const k = sort.key as keyof AdminUserRow;
       list.sort((a, b) => {
@@ -227,6 +248,88 @@ function AdminPage() {
             <Stat label="Active this week" value={fmtNum(stats?.active_week ?? 0)} icon={Users} />
             <Stat label="Active this month" value={fmtNum(stats?.active_month ?? 0)} icon={Users} />
           </div>
+
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Registration Analytics</h2>
+            <div className="flex gap-1 text-xs">
+              {([
+                { v: 7, l: "Last 7 days" },
+                { v: 30, l: "Last 30 days" },
+                { v: 90, l: "Last 90 days" },
+                { v: 0, l: "All time" },
+              ] as const).map((opt) => (
+                <button key={opt.v} onClick={() => { setRegRange(opt.v); setSelectedRegDay(null); }}
+                  className={`px-3 py-1 rounded-md border ${regRange === opt.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs text-muted-foreground">
+                {regData.reduce((s, d) => s + d.count, 0)} signups · {regData.length} active day{regData.length === 1 ? "" : "s"}
+              </div>
+              <div className="text-[10px] text-muted-foreground/70">Click a bar for details</div>
+            </div>
+            <div className="h-60">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={regData.map((d) => ({ ...d, label: new Date(d.day).toLocaleDateString(undefined, { month: "short", day: "numeric" }) }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                  <YAxis allowDecimals={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => [`${v} signups`, "Users"]}
+                    labelFormatter={(_, payload) => {
+                      const d = payload?.[0]?.payload?.day;
+                      return d ? new Date(d).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : "";
+                    }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="hsl(var(--primary))"
+                    radius={[6, 6, 0, 0]}
+                    cursor="pointer"
+                    onClick={(payload: any) => {
+                      const day = regData.find((d) => d.day === payload?.day);
+                      if (day) setSelectedRegDay(day);
+                    }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {selectedRegDay && (
+              <div className="mt-4 border-t border-border pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-sm font-medium">
+                      {new Date(selectedRegDay.day).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{selectedRegDay.count} user{selectedRegDay.count === 1 ? "" : "s"} registered</div>
+                  </div>
+                  <button onClick={() => setSelectedRegDay(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+                </div>
+                <div className="max-h-64 overflow-auto rounded-md border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground bg-secondary/30">
+                      <tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">Time</th></tr>
+                    </thead>
+                    <tbody>
+                      {selectedRegDay.users.map((u) => (
+                        <tr key={u.user_id} className="border-t border-border">
+                          <td className="px-3 py-2">{u.full_name || u.email.split("@")[0]}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
+                          <td className="px-3 py-2 text-muted-foreground text-xs">{new Date(u.created_at).toLocaleTimeString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
 
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — Recent</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -330,16 +433,15 @@ function AdminPage() {
           <Tbl headers={[
             { k: "email", l: "User" },
             { k: "created_at", l: "Joined" },
-            { k: "last_login", l: "Last login" },
+            { k: "last_seen", l: "Last seen" },
             { k: "balance", l: "Balance" },
             { k: "total_credits_purchased", l: "Purchased" },
             { k: "total_credits_used", l: "Used" },
             { k: "total_spent", l: "Spent" },
-            { k: "last_seen", l: "Last active" },
             { k: "none", l: "Status" },
           ]} sort={sort} onSort={toggleSort}>
             {filteredUsers.length === 0 ? (
-              <tr><Td colSpan={9} className="text-center text-muted-foreground py-8">No users.</Td></tr>
+              <tr><Td colSpan={8} className="text-center text-muted-foreground py-8">No users.</Td></tr>
             ) : filteredUsers.map((u) => (
               <tr key={u.user_id} className="border-t border-border hover:bg-secondary/40 cursor-pointer" onClick={() => setSelectedUser(u)}>
                 <Td>
@@ -349,15 +451,14 @@ function AdminPage() {
                   <div className="text-xs text-muted-foreground">{u.email}</div>
                 </Td>
                 <Td className="text-muted-foreground">{fmtDate(u.created_at)}</Td>
-                <Td className={`text-xs ${u.last_login ? "text-foreground" : "text-muted-foreground italic"}`}>{u.last_login ? fmtDate(u.last_login) : "Never"}</Td>
+                <Td className={`text-xs ${u.last_seen ? "text-foreground" : "text-muted-foreground italic"}`}>{u.last_seen ? fmtDate(u.last_seen) : "Never"}</Td>
                 <Td className="text-primary font-medium">{fmtNum(u.balance)}</Td>
                 <Td>{fmtNum(u.total_credits_purchased)}</Td>
                 <Td className="text-muted-foreground">{fmtNum(u.total_credits_used)}</Td>
                 <Td>{fmtMoney(u.total_spent)}</Td>
-                <Td className="text-muted-foreground text-xs">{fmtDate(u.last_seen)}</Td>
                 <Td>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : u.last_login == null ? "bg-muted text-muted-foreground" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
-                    {u.is_streaming ? "Streaming" : u.last_login == null ? "Never logged in" : isActive(u) ? "Active" : "Idle"}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : u.last_seen == null ? "bg-muted text-muted-foreground" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
+                    {u.is_streaming ? "Streaming" : u.last_seen == null ? "Never seen" : isActive(u) ? "Active" : "Idle"}
                   </span>
                 </Td>
               </tr>

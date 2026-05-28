@@ -14,10 +14,10 @@ export type AdminUserRow = {
   total_credits_used: number;
   total_spent: number;
   last_seen: string | null;
-  last_login: string | null;
   is_admin: boolean;
   is_streaming: boolean;
 };
+
 
 export type CreditStats = {
   credits_sold_today: number;
@@ -65,6 +65,24 @@ export type RecentVisit = {
 };
 
 export type TopPage = { path: string; visits: number; unique_visitors: number };
+
+export type RegistrationDay = {
+  day: string;
+  count: number;
+  users: Array<{ user_id: string; email: string; full_name: string | null; created_at: string }>;
+};
+
+export const adminRegistrationAnalytics = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { days: number }) => input)
+  .handler(async ({ context, data }) => {
+    const email = context.claims?.email as string | undefined;
+    if (email !== ADMIN_EMAIL) throw new Error("Not authorized");
+    const { data: rows, error } = await context.supabase.rpc("admin_registration_analytics", { p_days: data.days });
+    if (error) throw new Error(error.message);
+    return { days: (rows ?? []) as RegistrationDay[] };
+  });
+
 
 async function assertAdminEmail(userId: string, email: string | undefined) {
   if (email !== ADMIN_EMAIL) throw new Error("Not authorized");
