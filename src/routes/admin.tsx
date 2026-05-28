@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, Eye, Activity, ShieldCheck, ArrowLeft, Radio, Search, X } from "lucide-react";
+import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   amIAdmin,
@@ -10,16 +10,10 @@ import {
   adminListTransactions,
   adminUserTransactions,
   adminGetActiveStreams,
-  adminVisitorOverview,
-  adminListRecentVisits,
-  adminTopPages,
   type AdminUserRow,
   type CreditStats,
-  type VisitorOverview,
   type TransactionRow,
   type ActiveStream,
-  type RecentVisit,
-  type TopPage,
 } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
