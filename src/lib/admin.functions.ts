@@ -45,7 +45,7 @@ export const adminListUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const { data, error } = await supabaseAdmin.rpc("admin_list_users_with_credits");
+    const { data, error } = await context.supabase.rpc("admin_list_users_with_credits");
     if (error) throw new Error(error.message);
     return { users: (data ?? []) as AdminUserRow[] };
   });
@@ -67,7 +67,7 @@ export const adminGetVisitStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const { data, error } = await supabaseAdmin.rpc("admin_get_visit_stats");
+    const { data, error } = await context.supabase.rpc("admin_get_visit_stats");
     if (error) throw new Error(error.message);
     const row = (data ?? [])[0] as VisitStats | undefined;
     return {
@@ -79,7 +79,7 @@ export const adminListRecentVisits = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const { data, error } = await supabaseAdmin.rpc("admin_list_recent_visits", { p_limit: 100 });
+    const { data, error } = await context.supabase.rpc("admin_list_recent_visits", { p_limit: 100 });
     if (error) throw new Error(error.message);
     return { visits: (data ?? []) as RecentVisit[] };
   });
