@@ -132,15 +132,48 @@ export const adminVisitorOverview = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase.rpc("admin_visitor_overview");
     if (error) throw new Error(error.message);
     return { overview: ((data ?? [])[0] ?? null) as VisitorOverview | null };
-  });
-
-export const adminListRecentVisits = createServerFn({ method: "GET" })
+export const adminTopPages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
-    const { data, error } = await context.supabase.rpc("admin_list_recent_visits", { p_limit: 100 });
+    const { data, error } = await context.supabase.rpc("admin_top_pages", { p_limit: 20 });
     if (error) throw new Error(error.message);
-    return { visits: (data ?? []) as RecentVisit[] };
+    return { pages: (data ?? []) as TopPage[] };
+  });
+
+export const adminDailyProfit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
+    const since = new Date();
+    since.setUTCHours(0, 0, 0, 0);
+    since.setUTCDate(since.getUTCDate() - 6);
+    const { data, error } = await context.supabase
+      .from("transactions")
+      .select("type, credits, amount, created_at")
+      .gte("created_at", since.toISOString());
+    if (error) throw new Error(error.message);
+
+    const buckets = new Map<string, { revenue: number; credits_used: number }>();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(since);
+      d.setUTCDate(since.getUTCDate() + i);
+      buckets.set(d.toISOString().slice(0, 10), { revenue: 0, credits_used: 0 });
+    }
+    for (const row of (data ?? []) as Array<{ type: string; credits: number; amount: number; created_at: string }>) {
+      const key = new Date(row.created_at).toISOString().slice(0, 10);
+      const b = buckets.get(key);
+      if (!b) continue;
+      if (row.type === "purchase") b.revenue += Number(row.amount) || 0;
+      else if (row.type === "usage") b.credits_used += Number(row.credits) || 0;
+    }
+    const points: DailyProfitPoint[] = Array.from(buckets.entries()).map(([date, v]) => {
+      const decart_cost = (v.credits_used / 2) * 27;
+      return { date, revenue: v.revenue, credits_used: v.credits_used, decart_cost, profit: v.revenue - decart_cost };
+    });
+    return { points };
+  });
+
   });
 
 export const adminTopPages = createServerFn({ method: "GET" })
