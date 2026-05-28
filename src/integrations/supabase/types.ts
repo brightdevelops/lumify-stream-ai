@@ -193,14 +193,17 @@ export type Database = {
         Args: never
         Returns: {
           active_streams: number
+          credits_sold_all_time: number
           credits_sold_month: number
           credits_sold_today: number
           credits_sold_week: number
+          revenue_all_time: number
           revenue_month: number
           revenue_today: number
           revenue_week: number
           total_credits_held: number
           total_credits_used: number
+          total_users: number
         }[]
       }
       admin_get_visit_stats: {
