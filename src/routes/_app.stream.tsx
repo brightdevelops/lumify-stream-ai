@@ -417,6 +417,12 @@ function StreamPage() {
     if (streaming) applyReference(next, referenceImage);
   };
 
+  // Re-apply prompt when realism settings change mid-stream
+  useEffect(() => {
+    if (streaming && referenceImage) applyReference(selectedPreset, referenceImage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, realism]);
+
   const clearReference = () => {
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
     setReferenceImage(null);
