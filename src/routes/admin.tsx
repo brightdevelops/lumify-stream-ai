@@ -275,48 +275,7 @@ function AdminPage() {
           </Tbl>
         </Section>
 
-        {/* Visitor analytics */}
-        <Section title="Visitor analytics" icon={Eye}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mb-4">
-            <Stat label="Visits today" value={fmtNum(visitors?.visits_today ?? 0)} />
-            <Stat label="Visits this week" value={fmtNum(visitors?.visits_week ?? 0)} />
-            <Stat label="Visits this month" value={fmtNum(visitors?.visits_month ?? 0)} />
-            <Stat label="Returning visitors" value={fmtNum(visitors?.returning_visitors ?? 0)} sub={`${fmtNum(visitors?.unique_month ?? 0)} unique / 30d`} />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 mb-4">
-            <Stat label="Registered visitors" value={fmtNum(visitors?.registered_visitors ?? 0)} sub="(deduped by account)" />
-            <Stat label="Anonymous visitors" value={fmtNum(visitors?.anonymous_visitors ?? 0)} sub="(deduped by IP)" />
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="px-4 py-2 border-b border-border text-xs uppercase tracking-wide text-muted-foreground">Top pages</div>
-              <Tbl headers={["Path", "Visits", "Unique"]}>
-                {topPages.map((p) => (
-                  <tr key={p.path} className="border-t border-border">
-                    <Td className="font-mono text-xs">{p.path}</Td>
-                    <Td>{fmtNum(p.visits)}</Td>
-                    <Td className="text-muted-foreground">{fmtNum(p.unique_visitors)}</Td>
-                  </tr>
-                ))}
-              </Tbl>
-            </div>
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="px-4 py-2 border-b border-border text-xs uppercase tracking-wide text-muted-foreground">Recent unique devices</div>
-              <Tbl headers={["Last seen", "Visitor", "IP", "Visits", "Path"]}>
-                {visits.slice(0, 30).map((v) => (
-                  <tr key={v.id} className="border-t border-border">
-                    <Td className="text-muted-foreground text-xs whitespace-nowrap">{fmtDate(v.created_at)}</Td>
-                    <Td>{v.user_email ?? <span className="text-muted-foreground italic">anonymous</span>}</Td>
-                    <Td className="font-mono text-xs">{v.ip ?? "—"}</Td>
-                    <Td>{v.visit_count}</Td>
-                    <Td className="font-mono text-xs">{v.path}</Td>
-                  </tr>
-                ))}
-              </Tbl>
-            </div>
-          </div>
-        </Section>
+      </div>
       </div>
 
       {/* User drill-down modal */}
