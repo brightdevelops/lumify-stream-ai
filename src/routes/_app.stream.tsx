@@ -286,10 +286,6 @@ function StreamPage() {
         p_credits: totalUsed,
         p_amount: totalUsed * NAIRA_PER_CREDIT,
         p_description: `Stream session — ${mins} min ${secs} sec`,
-      await supabase.rpc("log_usage_transaction", {
-        p_credits: totalUsed,
-        p_amount: totalUsed * NAIRA_PER_CREDIT,
-        p_description: `Stream session — ${mins} min ${secs} sec`,
       });
     }
     if (sessionIdRef.current) {
@@ -301,6 +297,13 @@ function StreamPage() {
     }
     if (outOfCredits) setShowOutOfCredits(true);
   };
+
+  const stop = () => {
+    endStream(false);
+  };
+
+  const selectPreset = (p: string) => {
+    const next = selectedPreset === p ? null : p;
     setSelectedPreset(next);
     setError(null);
     if (streaming) applyReference(next, referenceImage);
