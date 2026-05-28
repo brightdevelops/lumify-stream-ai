@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const ADMIN_EMAIL = "brightsolutionslab@gmail.com";
 
 export type AdminUserRow = {
+export type AdminUserRow = {
   user_id: string;
   email: string;
   full_name: string | null;
@@ -14,10 +15,10 @@ export type AdminUserRow = {
   total_credits_used: number;
   total_spent: number;
   last_seen: string | null;
-  last_login: string | null;
   is_admin: boolean;
   is_streaming: boolean;
 };
+
 
 export type CreditStats = {
   credits_sold_today: number;
