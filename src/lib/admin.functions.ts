@@ -92,13 +92,14 @@ export const adminListTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { type?: "purchase" | "usage" | null; limit?: number }) => input)
   .handler(async ({ context, data }) => {
-  .inputValidator((input: { type?: "purchase" | "usage" | null; limit?: number }) => input)
-  .handler(async ({ context, data }) => {
     await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
     const { data: rows, error } = await context.supabase.rpc("admin_list_transactions", {
       p_limit: data.limit ?? 500,
       p_type: data.type ?? undefined,
     });
+    if (error) throw new Error(error.message);
+    return { transactions: (rows ?? []) as TransactionRow[] };
+  });
 
 export const adminUserTransactions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
