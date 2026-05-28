@@ -70,23 +70,33 @@ function AdminPage() {
     })();
   }, [checkFn, navigate]);
 
+  const load = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [s, u, a] = await Promise.all([statsFn(), usersFn(), activeFn()]);
+      setStats(s.stats); setUsers(u.users); setActive(a.streams);
+      setLastUpdated(new Date());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to refresh");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [statsFn, usersFn, activeFn]);
+
   // Initial + interval refresh of dynamic data
   useEffect(() => {
     if (!authChecked) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const [s, u, a] = await Promise.all([
-          statsFn(), usersFn(), activeFn(),
-        ]);
-        if (cancelled) return;
-        setStats(s.stats); setUsers(u.users); setActive(a.streams);
-      } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load"); }
-    };
     load();
     const id = setInterval(load, 5000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [authChecked, statsFn, usersFn, activeFn]);
+    return () => clearInterval(id);
+  }, [authChecked, load]);
+
+  // Tick once per second to update "X seconds ago"
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Transactions on filter change
   useEffect(() => {
