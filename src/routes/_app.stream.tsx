@@ -263,6 +263,13 @@ function StreamPage() {
     setDuration(0);
     setConnecting(false);
     setStreaming(true);
+
+    if (user) {
+      const { data: sess } = await supabase.from("stream_sessions").insert({
+        user_id: user.id,
+      } as never).select("id").maybeSingle();
+      sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
+    }
   };
 
   const endStream = async (outOfCredits = false) => {
@@ -279,17 +286,21 @@ function StreamPage() {
         p_credits: totalUsed,
         p_amount: totalUsed * NAIRA_PER_CREDIT,
         p_description: `Stream session — ${mins} min ${secs} sec`,
+      await supabase.rpc("log_usage_transaction", {
+        p_credits: totalUsed,
+        p_amount: totalUsed * NAIRA_PER_CREDIT,
+        p_description: `Stream session — ${mins} min ${secs} sec`,
       });
+    }
+    if (sessionIdRef.current) {
+      await supabase.from("stream_sessions").update({
+        ended_at: new Date().toISOString(),
+        credits_used: totalUsed,
+      }).eq("id", sessionIdRef.current);
+      sessionIdRef.current = null;
     }
     if (outOfCredits) setShowOutOfCredits(true);
   };
-
-  const stop = () => {
-    endStream(false);
-  };
-
-  const selectPreset = (p: string) => {
-    const next = selectedPreset === p ? null : p;
     setSelectedPreset(next);
     setError(null);
     if (streaming) applyReference(next, referenceImage);
