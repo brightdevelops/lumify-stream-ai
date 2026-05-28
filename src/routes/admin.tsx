@@ -46,6 +46,7 @@ function AdminPage() {
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
   const profitFn = useServerFn(adminDailyProfit);
+  const regFn = useServerFn(adminRegistrationAnalytics);
 
   const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState<CreditStats | null>(null);
