@@ -426,6 +426,25 @@ function StreamPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
+          {cameras.length > 1 && (
+            <div>
+              <label htmlFor="camera-select" className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                Select Camera
+              </label>
+              <select
+                id="camera-select"
+                value={selectedCameraId}
+                onChange={(e) => handleCameraChange(e.target.value)}
+                className="w-full sm:w-auto min-w-[260px] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary hover:border-primary/60 transition-colors"
+              >
+                {cameras.map((cam, i) => (
+                  <option key={cam.deviceId || i} value={cam.deviceId}>
+                    {cam.label || `Camera ${i + 1}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Panel label="Your Camera">
               <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
