@@ -88,7 +88,7 @@ function AdminPage() {
   useEffect(() => {
     if (!authChecked) return;
     load();
-    const id = setInterval(load, 5000);
+    const id = setInterval(load, 1000);
     return () => clearInterval(id);
   }, [authChecked, load]);
 
