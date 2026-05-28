@@ -21,7 +21,6 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
-import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 
 const SignupRoute = SignupRouteImport.update({
@@ -83,11 +82,6 @@ const AppBillingRoute = AppBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAdminRoute = AppAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => AppRoute,
-} as any)
 const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
   id: '/api/public/track-visit',
   path: '/api/public/track-visit',
@@ -101,7 +95,6 @@ export interface FileRoutesByFullPath {
   '/output': typeof OutputRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof AppAdminRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -116,7 +109,6 @@ export interface FileRoutesByTo {
   '/output': typeof OutputRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof AppAdminRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -133,7 +125,6 @@ export interface FileRoutesById {
   '/output': typeof OutputRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/_app/admin': typeof AppAdminRoute
   '/_app/billing': typeof AppBillingRoute
   '/_app/credits': typeof AppCreditsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -150,7 +141,6 @@ export interface FileRouteTypes {
     | '/output'
     | '/reset-password'
     | '/signup'
-    | '/admin'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -165,7 +155,6 @@ export interface FileRouteTypes {
     | '/output'
     | '/reset-password'
     | '/signup'
-    | '/admin'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -181,7 +170,6 @@ export interface FileRouteTypes {
     | '/output'
     | '/reset-password'
     | '/signup'
-    | '/_app/admin'
     | '/_app/billing'
     | '/_app/credits'
     | '/_app/dashboard'
@@ -287,13 +275,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin': {
-      id: '/_app/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AppAdminRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/api/public/track-visit': {
       id: '/api/public/track-visit'
       path: '/api/public/track-visit'
@@ -305,7 +286,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
-  AppAdminRoute: typeof AppAdminRoute
   AppBillingRoute: typeof AppBillingRoute
   AppCreditsRoute: typeof AppCreditsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -314,7 +294,6 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAdminRoute: AppAdminRoute,
   AppBillingRoute: AppBillingRoute,
   AppCreditsRoute: AppCreditsRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -337,3 +316,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
