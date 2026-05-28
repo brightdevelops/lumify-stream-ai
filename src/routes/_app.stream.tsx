@@ -65,9 +65,11 @@ function StreamPage() {
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [referenceUrl, setReferenceUrl] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
+  const [showOutOfCredits, setShowOutOfCredits] = useState(false);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
+  const [realism, setRealism] = useState<number>(8);
   const [duration, setDuration] = useState(0);
   const [credits, setCredits] = useState(0);
   const [startingCredits, setStartingCredits] = useState(0);
