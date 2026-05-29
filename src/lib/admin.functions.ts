@@ -172,7 +172,7 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
     await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
     const now = new Date();
     const startOfDay = new Date(now); startOfDay.setUTCHours(0, 0, 0, 0);
-    const weekStart = new Date(startOfDay); weekStart.setUTCDate(startOfDay.getUTCDate() - 6);
+    const monthStartBound = new Date(startOfDay); monthStartBound.setUTCDate(startOfDay.getUTCDate() - 29);
     const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const { data, error } = await context.supabase
@@ -182,11 +182,14 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
 
     const buckets = new Map<string, { revenue: number; credits_used: number }>();
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
-      d.setUTCDate(weekStart.getUTCDate() + i);
+    const firstDay = new Date(startOfDay);
+    firstDay.setUTCDate(startOfDay.getUTCDate() - 29);
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(firstDay);
+      d.setUTCDate(firstDay.getUTCDate() + i);
       buckets.set(d.toISOString().slice(0, 10), { revenue: 0, credits_used: 0 });
     }
+    void monthStartBound;
     let creditsUsedToday = 0;
     let creditsUsedMonth = 0;
     for (const row of (data ?? []) as Array<{ type: string; credits: number; amount: number; created_at: string }>) {

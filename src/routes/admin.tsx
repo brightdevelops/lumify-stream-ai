@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   amIAdmin,
@@ -12,13 +12,13 @@ import {
   adminUserTransactions,
   adminGetActiveStreams,
   adminDailyProfit,
-  adminRegistrationAnalytics,
+  
   type AdminUserRow,
   type CreditStats,
   type TransactionRow,
   type ActiveStream,
   type DailyProfitPoint,
-  type RegistrationDay,
+  
 } from "@/lib/admin.functions";
 
 
@@ -46,7 +46,7 @@ function AdminPage() {
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
   const profitFn = useServerFn(adminDailyProfit);
-  const regFn = useServerFn(adminRegistrationAnalytics);
+  
 
   const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState<CreditStats | null>(null);
@@ -71,9 +71,7 @@ function AdminPage() {
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
 
-  const [regRange, setRegRange] = useState<7 | 30 | 90 | 0>(30);
-  const [regData, setRegData] = useState<RegistrationDay[]>([]);
-  const [selectedRegDay, setSelectedRegDay] = useState<RegistrationDay | null>(null);
+  const [profitSort, setProfitSort] = useState<{ key: "date" | "profit"; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
 
   // Auth gate
   useEffect(() => {
@@ -136,19 +134,6 @@ function AdminPage() {
       .finally(() => setUserTxLoading(false));
   }, [selectedUser, userTxFn]);
 
-  // Registration analytics — refresh continuously like the rest of the dashboard
-  useEffect(() => {
-    if (!authChecked) return;
-    let cancelled = false;
-    const fetchReg = () => {
-      regFn({ data: { days: regRange } })
-        .then((r) => { if (!cancelled) setRegData(r.days); })
-        .catch(() => {});
-    };
-    fetchReg();
-    const id = setInterval(fetchReg, 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [authChecked, regRange, regFn]);
 
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -249,86 +234,6 @@ function AdminPage() {
             <Stat label="Active this month" value={fmtNum(stats?.active_month ?? 0)} icon={Users} />
           </div>
 
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Registration Analytics</h2>
-            <div className="flex gap-1 text-xs">
-              {([
-                { v: 7, l: "Last 7 days" },
-                { v: 30, l: "Last 30 days" },
-                { v: 90, l: "Last 90 days" },
-                { v: 0, l: "All time" },
-              ] as const).map((opt) => (
-                <button key={opt.v} onClick={() => { setRegRange(opt.v); setSelectedRegDay(null); }}
-                  className={`px-3 py-1 rounded-md border ${regRange === opt.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                  {opt.l}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4 mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs text-muted-foreground">
-                {regData.reduce((s, d) => s + d.count, 0)} signups · {regData.length} active day{regData.length === 1 ? "" : "s"}
-              </div>
-              <div className="text-[10px] text-muted-foreground/70">Click a bar for details</div>
-            </div>
-            <div className="h-60">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={regData.map((d) => ({ ...d, label: new Date(d.day).toLocaleDateString(undefined, { month: "short", day: "numeric" }) }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                  <YAxis allowDecimals={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: number) => [`${v} signups`, "Users"]}
-                    labelFormatter={(_, payload) => {
-                      const d = payload?.[0]?.payload?.day;
-                      return d ? new Date(d).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : "";
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="hsl(var(--primary))"
-                    radius={[6, 6, 0, 0]}
-                    cursor="pointer"
-                    onClick={(payload: any) => {
-                      const day = regData.find((d) => d.day === payload?.day);
-                      if (day) setSelectedRegDay(day);
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            {selectedRegDay && (
-              <div className="mt-4 border-t border-border pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <div className="text-sm font-medium">
-                      {new Date(selectedRegDay.day).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{selectedRegDay.count} user{selectedRegDay.count === 1 ? "" : "s"} registered</div>
-                  </div>
-                  <button onClick={() => setSelectedRegDay(null)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-                </div>
-                <div className="max-h-64 overflow-auto rounded-md border border-border">
-                  <table className="w-full text-sm">
-                    <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground bg-secondary/30">
-                      <tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">Time</th></tr>
-                    </thead>
-                    <tbody>
-                      {selectedRegDay.users.map((u) => (
-                        <tr key={u.user_id} className="border-t border-border">
-                          <td className="px-3 py-2">{u.full_name || u.email.split("@")[0]}</td>
-                          <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
-                          <td className="px-3 py-2 text-muted-foreground text-xs">{new Date(u.created_at).toLocaleTimeString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
 
 
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">Overview — Recent</h2>
@@ -361,29 +266,49 @@ function AdminPage() {
                 <ProfitStat label="Today's profit" value={fmtMoney(todayProfit)} sub={`Rev ${fmtMoney(stats?.revenue_today ?? 0)} − Cost ${fmtMoney((creditsUsedToday / 2) * 27)}`} tone="profit" />
                 <ProfitStat label="This month's profit (30d)" value={fmtMoney(monthProfit)} sub={`Rev ${fmtMoney(stats?.revenue_month ?? 0)} − Cost ${fmtMoney((creditsUsedMonth / 2) * 27)}`} tone="profit" />
               </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium">Daily profit · last 7 days</h3>
-                  <span className="text-xs text-muted-foreground">
-                    7d total: {fmtMoney(dailyProfit.reduce((s, p) => s + p.profit, 0))}
-                  </span>
-                </div>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyProfit.map((p) => ({ ...p, day: new Date(p.date).toLocaleDateString(undefined, { weekday: "short" }) }))}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="day" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip
-                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                        formatter={(v: number) => fmtMoney(v)}
-                        labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ""}
-                      />
-                      <Bar dataKey="profit" fill="rgb(16 185 129)" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              {(() => {
+                const sorted = [...dailyProfit].sort((a, b) => {
+                  const av = profitSort.key === "date" ? a.date : a.profit;
+                  const bv = profitSort.key === "date" ? b.date : b.profit;
+                  const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+                  return profitSort.dir === "asc" ? cmp : -cmp;
+                });
+                const toggle = (k: "date" | "profit") =>
+                  setProfitSort((s) => s.key === k ? { key: k, dir: s.dir === "asc" ? "desc" : "asc" } : { key: k, dir: "desc" });
+                const arrow = (k: "date" | "profit") => profitSort.key === k ? (profitSort.dir === "asc" ? " ↑" : " ↓") : "";
+                return (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-emerald-500/20 flex items-center justify-between">
+                      <h3 className="text-sm font-medium">Daily gross profit · last 30 days</h3>
+                      <span className="text-xs text-muted-foreground">
+                        30d total: {fmtMoney(dailyProfit.reduce((s, p) => s + p.profit, 0))}
+                      </span>
+                    </div>
+                    <div className="max-h-[28rem] overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground bg-emerald-500/5 sticky top-0">
+                          <tr>
+                            <th className="px-4 py-2.5 cursor-pointer hover:text-foreground" onClick={() => toggle("date")}>Date{arrow("date")}</th>
+                            <th className="px-4 py-2.5 cursor-pointer hover:text-foreground text-right" onClick={() => toggle("profit")}>Daily gross profit{arrow("profit")}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sorted.map((p) => (
+                            <tr key={p.date} className="border-t border-emerald-500/10">
+                              <td className="px-4 py-2.5">{new Date(p.date).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</td>
+                              <td className={`px-4 py-2.5 text-right font-mono ${p.profit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{fmtMoney(p.profit)}</td>
+                            </tr>
+                          ))}
+                          {sorted.length === 0 && (
+                            <tr><td colSpan={2} className="px-4 py-6 text-center text-muted-foreground">No data yet.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
             </section>
           );
         })()}
