@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Zap, CreditCard, Wand2, Check } from "lucide-react";
 
 
@@ -30,14 +30,31 @@ const features = [
 
 function Landing() {
   const [scrolled, setScrolled] = useState(false);
-  const { user, loading } = useAuth();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate({ to: "/dashboard", replace: true });
-    }
-  }, [loading, user, navigate]);
+    let cancelled = false;
+    // Check existing session restored from localStorage
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session) {
+        setHasSession(true);
+        navigate({ to: "/dashboard", replace: true });
+      } else {
+        setAuthChecked(true);
+      }
+    });
+    // React to future sign-in events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) {
+        setHasSession(true);
+        navigate({ to: "/dashboard", replace: true });
+      }
+    });
+    return () => { cancelled = true; subscription.unsubscribe(); };
+  }, [navigate]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -45,7 +62,8 @@ function Landing() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  if (!loading && user) return null;
+  if (!authChecked || hasSession) return null;
+
 
 
   return (
