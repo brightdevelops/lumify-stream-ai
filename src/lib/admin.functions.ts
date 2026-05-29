@@ -172,7 +172,7 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
     await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
     const now = new Date();
     const startOfDay = new Date(now); startOfDay.setUTCHours(0, 0, 0, 0);
-    const weekStart = new Date(startOfDay); weekStart.setUTCDate(startOfDay.getUTCDate() - 6);
+    const monthStartBound = new Date(startOfDay); monthStartBound.setUTCDate(startOfDay.getUTCDate() - 29);
     const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const { data, error } = await context.supabase
