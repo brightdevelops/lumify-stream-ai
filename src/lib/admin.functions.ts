@@ -204,6 +204,20 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
         if (created >= startOfDay) creditsUsedToday += c;
       }
     }
+
+    // Include in-progress streaming sessions started today so today's cost
+    // reflects ongoing usage (usage transactions are only logged on session end).
+    const { data: activeToday } = await context.supabase
+      .from("stream_sessions")
+      .select("credits_used, started_at, ended_at")
+      .is("ended_at", null)
+      .gte("started_at", startOfDay.toISOString());
+    for (const s of (activeToday ?? []) as Array<{ credits_used: number }>) {
+      const c = Number(s.credits_used) || 0;
+      creditsUsedToday += c;
+      creditsUsedMonth += c;
+    }
+
     const points: DailyProfitPoint[] = Array.from(buckets.entries()).map(([date, v]) => {
       const decart_cost = (v.credits_used / 2) * 27;
       return { date, revenue: v.revenue, credits_used: v.credits_used, decart_cost, profit: v.revenue - decart_cost };
