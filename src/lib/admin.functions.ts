@@ -189,7 +189,7 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
       d.setUTCDate(firstDay.getUTCDate() + i);
       buckets.set(d.toISOString().slice(0, 10), { revenue: 0, credits_used: 0 });
     }
-    void weekStart;
+    void monthStartBound;
     let creditsUsedToday = 0;
     let creditsUsedMonth = 0;
     for (const row of (data ?? []) as Array<{ type: string; credits: number; amount: number; created_at: string }>) {
