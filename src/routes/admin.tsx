@@ -134,19 +134,6 @@ function AdminPage() {
       .finally(() => setUserTxLoading(false));
   }, [selectedUser, userTxFn]);
 
-  // Registration analytics — refresh continuously like the rest of the dashboard
-  useEffect(() => {
-    if (!authChecked) return;
-    let cancelled = false;
-    const fetchReg = () => {
-      regFn({ data: { days: regRange } })
-        .then((r) => { if (!cancelled) setRegData(r.days); })
-        .catch(() => {});
-    };
-    fetchReg();
-    const id = setInterval(fetchReg, 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [authChecked, regRange, regFn]);
 
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase().trim();
