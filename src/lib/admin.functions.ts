@@ -182,11 +182,14 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
 
     const buckets = new Map<string, { revenue: number; credits_used: number }>();
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
-      d.setUTCDate(weekStart.getUTCDate() + i);
+    const firstDay = new Date(startOfDay);
+    firstDay.setUTCDate(startOfDay.getUTCDate() - 29);
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(firstDay);
+      d.setUTCDate(firstDay.getUTCDate() + i);
       buckets.set(d.toISOString().slice(0, 10), { revenue: 0, credits_used: 0 });
     }
+    void weekStart;
     let creditsUsedToday = 0;
     let creditsUsedMonth = 0;
     for (const row of (data ?? []) as Array<{ type: string; credits: number; amount: number; created_at: string }>) {
