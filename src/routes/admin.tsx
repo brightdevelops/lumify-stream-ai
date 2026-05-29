@@ -71,7 +71,7 @@ function AdminPage() {
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
 
-  const [profitSort, setProfitSort] = useState<{ key: "date" | "profit"; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
+  
 
   // Auth gate
   useEffect(() => {
