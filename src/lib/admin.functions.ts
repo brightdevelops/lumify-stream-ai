@@ -175,7 +175,9 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
     const monthStartBound = new Date(startOfDay); monthStartBound.setUTCDate(startOfDay.getUTCDate() - 29);
     const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const { data, error } = await context.supabase
+    // Use supabaseAdmin to bypass RLS — the admin needs to see ALL users'
+    // transactions and stream sessions, not just their own.
+    const { data, error } = await supabaseAdmin
       .from("transactions")
       .select("type, credits, amount, created_at")
       .gte("created_at", monthStart.toISOString());
@@ -207,7 +209,7 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
 
     // Include in-progress streaming sessions started today so today's cost
     // reflects ongoing usage (usage transactions are only logged on session end).
-    const { data: activeToday } = await context.supabase
+    const { data: activeToday } = await supabaseAdmin
       .from("stream_sessions")
       .select("credits_used, started_at, ended_at")
       .is("ended_at", null)
