@@ -281,29 +281,8 @@ function AdminPage() {
                 <ProfitStat label="Today's profit" value={fmtMoney(todayProfit)} sub={`Rev ${fmtMoney(stats?.revenue_today ?? 0)} − Cost ${fmtMoney((creditsUsedToday / 2) * 27)}`} tone="profit" />
                 <ProfitStat label="This month's profit (30d)" value={fmtMoney(monthProfit)} sub={`Rev ${fmtMoney(stats?.revenue_month ?? 0)} − Cost ${fmtMoney((creditsUsedMonth / 2) * 27)}`} tone="profit" />
               </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium">Daily profit · last 7 days</h3>
-                  <span className="text-xs text-muted-foreground">
-                    7d total: {fmtMoney(dailyProfit.reduce((s, p) => s + p.profit, 0))}
-                  </span>
-                </div>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyProfit.map((p) => ({ ...p, day: new Date(p.date).toLocaleDateString(undefined, { weekday: "short" }) }))}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="day" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip
-                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                        formatter={(v: number) => fmtMoney(v)}
-                        labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ""}
-                      />
-                      <Bar dataKey="profit" fill="rgb(16 185 129)" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              <DailyProfitTable points={dailyProfit} />
+
             </section>
           );
         })()}
