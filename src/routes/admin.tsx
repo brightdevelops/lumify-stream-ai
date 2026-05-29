@@ -263,8 +263,8 @@ function AdminPage() {
                 <ProfitStat label="Total Decart cost" value={fmtMoney(totalDecartCost)} tone="cost" />
                 <ProfitStat label="Total gross profit" value={fmtMoney(grossProfit)} tone="profit" />
                 <ProfitStat label="Profit margin" value={`${margin.toFixed(1)}%`} tone="profit" />
-                <ProfitStat label="Today's profit" value={fmtMoney(todayProfit)} sub={`Rev ${fmtMoney(stats?.revenue_today ?? 0)} − Cost ${fmtMoney((creditsUsedToday / 2) * 27)}`} tone="profit" />
-                <ProfitStat label="This month's profit (30d)" value={fmtMoney(monthProfit)} sub={`Rev ${fmtMoney(stats?.revenue_month ?? 0)} − Cost ${fmtMoney((creditsUsedMonth / 2) * 27)}`} tone="profit" />
+                <ProfitStat label="Today's profit" value={fmtMoney(todayProfit)} sub={`Rev ${fmtMoney(stats?.revenue_today ?? 0)} − Cost ${fmtMoney((creditsUsedToday / 2) * 27)} = Profit ${fmtMoney(todayProfit)}`} tone="profit" />
+                <ProfitStat label="This month's profit (30d)" value={fmtMoney(monthProfit)} sub={`Rev ${fmtMoney(stats?.revenue_month ?? 0)} − Cost ${fmtMoney((creditsUsedMonth / 2) * 27)} = Profit ${fmtMoney(monthProfit)}`} tone="profit" />
               </div>
 
             </section>
