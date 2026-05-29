@@ -18,7 +18,7 @@ import {
   type TransactionRow,
   type ActiveStream,
   type DailyProfitPoint,
-  type RegistrationDay,
+  
 } from "@/lib/admin.functions";
 
 
