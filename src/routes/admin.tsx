@@ -71,7 +71,7 @@ function AdminPage() {
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
   const [userTxLoading, setUserTxLoading] = useState(false);
 
-  const [profitSort, setProfitSort] = useState<{ key: "date" | "profit"; dir: "asc" | "desc" }>({ key: "date", dir: "desc" });
+  
 
   // Auth gate
   useEffect(() => {
@@ -266,48 +266,6 @@ function AdminPage() {
                 <ProfitStat label="Today's profit" value={fmtMoney(todayProfit)} sub={`Rev ${fmtMoney(stats?.revenue_today ?? 0)} − Cost ${fmtMoney((creditsUsedToday / 2) * 27)}`} tone="profit" />
                 <ProfitStat label="This month's profit (30d)" value={fmtMoney(monthProfit)} sub={`Rev ${fmtMoney(stats?.revenue_month ?? 0)} − Cost ${fmtMoney((creditsUsedMonth / 2) * 27)}`} tone="profit" />
               </div>
-              {(() => {
-                const sorted = [...dailyProfit].sort((a, b) => {
-                  const av = profitSort.key === "date" ? a.date : a.profit;
-                  const bv = profitSort.key === "date" ? b.date : b.profit;
-                  const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-                  return profitSort.dir === "asc" ? cmp : -cmp;
-                });
-                const toggle = (k: "date" | "profit") =>
-                  setProfitSort((s) => s.key === k ? { key: k, dir: s.dir === "asc" ? "desc" : "asc" } : { key: k, dir: "desc" });
-                const arrow = (k: "date" | "profit") => profitSort.key === k ? (profitSort.dir === "asc" ? " ↑" : " ↓") : "";
-                return (
-                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-emerald-500/20 flex items-center justify-between">
-                      <h3 className="text-sm font-medium">Daily gross profit · last 30 days</h3>
-                      <span className="text-xs text-muted-foreground">
-                        30d total: {fmtMoney(dailyProfit.reduce((s, p) => s + p.profit, 0))}
-                      </span>
-                    </div>
-                    <div className="max-h-[28rem] overflow-auto">
-                      <table className="w-full text-sm">
-                        <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground bg-emerald-500/5 sticky top-0">
-                          <tr>
-                            <th className="px-4 py-2.5 cursor-pointer hover:text-foreground" onClick={() => toggle("date")}>Date{arrow("date")}</th>
-                            <th className="px-4 py-2.5 cursor-pointer hover:text-foreground text-right" onClick={() => toggle("profit")}>Daily gross profit{arrow("profit")}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sorted.map((p) => (
-                            <tr key={p.date} className="border-t border-emerald-500/10">
-                              <td className="px-4 py-2.5">{new Date(p.date).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</td>
-                              <td className={`px-4 py-2.5 text-right font-mono ${p.profit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{fmtMoney(p.profit)}</td>
-                            </tr>
-                          ))}
-                          {sorted.length === 0 && (
-                            <tr><td colSpan={2} className="px-4 py-6 text-center text-muted-foreground">No data yet.</td></tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              })()}
 
             </section>
           );
