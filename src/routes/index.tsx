@@ -24,7 +24,7 @@ const packages = [
 
 const features = [
   { icon: Zap, title: "Real-time transformation", body: "Sub-second AI processing keeps every frame of your stream synced to the prompt — no lag, no jitter." },
-  { icon: CreditCard, title: "Pay as you stream", body: "Two credits per second, billed by use. No subscriptions, no surprises. Credits never expire." },
+  { icon: CreditCard, title: "Pay as you stream", body: "2 credits per second (₦46/sec) · 1 credit = ₦23. No subscriptions, no surprises. Credits never expire." },
   { icon: Wand2, title: "Prompt-based control", body: "Switch from cyberpunk to oil painting with a sentence. Save presets, recall them instantly mid-stream." },
 ];
 
