@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Languages, Send } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
+import { getVoiceConfig, estimateVoiceCost, generateVoiceClip } from "@/lib/voice.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -84,6 +85,22 @@ function StreamPage() {
   const durationRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
 
+  // Voice-over (Speak in Another Language) state
+  type LangOpt = { code: string; name: string };
+  type VoiceOpt = { id: string; label: string; description: string };
+  const [voiceLangs, setVoiceLangs] = useState<LangOpt[]>([]);
+  const [voiceList, setVoiceList] = useState<VoiceOpt[]>([]);
+  const [voiceLang, setVoiceLang] = useState<string>("es");
+  const [voiceId, setVoiceId] = useState<string>("");
+  const [voiceText, setVoiceText] = useState<string>("");
+  const [voiceEstimate, setVoiceEstimate] = useState<{ credits: number; seconds: number } | null>(null);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceInfo, setVoiceInfo] = useState<string | null>(null);
+  const [voicePricing, setVoicePricing] = useState<{ creditsPerMinute: number; nairaPerCredit: number } | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+
   useEffect(() => {
     if (!user) return;
     supabase
@@ -98,6 +115,32 @@ function StreamPage() {
         creditsRef.current = bal;
       });
   }, [user]);
+
+  // Load voice config (languages + voice presets) once.
+  useEffect(() => {
+    getVoiceConfig()
+      .then((cfg) => {
+        setVoiceLangs(cfg.languages);
+        setVoiceList(cfg.voices);
+        setVoicePricing({ creditsPerMinute: cfg.creditsPerMinute, nairaPerCredit: cfg.nairaPerCredit });
+        setVoiceId((prev) => prev || cfg.voices[0]?.id || "");
+      })
+      .catch(() => {});
+  }, []);
+
+  // Debounced estimate as the user types.
+  useEffect(() => {
+    if (!voiceText.trim()) {
+      setVoiceEstimate(null);
+      return;
+    }
+    const handle = setTimeout(() => {
+      estimateVoiceCost({ data: { text: voiceText.trim() } })
+        .then((r) => setVoiceEstimate({ credits: r.estimatedCredits, seconds: r.estimatedSeconds }))
+        .catch(() => setVoiceEstimate(null));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [voiceText]);
 
 
   useEffect(() => {
@@ -251,6 +294,14 @@ function StreamPage() {
     mediaStreamRef.current = null;
     if (inputVideoRef.current) inputVideoRef.current.srcObject = null;
     if (outputVideoRef.current) outputVideoRef.current.srcObject = null;
+    try {
+      audioDestRef.current?.disconnect();
+    } catch {}
+    audioDestRef.current = null;
+    try {
+      audioCtxRef.current?.close();
+    } catch {}
+    audioCtxRef.current = null;
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
@@ -337,9 +388,23 @@ function StreamPage() {
             outputVideoRef.current.play().catch(() => {});
           }
           try {
+            // Set up a persistent audio context + destination so generated
+            // voice clips can be mixed into the outgoing broadcast stream.
+            if (!audioCtxRef.current) {
+              const Ctx: typeof AudioContext =
+                window.AudioContext ||
+                (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+              audioCtxRef.current = new Ctx();
+              audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+            }
+            const broadcastStream = new MediaStream();
+            transformedStream.getVideoTracks().forEach((t) => broadcastStream.addTrack(t));
+            const audioTrack = audioDestRef.current?.stream.getAudioTracks()[0];
+            if (audioTrack) broadcastStream.addTrack(audioTrack);
+
             broadcasterStopRef.current?.();
             if (user) {
-              broadcasterStopRef.current = startBroadcaster(user.id, transformedStream);
+              broadcasterStopRef.current = startBroadcaster(user.id, broadcastStream);
             }
           } catch (e) {
             console.error("Broadcaster start failed", e);
@@ -428,6 +493,74 @@ function StreamPage() {
     setReferenceImage(null);
     setReferenceUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Generate a translated voice clip and play it through the outgoing stream.
+  const sendVoiceClip = async () => {
+    setVoiceError(null);
+    setVoiceInfo(null);
+    const text = voiceText.trim();
+    if (!text) {
+      setVoiceError("Type something to say first.");
+      return;
+    }
+    if (!voiceId) {
+      setVoiceError("Pick a voice style.");
+      return;
+    }
+    if (voiceEstimate && credits < voiceEstimate.credits) {
+      setVoiceError(
+        `Not enough credits. This clip needs about ${voiceEstimate.credits} credits — top up to continue.`,
+      );
+      return;
+    }
+    // Ensure an AudioContext exists even before streaming starts, so users
+    // can preview clips. While streaming, the same context feeds the broadcast.
+    if (!audioCtxRef.current) {
+      try {
+        const Ctx: typeof AudioContext =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtxRef.current = new Ctx();
+        audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+      } catch {
+        setVoiceError("Audio is not supported in this browser.");
+        return;
+      }
+    }
+    setVoiceBusy(true);
+    try {
+      const res = await generateVoiceClip({
+        data: { text, languageCode: voiceLang, voiceId },
+      });
+      // Refresh balance immediately so the user sees the deduction.
+      setCredits((c) => Math.max(0, c - res.creditsDeducted));
+      creditsRef.current = Math.max(0, creditsRef.current - res.creditsDeducted);
+
+      const ctx = audioCtxRef.current!;
+      if (ctx.state === "suspended") await ctx.resume();
+      const bin = atob(res.audioBase64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      // Route to the broadcast destination so viewers hear it…
+      if (audioDestRef.current) source.connect(audioDestRef.current);
+      // …and to the local speakers so the streamer hears it too.
+      source.connect(ctx.destination);
+      source.start();
+      setVoiceInfo(
+        `Played ${res.durationSeconds}s in ${voiceLangs.find((l) => l.code === voiceLang)?.name ?? voiceLang} — ${res.creditsDeducted} credits used.`,
+      );
+      setVoiceText("");
+      setVoiceEstimate(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Voice generation failed. Please try again.";
+      setVoiceError(msg);
+    } finally {
+      setVoiceBusy(false);
+    }
   };
 
   const mmss = (s: number) =>
@@ -705,6 +838,79 @@ function StreamPage() {
               >
                 <ExternalLink className="h-3 w-3" /> Open output preview
               </a>
+            )}
+          </SidePanel>
+
+          <SidePanel title={
+            <span className="inline-flex items-center gap-1.5">
+              <Languages className="h-3.5 w-3.5 text-primary" /> Speak in Another Language
+            </span>
+          }>
+            <p className="text-xs text-muted-foreground -mt-1 mb-2">
+              Type in English, pick a language and a voice — your audience hears it spoken live.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={voiceLang}
+                onChange={(e) => setVoiceLang(e.target.value)}
+                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                aria-label="Target language"
+              >
+                {voiceLangs.map((l) => (
+                  <option key={l.code} value={l.code}>{l.name}</option>
+                ))}
+              </select>
+              <select
+                value={voiceId}
+                onChange={(e) => setVoiceId(e.target.value)}
+                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                aria-label="Voice style"
+              >
+                {voiceList.map((v) => (
+                  <option key={v.id} value={v.id}>{v.label}</option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              value={voiceText}
+              onChange={(e) => setVoiceText(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="Type a message in English…"
+              className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:border-primary"
+            />
+            <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>
+                {voiceEstimate
+                  ? `≈ ${voiceEstimate.credits} credits (${voiceEstimate.seconds}s)`
+                  : voicePricing
+                    ? `${voicePricing.creditsPerMinute} credits / min`
+                    : ""}
+              </span>
+              <span>{voiceText.length}/2000</span>
+            </div>
+            {voiceError && (
+              <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
+                {voiceError}
+              </div>
+            )}
+            {voiceInfo && !voiceError && (
+              <div className="mt-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-primary">
+                {voiceInfo}
+              </div>
+            )}
+            <button
+              onClick={sendVoiceClip}
+              disabled={voiceBusy || !voiceText.trim() || !voiceId}
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              <Send className="h-3.5 w-3.5" />
+              {voiceBusy ? "Generating…" : streaming ? "Speak on Stream" : "Generate & Preview"}
+            </button>
+            {!streaming && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                You can preview clips before going live. While streaming, generated audio is mixed into your broadcast.
+              </p>
             )}
           </SidePanel>
 
