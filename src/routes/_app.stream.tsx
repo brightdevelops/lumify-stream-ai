@@ -116,6 +116,32 @@ function StreamPage() {
       });
   }, [user]);
 
+  // Load voice config (languages + voice presets) once.
+  useEffect(() => {
+    getVoiceConfig()
+      .then((cfg) => {
+        setVoiceLangs(cfg.languages);
+        setVoiceList(cfg.voices);
+        setVoicePricing({ creditsPerMinute: cfg.creditsPerMinute, nairaPerCredit: cfg.nairaPerCredit });
+        setVoiceId((prev) => prev || cfg.voices[0]?.id || "");
+      })
+      .catch(() => {});
+  }, []);
+
+  // Debounced estimate as the user types.
+  useEffect(() => {
+    if (!voiceText.trim()) {
+      setVoiceEstimate(null);
+      return;
+    }
+    const handle = setTimeout(() => {
+      estimateVoiceCost({ data: { text: voiceText.trim() } })
+        .then((r) => setVoiceEstimate({ credits: r.estimatedCredits, seconds: r.estimatedSeconds }))
+        .catch(() => setVoiceEstimate(null));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [voiceText]);
+
 
   useEffect(() => {
     return () => {
