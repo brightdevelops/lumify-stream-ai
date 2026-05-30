@@ -841,6 +841,79 @@ function StreamPage() {
             )}
           </SidePanel>
 
+          <SidePanel title={
+            <span className="inline-flex items-center gap-1.5">
+              <Languages className="h-3.5 w-3.5 text-primary" /> Speak in Another Language
+            </span>
+          }>
+            <p className="text-xs text-muted-foreground -mt-1 mb-2">
+              Type in English, pick a language and a voice — your audience hears it spoken live.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={voiceLang}
+                onChange={(e) => setVoiceLang(e.target.value)}
+                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                aria-label="Target language"
+              >
+                {voiceLangs.map((l) => (
+                  <option key={l.code} value={l.code}>{l.name}</option>
+                ))}
+              </select>
+              <select
+                value={voiceId}
+                onChange={(e) => setVoiceId(e.target.value)}
+                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+                aria-label="Voice style"
+              >
+                {voiceList.map((v) => (
+                  <option key={v.id} value={v.id}>{v.label}</option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              value={voiceText}
+              onChange={(e) => setVoiceText(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="Type a message in English…"
+              className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:border-primary"
+            />
+            <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>
+                {voiceEstimate
+                  ? `≈ ${voiceEstimate.credits} credits (${voiceEstimate.seconds}s)`
+                  : voicePricing
+                    ? `${voicePricing.creditsPerMinute} credits / min`
+                    : ""}
+              </span>
+              <span>{voiceText.length}/2000</span>
+            </div>
+            {voiceError && (
+              <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
+                {voiceError}
+              </div>
+            )}
+            {voiceInfo && !voiceError && (
+              <div className="mt-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-primary">
+                {voiceInfo}
+              </div>
+            )}
+            <button
+              onClick={sendVoiceClip}
+              disabled={voiceBusy || !voiceText.trim() || !voiceId}
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              <Send className="h-3.5 w-3.5" />
+              {voiceBusy ? "Generating…" : streaming ? "Speak on Stream" : "Generate & Preview"}
+            </button>
+            {!streaming && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                You can preview clips before going live. While streaming, generated audio is mixed into your broadcast.
+              </p>
+            )}
+          </SidePanel>
+
           <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-4 w-4" /> Top Up Credits
           </Link>
