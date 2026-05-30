@@ -85,6 +85,22 @@ function StreamPage() {
   const durationRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
 
+  // Voice-over (Speak in Another Language) state
+  type LangOpt = { code: string; name: string };
+  type VoiceOpt = { id: string; label: string; description: string };
+  const [voiceLangs, setVoiceLangs] = useState<LangOpt[]>([]);
+  const [voiceList, setVoiceList] = useState<VoiceOpt[]>([]);
+  const [voiceLang, setVoiceLang] = useState<string>("es");
+  const [voiceId, setVoiceId] = useState<string>("");
+  const [voiceText, setVoiceText] = useState<string>("");
+  const [voiceEstimate, setVoiceEstimate] = useState<{ credits: number; seconds: number } | null>(null);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceInfo, setVoiceInfo] = useState<string | null>(null);
+  const [voicePricing, setVoicePricing] = useState<{ creditsPerMinute: number; nairaPerCredit: number } | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+
   useEffect(() => {
     if (!user) return;
     supabase
