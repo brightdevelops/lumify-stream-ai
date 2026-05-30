@@ -505,7 +505,7 @@ function Stat({ label, value, sub, icon: Icon, highlight }: { label: string; val
 function Section({ title, icon: Icon, actions, children }: { title: string; icon: typeof Users; actions?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-4">
+      <div className="px-4 sm:px-5 py-3 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-sm font-medium flex items-center gap-2"><Icon className="h-4 w-4 text-primary" /> {title}</h2>
         {actions}
       </div>
