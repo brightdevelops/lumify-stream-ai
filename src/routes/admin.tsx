@@ -314,8 +314,8 @@ function AdminPage() {
           title="Users"
           icon={Users}
           actions={
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1 text-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <div className="flex gap-1 text-xs flex-wrap">
                 {(["all", "active", "inactive"] as const).map((t) => (
                   <button key={t} onClick={() => setUserFilter(t)}
                     className={`px-3 py-1 rounded-md border capitalize ${userFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
@@ -326,45 +326,74 @@ function AdminPage() {
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search email or name…"
-                  className="h-8 w-56 pl-7 rounded-md border border-border bg-background px-3 text-xs" />
+                  className="h-8 w-full sm:w-56 pl-7 rounded-md border border-border bg-background px-3 text-xs" />
               </div>
             </div>
           }
         >
-          <Tbl headers={[
-            { k: "email", l: "User" },
-            { k: "created_at", l: "Joined" },
-            { k: "last_seen", l: "Last seen" },
-            { k: "balance", l: "Balance" },
-            { k: "total_credits_purchased", l: "Purchased" },
-            { k: "total_credits_used", l: "Used" },
-            { k: "total_spent", l: "Spent" },
-            { k: "none", l: "Status" },
-          ]} sort={sort} onSort={toggleSort}>
+          <div className="hidden md:block">
+            <Tbl headers={[
+              { k: "email", l: "User" },
+              { k: "created_at", l: "Joined" },
+              { k: "last_seen", l: "Last seen" },
+              { k: "balance", l: "Balance" },
+              { k: "total_credits_purchased", l: "Purchased" },
+              { k: "total_credits_used", l: "Used" },
+              { k: "total_spent", l: "Spent" },
+              { k: "none", l: "Status" },
+            ]} sort={sort} onSort={toggleSort}>
+              {filteredUsers.length === 0 ? (
+                <tr><Td colSpan={8} className="text-center text-muted-foreground py-8">No users.</Td></tr>
+              ) : filteredUsers.map((u) => (
+                <tr key={u.user_id} className="border-t border-border hover:bg-secondary/40 cursor-pointer" onClick={() => setSelectedUser(u)}>
+                  <Td>
+                    <div className="font-medium flex items-center gap-1.5">{u.full_name || u.email.split("@")[0]}
+                      {u.is_admin && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{u.email}</div>
+                  </Td>
+                  <Td className="text-muted-foreground">{fmtDate(u.created_at)}</Td>
+                  <Td className={`text-xs ${u.last_seen ? "text-foreground" : "text-muted-foreground italic"}`}>{u.last_seen ? fmtDate(u.last_seen) : "Never"}</Td>
+                  <Td className="text-primary font-medium">{fmtNum(u.balance)}</Td>
+                  <Td>{fmtNum(u.total_credits_purchased)}</Td>
+                  <Td className="text-muted-foreground">{fmtNum(u.total_credits_used)}</Td>
+                  <Td>{fmtMoney(u.total_spent)}</Td>
+                  <Td>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : u.last_seen == null ? "bg-muted text-muted-foreground" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
+                      {u.is_streaming ? "Streaming" : u.last_seen == null ? "Never seen" : isActive(u) ? "Active" : "Idle"}
+                    </span>
+                  </Td>
+                </tr>
+              ))}
+            </Tbl>
+          </div>
+          <div className="md:hidden divide-y divide-border">
             {filteredUsers.length === 0 ? (
-              <tr><Td colSpan={8} className="text-center text-muted-foreground py-8">No users.</Td></tr>
+              <div className="p-6 text-center text-sm text-muted-foreground">No users.</div>
             ) : filteredUsers.map((u) => (
-              <tr key={u.user_id} className="border-t border-border hover:bg-secondary/40 cursor-pointer" onClick={() => setSelectedUser(u)}>
-                <Td>
-                  <div className="font-medium flex items-center gap-1.5">{u.full_name || u.email.split("@")[0]}
-                    {u.is_admin && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
+              <button key={u.user_id} onClick={() => setSelectedUser(u)} className="w-full text-left p-4 hover:bg-secondary/40">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm flex items-center gap-1.5">
+                      {u.full_name || u.email.split("@")[0]}
+                      {u.is_admin && <ShieldCheck className="h-3.5 w-3.5 text-primary" />}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">{u.email}</div>
-                </Td>
-                <Td className="text-muted-foreground">{fmtDate(u.created_at)}</Td>
-                <Td className={`text-xs ${u.last_seen ? "text-foreground" : "text-muted-foreground italic"}`}>{u.last_seen ? fmtDate(u.last_seen) : "Never"}</Td>
-                <Td className="text-primary font-medium">{fmtNum(u.balance)}</Td>
-                <Td>{fmtNum(u.total_credits_purchased)}</Td>
-                <Td className="text-muted-foreground">{fmtNum(u.total_credits_used)}</Td>
-                <Td>{fmtMoney(u.total_spent)}</Td>
-                <Td>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : u.last_seen == null ? "bg-muted text-muted-foreground" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
-                    {u.is_streaming ? "Streaming" : u.last_seen == null ? "Never seen" : isActive(u) ? "Active" : "Idle"}
+                  <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full ${u.is_streaming ? "bg-primary/15 text-primary" : u.last_seen == null ? "bg-muted text-muted-foreground" : isActive(u) ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
+                    {u.is_streaming ? "Streaming" : u.last_seen == null ? "Never" : isActive(u) ? "Active" : "Idle"}
                   </span>
-                </Td>
-              </tr>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <span><span className="text-muted-foreground">Balance:</span> <span className="text-primary font-medium">{fmtNum(u.balance)}</span></span>
+                  <span><span className="text-muted-foreground">Spent:</span> {fmtMoney(u.total_spent)}</span>
+                  <span><span className="text-muted-foreground">Purchased:</span> {fmtNum(u.total_credits_purchased)}</span>
+                  <span><span className="text-muted-foreground">Used:</span> {fmtNum(u.total_credits_used)}</span>
+                  <span className="col-span-2 text-muted-foreground text-[11px]">Joined {fmtDate(u.created_at)} · Last {u.last_seen ? fmtDate(u.last_seen) : "Never"}</span>
+                </div>
+              </button>
             ))}
-          </Tbl>
+          </div>
         </Section>
 
         {/* Credits monitor */}
