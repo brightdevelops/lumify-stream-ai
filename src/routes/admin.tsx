@@ -277,17 +277,35 @@ function AdminPage() {
           {active.length === 0 ? (
             <Empty>No active streams.</Empty>
           ) : (
-            <Tbl headers={["User", "Started", "Duration", "Credits used", "Credits left"]}>
-              {active.map((s) => (
-                <tr key={s.session_id} className="border-t border-border">
-                  <Td><div className="font-medium">{s.full_name || s.user_email?.split("@")[0]}</div><div className="text-xs text-muted-foreground">{s.user_email}</div></Td>
-                  <Td>{fmtDate(s.started_at)}</Td>
-                  <Td>{fmtDuration(s.duration_seconds)}</Td>
-                  <Td>{fmtNum(s.credits_used)}</Td>
-                  <Td className="text-primary font-medium">{fmtNum(s.credits_remaining)}</Td>
-                </tr>
-              ))}
-            </Tbl>
+            <>
+              <div className="hidden md:block">
+                <Tbl headers={["User", "Started", "Duration", "Credits used", "Credits left"]}>
+                  {active.map((s) => (
+                    <tr key={s.session_id} className="border-t border-border">
+                      <Td><div className="font-medium">{s.full_name || s.user_email?.split("@")[0]}</div><div className="text-xs text-muted-foreground">{s.user_email}</div></Td>
+                      <Td>{fmtDate(s.started_at)}</Td>
+                      <Td>{fmtDuration(s.duration_seconds)}</Td>
+                      <Td>{fmtNum(s.credits_used)}</Td>
+                      <Td className="text-primary font-medium">{fmtNum(s.credits_remaining)}</Td>
+                    </tr>
+                  ))}
+                </Tbl>
+              </div>
+              <div className="md:hidden divide-y divide-border">
+                {active.map((s) => (
+                  <div key={s.session_id} className="p-4 space-y-1">
+                    <div className="font-medium text-sm">{s.full_name || s.user_email?.split("@")[0]}</div>
+                    <div className="text-xs text-muted-foreground truncate">{s.user_email}</div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-2">
+                      <span><span className="text-muted-foreground">Started:</span> {fmtDate(s.started_at)}</span>
+                      <span><span className="text-muted-foreground">Duration:</span> {fmtDuration(s.duration_seconds)}</span>
+                      <span><span className="text-muted-foreground">Used:</span> {fmtNum(s.credits_used)}</span>
+                      <span className="text-primary font-medium">Left: {fmtNum(s.credits_remaining)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </Section>
 
