@@ -132,7 +132,7 @@ function CreditsPage() {
 
       <div className="mt-6 flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
         <Info className="h-4 w-4 text-primary" />
-        <span><span className="text-foreground font-medium">2 credits per second</span> · 1 credit = ₦23 · Credits never expire</span>
+        <span><span className="text-foreground font-medium">2 credits per second (₦46/sec)</span> · 1 credit = ₦23 · Credits never expire</span>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6">
