@@ -29,7 +29,7 @@ export const Route = createFileRoute("/admin")({
 const fmtMoney = (n: number) => `₦${Number(n || 0).toLocaleString()}`;
 const fmtNum = (n: number) => Number(n || 0).toLocaleString();
 const fmtDate = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "—";
 const fmtDuration = (s: number) => {
   const m = Math.floor(s / 60); const sec = s % 60;
   return `${m}m ${sec}s`;
