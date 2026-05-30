@@ -77,12 +77,12 @@ function AdminPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      if (!data.user) { navigate({ to: "/" }); return; }
+      if (!data.user) { navigate({ to: "/login" }); return; }
       try {
         const r = await checkFn();
-        if (!r.isAdmin) { navigate({ to: "/" }); return; }
+        if (!r.isAdmin) { navigate({ to: "/dashboard" }); return; }
         setAuthChecked(true);
-      } catch { navigate({ to: "/" }); }
+      } catch { navigate({ to: "/login" }); }
     })();
   }, [checkFn, navigate]);
 
