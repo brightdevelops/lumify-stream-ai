@@ -495,6 +495,74 @@ function StreamPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Generate a translated voice clip and play it through the outgoing stream.
+  const sendVoiceClip = async () => {
+    setVoiceError(null);
+    setVoiceInfo(null);
+    const text = voiceText.trim();
+    if (!text) {
+      setVoiceError("Type something to say first.");
+      return;
+    }
+    if (!voiceId) {
+      setVoiceError("Pick a voice style.");
+      return;
+    }
+    if (voiceEstimate && credits < voiceEstimate.credits) {
+      setVoiceError(
+        `Not enough credits. This clip needs about ${voiceEstimate.credits} credits — top up to continue.`,
+      );
+      return;
+    }
+    // Ensure an AudioContext exists even before streaming starts, so users
+    // can preview clips. While streaming, the same context feeds the broadcast.
+    if (!audioCtxRef.current) {
+      try {
+        const Ctx: typeof AudioContext =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtxRef.current = new Ctx();
+        audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+      } catch {
+        setVoiceError("Audio is not supported in this browser.");
+        return;
+      }
+    }
+    setVoiceBusy(true);
+    try {
+      const res = await generateVoiceClip({
+        data: { text, languageCode: voiceLang, voiceId },
+      });
+      // Refresh balance immediately so the user sees the deduction.
+      setCredits((c) => Math.max(0, c - res.creditsDeducted));
+      creditsRef.current = Math.max(0, creditsRef.current - res.creditsDeducted);
+
+      const ctx = audioCtxRef.current!;
+      if (ctx.state === "suspended") await ctx.resume();
+      const bin = atob(res.audioBase64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      // Route to the broadcast destination so viewers hear it…
+      if (audioDestRef.current) source.connect(audioDestRef.current);
+      // …and to the local speakers so the streamer hears it too.
+      source.connect(ctx.destination);
+      source.start();
+      setVoiceInfo(
+        `Played ${res.durationSeconds}s in ${voiceLangs.find((l) => l.code === voiceLang)?.name ?? voiceLang} — ${res.creditsDeducted} credits used.`,
+      );
+      setVoiceText("");
+      setVoiceEstimate(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Voice generation failed. Please try again.";
+      setVoiceError(msg);
+    } finally {
+      setVoiceBusy(false);
+    }
+  };
+
   const mmss = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   const pct = startingCredits > 0 ? Math.max(0, Math.min(100, (credits / startingCredits) * 100)) : 0;
