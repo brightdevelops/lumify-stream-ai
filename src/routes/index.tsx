@@ -115,7 +115,7 @@ function Landing() {
       <section id="pricing" className="mx-auto max-w-6xl px-6 pb-32">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <h2 className="text-4xl md:text-5xl">Simple, transparent credits</h2>
-          <p className="mt-4 text-muted-foreground">Two credits per second of streaming. Pick a pack and go — credits never expire.</p>
+          <p className="mt-4 text-muted-foreground">2 credits per second (₦46/sec) · 1 credit = ₦23 · Credits never expire.</p>
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {packages.map((p) => (
