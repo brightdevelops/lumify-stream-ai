@@ -411,20 +411,40 @@ function AdminPage() {
             </div>
           }
         >
-          <Tbl headers={["User", "Type", "Credits", "Amount", "Description", "Date"]}>
+          <div className="hidden md:block">
+            <Tbl headers={["User", "Type", "Credits", "Amount", "Description", "Date"]}>
+              {transactions.length === 0 ? (
+                <tr><Td colSpan={6} className="text-center text-muted-foreground py-8">No transactions.</Td></tr>
+              ) : transactions.map((t) => (
+                <tr key={t.id} className="border-t border-border">
+                  <Td>{t.user_email ?? <span className="text-muted-foreground italic">unknown</span>}</Td>
+                  <Td><span className={`text-xs px-2 py-0.5 rounded-full ${t.type === "purchase" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>{t.type}</span></Td>
+                  <Td>{fmtNum(t.credits)}</Td>
+                  <Td>{fmtMoney(t.amount)}</Td>
+                  <Td className="text-muted-foreground truncate max-w-xs">{t.description || "—"}</Td>
+                  <Td className="text-muted-foreground text-xs whitespace-nowrap">{fmtDate(t.created_at)}</Td>
+                </tr>
+              ))}
+            </Tbl>
+          </div>
+          <div className="md:hidden divide-y divide-border">
             {transactions.length === 0 ? (
-              <tr><Td colSpan={6} className="text-center text-muted-foreground py-8">No transactions.</Td></tr>
+              <div className="p-6 text-center text-sm text-muted-foreground">No transactions.</div>
             ) : transactions.map((t) => (
-              <tr key={t.id} className="border-t border-border">
-                <Td>{t.user_email ?? <span className="text-muted-foreground italic">unknown</span>}</Td>
-                <Td><span className={`text-xs px-2 py-0.5 rounded-full ${t.type === "purchase" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>{t.type}</span></Td>
-                <Td>{fmtNum(t.credits)}</Td>
-                <Td>{fmtMoney(t.amount)}</Td>
-                <Td className="text-muted-foreground truncate max-w-xs">{t.description || "—"}</Td>
-                <Td className="text-muted-foreground text-xs whitespace-nowrap">{fmtDate(t.created_at)}</Td>
-              </tr>
+              <div key={t.id} className="p-4 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium truncate">{t.user_email ?? <span className="text-muted-foreground italic">unknown</span>}</span>
+                  <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full ${t.type === "purchase" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>{t.type}</span>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  <span><span className="text-muted-foreground">Credits:</span> {fmtNum(t.credits)}</span>
+                  <span><span className="text-muted-foreground">Amount:</span> {fmtMoney(t.amount)}</span>
+                </div>
+                {t.description && <div className="text-xs text-muted-foreground truncate">{t.description}</div>}
+                <div className="text-[11px] text-muted-foreground">{fmtDate(t.created_at)}</div>
+              </div>
             ))}
-          </Tbl>
+          </div>
         </Section>
 
       </div>
