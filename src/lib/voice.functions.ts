@@ -55,8 +55,8 @@ export const VOICE_STYLES = [
   { id: "kPtEHAvRnjUJFv7SK9WI", label: "Robotic", description: "Synthetic, processed voice" },
 ] as const;
 
-const VOICE_IDS = new Set(VOICE_STYLES.map((v) => v.id));
-const LANG_CODES = new Set(SUPPORTED_LANGUAGES.map((l) => l.code));
+const VOICE_IDS: Set<string> = new Set(VOICE_STYLES.map((v) => v.id));
+const LANG_CODES: Set<string> = new Set(SUPPORTED_LANGUAGES.map((l) => l.code));
 
 const languageName = (code: string) =>
   SUPPORTED_LANGUAGES.find((l) => l.code === code)?.name ?? code;
