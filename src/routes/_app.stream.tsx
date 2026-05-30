@@ -294,6 +294,14 @@ function StreamPage() {
     mediaStreamRef.current = null;
     if (inputVideoRef.current) inputVideoRef.current.srcObject = null;
     if (outputVideoRef.current) outputVideoRef.current.srcObject = null;
+    try {
+      audioDestRef.current?.disconnect();
+    } catch {}
+    audioDestRef.current = null;
+    try {
+      audioCtxRef.current?.close();
+    } catch {}
+    audioCtxRef.current = null;
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
