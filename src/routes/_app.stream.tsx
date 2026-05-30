@@ -388,9 +388,23 @@ function StreamPage() {
             outputVideoRef.current.play().catch(() => {});
           }
           try {
+            // Set up a persistent audio context + destination so generated
+            // voice clips can be mixed into the outgoing broadcast stream.
+            if (!audioCtxRef.current) {
+              const Ctx: typeof AudioContext =
+                window.AudioContext ||
+                (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+              audioCtxRef.current = new Ctx();
+              audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+            }
+            const broadcastStream = new MediaStream();
+            transformedStream.getVideoTracks().forEach((t) => broadcastStream.addTrack(t));
+            const audioTrack = audioDestRef.current?.stream.getAudioTracks()[0];
+            if (audioTrack) broadcastStream.addTrack(audioTrack);
+
             broadcasterStopRef.current?.();
             if (user) {
-              broadcasterStopRef.current = startBroadcaster(user.id, transformedStream);
+              broadcasterStopRef.current = startBroadcaster(user.id, broadcastStream);
             }
           } catch (e) {
             console.error("Broadcaster start failed", e);
