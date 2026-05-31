@@ -1036,12 +1036,91 @@ function StreamPage() {
               <Send className="h-3.5 w-3.5" />
               {voiceBusy ? "Generating…" : streaming ? "Speak on Stream" : "Generate & Preview"}
             </button>
+            {lastClip && (
+              <div className="mt-2 flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
+                <span className="flex-1 text-[11px] text-foreground truncate">
+                  Last clip: <span className="text-muted-foreground">{lastClip.sourceText}</span>
+                </span>
+                <button
+                  onClick={() => playBase64Audio(lastClip.audioBase64).catch(() => {})}
+                  className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary"
+                  title="Replay (free)"
+                >
+                  <Volume2 className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={saveLastClip}
+                  disabled={savingClip}
+                  className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  title="Save this phrase for free reuse"
+                >
+                  <Bookmark className="h-3 w-3" />
+                  {savingClip ? "Saving…" : "Save"}
+                </button>
+              </div>
+            )}
             {!streaming && (
               <p className="mt-2 text-[11px] text-muted-foreground">
                 You can preview clips before going live. While streaming, generated audio is mixed into your broadcast.
               </p>
             )}
           </SidePanel>
+
+          <SidePanel title={
+            <span className="inline-flex items-center gap-1.5">
+              <Bookmark className="h-3.5 w-3.5 text-primary" /> Saved Phrases
+              <span className="ml-1 rounded-sm border border-border bg-background/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                {savedPhrases.length}
+              </span>
+            </span>
+          }>
+            <p className="text-xs text-muted-foreground -mt-1 mb-2">
+              Replay saved clips for free — generating new audio is the only thing that costs credits.
+            </p>
+            {savedLoading ? (
+              <p className="text-[11px] text-muted-foreground">Loading…</p>
+            ) : savedPhrases.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">
+                No saved phrases yet. Generate a clip and tap Save to keep it here.
+              </p>
+            ) : (
+              <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {savedPhrases.map((p) => (
+                  <li
+                    key={p.id}
+                    className="rounded-md border border-border bg-background/60 px-2 py-1.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-xs font-medium text-foreground">{p.label}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {p.language_name} · {p.voice_label} · {p.duration_seconds}s
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => playSavedPhrase(p)}
+                        disabled={playingId === p.id}
+                        className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary disabled:opacity-50"
+                        title={streaming ? "Play on stream (free)" : "Preview (free)"}
+                      >
+                        <Volume2 className="h-3 w-3" />
+                        {playingId === p.id ? "Playing…" : "Play"}
+                      </button>
+                      <button
+                        onClick={() => removeSavedPhrase(p.id)}
+                        className="inline-flex items-center justify-center rounded border border-border bg-card p-1 text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                        title="Delete saved phrase"
+                        aria-label="Delete saved phrase"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SidePanel>
+
 
           <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-4 w-4" /> Top Up Credits
