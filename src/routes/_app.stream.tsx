@@ -537,6 +537,40 @@ function StreamPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Lazily build an AudioContext + broadcast destination for voice playback.
+  const ensureAudio = (): boolean => {
+    if (audioCtxRef.current) return true;
+    try {
+      const Ctx: typeof AudioContext =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioCtxRef.current = new Ctx();
+      audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Decode + play a base64 MP3 to local speakers + (if streaming) the broadcast.
+  const playBase64Audio = async (audioBase64: string) => {
+    if (!ensureAudio()) throw new Error("Audio is not supported in this browser.");
+    const ctx = audioCtxRef.current!;
+    if (ctx.state === "suspended") await ctx.resume();
+    const bin = atob(audioBase64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    if (audioDestRef.current) source.connect(audioDestRef.current);
+    source.connect(ctx.destination);
+    source.start();
+    return new Promise<void>((resolve) => {
+      source.onended = () => resolve();
+    });
+  };
+
   // Generate a translated voice clip and play it through the outgoing stream.
   const sendVoiceClip = async () => {
     setVoiceError(null);
@@ -556,19 +590,9 @@ function StreamPage() {
       );
       return;
     }
-    // Ensure an AudioContext exists even before streaming starts, so users
-    // can preview clips. While streaming, the same context feeds the broadcast.
-    if (!audioCtxRef.current) {
-      try {
-        const Ctx: typeof AudioContext =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        audioCtxRef.current = new Ctx();
-        audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
-      } catch {
-        setVoiceError("Audio is not supported in this browser.");
-        return;
-      }
+    if (!ensureAudio()) {
+      setVoiceError("Audio is not supported in this browser.");
+      return;
     }
     setVoiceBusy(true);
     try {
@@ -579,21 +603,24 @@ function StreamPage() {
       setCredits((c) => Math.max(0, c - res.creditsDeducted));
       creditsRef.current = Math.max(0, creditsRef.current - res.creditsDeducted);
 
-      const ctx = audioCtxRef.current!;
-      if (ctx.state === "suspended") await ctx.resume();
-      const bin = atob(res.audioBase64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      // Route to the broadcast destination so viewers hear it…
-      if (audioDestRef.current) source.connect(audioDestRef.current);
-      // …and to the local speakers so the streamer hears it too.
-      source.connect(ctx.destination);
-      source.start();
+      const langName = voiceLangs.find((l) => l.code === voiceLang)?.name ?? voiceLang;
+      const voiceLabel = voiceList.find((v) => v.id === voiceId)?.label ?? "Voice";
+      setLastClip({
+        audioBase64: res.audioBase64,
+        mimeType: res.mimeType,
+        durationSeconds: res.durationSeconds,
+        creditsDeducted: res.creditsDeducted,
+        languageCode: voiceLang,
+        languageName: langName,
+        voiceId,
+        voiceLabel,
+        sourceText: text,
+        translatedText: res.translatedText,
+      });
+
+      await playBase64Audio(res.audioBase64);
       setVoiceInfo(
-        `Played ${res.durationSeconds}s in ${voiceLangs.find((l) => l.code === voiceLang)?.name ?? voiceLang} — ${res.creditsDeducted} credits used.`,
+        `Played ${res.durationSeconds}s in ${langName} — ${res.creditsDeducted} credits used.`,
       );
       setVoiceText("");
       setVoiceEstimate(null);
@@ -604,6 +631,66 @@ function StreamPage() {
       setVoiceBusy(false);
     }
   };
+
+  // Save the most recent generated clip — free, since the user already paid.
+  const saveLastClip = async () => {
+    if (!lastClip) return;
+    setSavingClip(true);
+    setVoiceError(null);
+    try {
+      const defaultLabel = lastClip.sourceText.slice(0, 60);
+      const label = (typeof window !== "undefined"
+        ? window.prompt("Name this phrase", defaultLabel)
+        : defaultLabel) || defaultLabel;
+      const { phrase } = await savePhrase({
+        data: {
+          label: label.trim().slice(0, 120) || defaultLabel,
+          sourceText: lastClip.sourceText,
+          languageCode: lastClip.languageCode,
+          voiceId: lastClip.voiceId,
+          durationSeconds: lastClip.durationSeconds,
+          creditsSpent: lastClip.creditsDeducted,
+          mimeType: lastClip.mimeType,
+          audioBase64: lastClip.audioBase64,
+        },
+      });
+      setSavedPhrases((prev) => [phrase as SavedPhrase, ...prev]);
+      setVoiceInfo("Saved — replay any time for free.");
+      setLastClip(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Couldn't save that phrase. Please try again.";
+      setVoiceError(msg);
+    } finally {
+      setSavingClip(false);
+    }
+  };
+
+  // Replay a saved clip — never costs credits.
+  const playSavedPhrase = async (p: SavedPhrase) => {
+    setVoiceError(null);
+    setPlayingId(p.id);
+    try {
+      await playBase64Audio(p.audio_base64);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Couldn't play that clip.";
+      setVoiceError(msg);
+    } finally {
+      setPlayingId(null);
+    }
+  };
+
+  const removeSavedPhrase = async (id: string) => {
+    if (typeof window !== "undefined" && !window.confirm("Delete this saved phrase?")) return;
+    const prev = savedPhrases;
+    setSavedPhrases((p) => p.filter((x) => x.id !== id));
+    try {
+      await deleteSavedPhrase({ data: { id } });
+    } catch {
+      setSavedPhrases(prev);
+      setVoiceError("Couldn't delete that phrase. Please try again.");
+    }
+  };
+
 
   const mmss = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
