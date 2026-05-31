@@ -98,6 +98,38 @@ function StreamPage() {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceInfo, setVoiceInfo] = useState<string | null>(null);
   const [voicePricing, setVoicePricing] = useState<{ creditsPerMinute: number; nairaPerCredit: number } | null>(null);
+  // Last freshly-generated clip (eligible to save).
+  type LastClip = {
+    audioBase64: string;
+    mimeType: string;
+    durationSeconds: number;
+    creditsDeducted: number;
+    languageCode: string;
+    languageName: string;
+    voiceId: string;
+    voiceLabel: string;
+    sourceText: string;
+    translatedText: string;
+  };
+  const [lastClip, setLastClip] = useState<LastClip | null>(null);
+  const [savingClip, setSavingClip] = useState(false);
+  type SavedPhrase = {
+    id: string;
+    label: string;
+    source_text: string;
+    language_code: string;
+    language_name: string;
+    voice_id: string;
+    voice_label: string;
+    duration_seconds: number;
+    credits_spent: number;
+    mime_type: string;
+    audio_base64: string;
+    created_at: string;
+  };
+  const [savedPhrases, setSavedPhrases] = useState<SavedPhrase[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
 
