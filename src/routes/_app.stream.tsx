@@ -160,6 +160,16 @@ function StreamPage() {
       .catch(() => {});
   }, []);
 
+  // Load this user's saved phrases.
+  useEffect(() => {
+    if (!user) return;
+    setSavedLoading(true);
+    listSavedPhrases()
+      .then(({ phrases }) => setSavedPhrases(phrases as SavedPhrase[]))
+      .catch(() => {})
+      .finally(() => setSavedLoading(false));
+  }, [user]);
+
   // Debounced estimate as the user types.
   useEffect(() => {
     if (!voiceText.trim()) {
