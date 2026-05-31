@@ -1,13 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Languages, Send } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Languages, Send, Bookmark, Trash2, Volume2 } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
-import { getVoiceConfig, estimateVoiceCost, generateVoiceClip } from "@/lib/voice.functions";
+import { getVoiceConfig, estimateVoiceCost, generateVoiceClip, listSavedPhrases, savePhrase, deleteSavedPhrase } from "@/lib/voice.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
