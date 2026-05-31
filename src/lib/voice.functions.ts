@@ -227,3 +227,83 @@ export const generateVoiceClip = createServerFn({ method: "POST" })
       translatedText: speakText,
     };
   });
+
+// ----- Saved phrases -----
+// Saved clips reuse already-paid-for audio, so listing / replaying / deleting
+// them never touches credits or transactions.
+
+export const listSavedPhrases = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("saved_phrases")
+      .select(
+        "id, label, source_text, language_code, language_name, voice_id, voice_label, duration_seconds, credits_spent, mime_type, audio_base64, created_at",
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return { phrases: data ?? [] };
+  });
+
+export const savePhrase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        label: z.string().min(1).max(120),
+        sourceText: z.string().min(1).max(2000),
+        languageCode: z.string().min(2).max(8),
+        voiceId: z.string().min(8).max(64),
+        durationSeconds: z.number().int().min(1).max(3600),
+        creditsSpent: z.number().int().min(0).max(100000),
+        mimeType: z.string().min(3).max(64),
+        // base64-encoded MP3; cap ~3MB of bytes ≈ 4MB base64
+        audioBase64: z.string().min(16).max(4_500_000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const langName =
+      SUPPORTED_LANGUAGES.find((l) => l.code === data.languageCode)?.name ?? data.languageCode;
+    const voiceLabel =
+      VOICE_STYLES.find((v) => v.id === data.voiceId)?.label ?? "Voice";
+    const { data: row, error } = await supabase
+      .from("saved_phrases")
+      .insert({
+        user_id: userId,
+        label: data.label,
+        source_text: data.sourceText,
+        language_code: data.languageCode,
+        language_name: langName,
+        voice_id: data.voiceId,
+        voice_label: voiceLabel,
+        duration_seconds: data.durationSeconds,
+        credits_spent: data.creditsSpent,
+        mime_type: data.mimeType,
+        audio_base64: data.audioBase64,
+      })
+      .select(
+        "id, label, source_text, language_code, language_name, voice_id, voice_label, duration_seconds, credits_spent, mime_type, audio_base64, created_at",
+      )
+      .single();
+    if (error) throw new Error(error.message);
+    return { phrase: row };
+  });
+
+export const deleteSavedPhrase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("saved_phrases")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
