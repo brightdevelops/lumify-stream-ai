@@ -92,6 +92,54 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_phrases: {
+        Row: {
+          audio_base64: string
+          created_at: string
+          credits_spent: number
+          duration_seconds: number
+          id: string
+          label: string
+          language_code: string
+          language_name: string
+          mime_type: string
+          source_text: string
+          user_id: string
+          voice_id: string
+          voice_label: string
+        }
+        Insert: {
+          audio_base64: string
+          created_at?: string
+          credits_spent?: number
+          duration_seconds?: number
+          id?: string
+          label: string
+          language_code: string
+          language_name: string
+          mime_type?: string
+          source_text: string
+          user_id: string
+          voice_id: string
+          voice_label: string
+        }
+        Update: {
+          audio_base64?: string
+          created_at?: string
+          credits_spent?: number
+          duration_seconds?: number
+          id?: string
+          label?: string
+          language_code?: string
+          language_name?: string
+          mime_type?: string
+          source_text?: string
+          user_id?: string
+          voice_id?: string
+          voice_label?: string
+        }
+        Relationships: []
+      }
       stream_sessions: {
         Row: {
           created_at: string

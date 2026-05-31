@@ -1,13 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Languages, Send } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Languages, Send, Bookmark, Trash2, Volume2 } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
-import { getVoiceConfig, estimateVoiceCost, generateVoiceClip } from "@/lib/voice.functions";
+import { getVoiceConfig, estimateVoiceCost, generateVoiceClip, listSavedPhrases, savePhrase, deleteSavedPhrase } from "@/lib/voice.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -98,6 +98,38 @@ function StreamPage() {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceInfo, setVoiceInfo] = useState<string | null>(null);
   const [voicePricing, setVoicePricing] = useState<{ creditsPerMinute: number; nairaPerCredit: number } | null>(null);
+  // Last freshly-generated clip (eligible to save).
+  type LastClip = {
+    audioBase64: string;
+    mimeType: string;
+    durationSeconds: number;
+    creditsDeducted: number;
+    languageCode: string;
+    languageName: string;
+    voiceId: string;
+    voiceLabel: string;
+    sourceText: string;
+    translatedText: string;
+  };
+  const [lastClip, setLastClip] = useState<LastClip | null>(null);
+  const [savingClip, setSavingClip] = useState(false);
+  type SavedPhrase = {
+    id: string;
+    label: string;
+    source_text: string;
+    language_code: string;
+    language_name: string;
+    voice_id: string;
+    voice_label: string;
+    duration_seconds: number;
+    credits_spent: number;
+    mime_type: string;
+    audio_base64: string;
+    created_at: string;
+  };
+  const [savedPhrases, setSavedPhrases] = useState<SavedPhrase[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
 
@@ -127,6 +159,16 @@ function StreamPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Load this user's saved phrases.
+  useEffect(() => {
+    if (!user) return;
+    setSavedLoading(true);
+    listSavedPhrases()
+      .then(({ phrases }) => setSavedPhrases(phrases as SavedPhrase[]))
+      .catch(() => {})
+      .finally(() => setSavedLoading(false));
+  }, [user]);
 
   // Debounced estimate as the user types.
   useEffect(() => {
@@ -495,6 +537,40 @@ function StreamPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Lazily build an AudioContext + broadcast destination for voice playback.
+  const ensureAudio = (): boolean => {
+    if (audioCtxRef.current) return true;
+    try {
+      const Ctx: typeof AudioContext =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioCtxRef.current = new Ctx();
+      audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Decode + play a base64 MP3 to local speakers + (if streaming) the broadcast.
+  const playBase64Audio = async (audioBase64: string) => {
+    if (!ensureAudio()) throw new Error("Audio is not supported in this browser.");
+    const ctx = audioCtxRef.current!;
+    if (ctx.state === "suspended") await ctx.resume();
+    const bin = atob(audioBase64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    if (audioDestRef.current) source.connect(audioDestRef.current);
+    source.connect(ctx.destination);
+    source.start();
+    return new Promise<void>((resolve) => {
+      source.onended = () => resolve();
+    });
+  };
+
   // Generate a translated voice clip and play it through the outgoing stream.
   const sendVoiceClip = async () => {
     setVoiceError(null);
@@ -514,19 +590,9 @@ function StreamPage() {
       );
       return;
     }
-    // Ensure an AudioContext exists even before streaming starts, so users
-    // can preview clips. While streaming, the same context feeds the broadcast.
-    if (!audioCtxRef.current) {
-      try {
-        const Ctx: typeof AudioContext =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        audioCtxRef.current = new Ctx();
-        audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
-      } catch {
-        setVoiceError("Audio is not supported in this browser.");
-        return;
-      }
+    if (!ensureAudio()) {
+      setVoiceError("Audio is not supported in this browser.");
+      return;
     }
     setVoiceBusy(true);
     try {
@@ -537,21 +603,24 @@ function StreamPage() {
       setCredits((c) => Math.max(0, c - res.creditsDeducted));
       creditsRef.current = Math.max(0, creditsRef.current - res.creditsDeducted);
 
-      const ctx = audioCtxRef.current!;
-      if (ctx.state === "suspended") await ctx.resume();
-      const bin = atob(res.audioBase64);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      // Route to the broadcast destination so viewers hear it…
-      if (audioDestRef.current) source.connect(audioDestRef.current);
-      // …and to the local speakers so the streamer hears it too.
-      source.connect(ctx.destination);
-      source.start();
+      const langName = voiceLangs.find((l) => l.code === voiceLang)?.name ?? voiceLang;
+      const voiceLabel = voiceList.find((v) => v.id === voiceId)?.label ?? "Voice";
+      setLastClip({
+        audioBase64: res.audioBase64,
+        mimeType: res.mimeType,
+        durationSeconds: res.durationSeconds,
+        creditsDeducted: res.creditsDeducted,
+        languageCode: voiceLang,
+        languageName: langName,
+        voiceId,
+        voiceLabel,
+        sourceText: text,
+        translatedText: res.translatedText,
+      });
+
+      await playBase64Audio(res.audioBase64);
       setVoiceInfo(
-        `Played ${res.durationSeconds}s in ${voiceLangs.find((l) => l.code === voiceLang)?.name ?? voiceLang} — ${res.creditsDeducted} credits used.`,
+        `Played ${res.durationSeconds}s in ${langName} — ${res.creditsDeducted} credits used.`,
       );
       setVoiceText("");
       setVoiceEstimate(null);
@@ -562,6 +631,66 @@ function StreamPage() {
       setVoiceBusy(false);
     }
   };
+
+  // Save the most recent generated clip — free, since the user already paid.
+  const saveLastClip = async () => {
+    if (!lastClip) return;
+    setSavingClip(true);
+    setVoiceError(null);
+    try {
+      const defaultLabel = lastClip.sourceText.slice(0, 60);
+      const label = (typeof window !== "undefined"
+        ? window.prompt("Name this phrase", defaultLabel)
+        : defaultLabel) || defaultLabel;
+      const { phrase } = await savePhrase({
+        data: {
+          label: label.trim().slice(0, 120) || defaultLabel,
+          sourceText: lastClip.sourceText,
+          languageCode: lastClip.languageCode,
+          voiceId: lastClip.voiceId,
+          durationSeconds: lastClip.durationSeconds,
+          creditsSpent: lastClip.creditsDeducted,
+          mimeType: lastClip.mimeType,
+          audioBase64: lastClip.audioBase64,
+        },
+      });
+      setSavedPhrases((prev) => [phrase as SavedPhrase, ...prev]);
+      setVoiceInfo("Saved — replay any time for free.");
+      setLastClip(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Couldn't save that phrase. Please try again.";
+      setVoiceError(msg);
+    } finally {
+      setSavingClip(false);
+    }
+  };
+
+  // Replay a saved clip — never costs credits.
+  const playSavedPhrase = async (p: SavedPhrase) => {
+    setVoiceError(null);
+    setPlayingId(p.id);
+    try {
+      await playBase64Audio(p.audio_base64);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Couldn't play that clip.";
+      setVoiceError(msg);
+    } finally {
+      setPlayingId(null);
+    }
+  };
+
+  const removeSavedPhrase = async (id: string) => {
+    if (typeof window !== "undefined" && !window.confirm("Delete this saved phrase?")) return;
+    const prev = savedPhrases;
+    setSavedPhrases((p) => p.filter((x) => x.id !== id));
+    try {
+      await deleteSavedPhrase({ data: { id } });
+    } catch {
+      setSavedPhrases(prev);
+      setVoiceError("Couldn't delete that phrase. Please try again.");
+    }
+  };
+
 
   const mmss = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -907,12 +1036,91 @@ function StreamPage() {
               <Send className="h-3.5 w-3.5" />
               {voiceBusy ? "Generating…" : streaming ? "Speak on Stream" : "Generate & Preview"}
             </button>
+            {lastClip && (
+              <div className="mt-2 flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
+                <span className="flex-1 text-[11px] text-foreground truncate">
+                  Last clip: <span className="text-muted-foreground">{lastClip.sourceText}</span>
+                </span>
+                <button
+                  onClick={() => playBase64Audio(lastClip.audioBase64).catch(() => {})}
+                  className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary"
+                  title="Replay (free)"
+                >
+                  <Volume2 className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={saveLastClip}
+                  disabled={savingClip}
+                  className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  title="Save this phrase for free reuse"
+                >
+                  <Bookmark className="h-3 w-3" />
+                  {savingClip ? "Saving…" : "Save"}
+                </button>
+              </div>
+            )}
             {!streaming && (
               <p className="mt-2 text-[11px] text-muted-foreground">
                 You can preview clips before going live. While streaming, generated audio is mixed into your broadcast.
               </p>
             )}
           </SidePanel>
+
+          <SidePanel title={
+            <span className="inline-flex items-center gap-1.5">
+              <Bookmark className="h-3.5 w-3.5 text-primary" /> Saved Phrases
+              <span className="ml-1 rounded-sm border border-border bg-background/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                {savedPhrases.length}
+              </span>
+            </span>
+          }>
+            <p className="text-xs text-muted-foreground -mt-1 mb-2">
+              Replay saved clips for free — generating new audio is the only thing that costs credits.
+            </p>
+            {savedLoading ? (
+              <p className="text-[11px] text-muted-foreground">Loading…</p>
+            ) : savedPhrases.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">
+                No saved phrases yet. Generate a clip and tap Save to keep it here.
+              </p>
+            ) : (
+              <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {savedPhrases.map((p) => (
+                  <li
+                    key={p.id}
+                    className="rounded-md border border-border bg-background/60 px-2 py-1.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-xs font-medium text-foreground">{p.label}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {p.language_name} · {p.voice_label} · {p.duration_seconds}s
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => playSavedPhrase(p)}
+                        disabled={playingId === p.id}
+                        className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary disabled:opacity-50"
+                        title={streaming ? "Play on stream (free)" : "Preview (free)"}
+                      >
+                        <Volume2 className="h-3 w-3" />
+                        {playingId === p.id ? "Playing…" : "Play"}
+                      </button>
+                      <button
+                        onClick={() => removeSavedPhrase(p.id)}
+                        className="inline-flex items-center justify-center rounded border border-border bg-card p-1 text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                        title="Delete saved phrase"
+                        aria-label="Delete saved phrase"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SidePanel>
+
 
           <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-4 w-4" /> Top Up Credits
