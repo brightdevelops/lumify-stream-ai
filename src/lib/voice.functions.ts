@@ -48,10 +48,15 @@ export const SUPPORTED_LANGUAGES = [
 ] as const;
 
 // Character-style voices (NOT impersonations of real people / copyrighted characters).
+// All voices use the eleven_multilingual_v2 model, which speaks every supported language.
 export const VOICE_STYLES = [
-  { id: "EXAVITQu4vr4xnSDxMaL", label: "Natural", description: "Warm, conversational female voice" },
-  { id: "nPczCjzI2devNBz1zQrb", label: "Deep", description: "Deep, mature male voice" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", label: "Higher / Cute", description: "Bright, higher-pitched female voice" },
+  { id: "EXAVITQu4vr4xnSDxMaL", label: "Natural", description: "Warm, conversational voice" },
+  { id: "e79twtVS2278lVZZQiAD", label: "Child", description: "Bright, youthful voice" },
+  { id: "XrExE9yKIg1WjnnlVkGX", label: "Young Lady", description: "Friendly young female voice" },
+  { id: "SAhdygBsjizE9aIj39dz", label: "Old Lady", description: "Warm older female voice" },
+  { id: "IKne3meq5aSn9XLyUdCD", label: "Young Man", description: "Casual young male voice" },
+  { id: "nPczCjzI2devNBz1zQrb", label: "Old Man", description: "Deep older male voice" },
+  { id: "onwK4e9ZLuTAKqWW03F9", label: "Deep", description: "Deep, authoritative voice" },
   { id: "kPtEHAvRnjUJFv7SK9WI", label: "Robotic", description: "Synthetic, processed voice" },
 ] as const;
 
