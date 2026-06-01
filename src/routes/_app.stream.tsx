@@ -1,13 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Languages, Send, Bookmark, Trash2, Volume2 } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
-import { getVoiceConfig, estimateVoiceCost, generateVoiceClip, listSavedPhrases, savePhrase, deleteSavedPhrase } from "@/lib/voice.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -20,6 +19,7 @@ const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "
 const RATE = 2; // credits/sec
 const NAIRA_PER_CREDIT = 23;
 const MIN_CREDITS_TO_START = 10;
+const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
 // Decart API key is fetched at stream start from an authenticated server function.
 
 const REALISM_KEYWORDS = "photorealistic, natural human skin texture, realistic lighting, high detail, lifelike";
@@ -31,6 +31,18 @@ const buildPrompt = (preset: string | null, mode: "realistic" | "stylized", real
   return preset
     ? `Transform into this character in ${preset} style`
     : "Transform into this character";
+};
+
+// Human-friendly time-left formatter: "7 min 30 sec", "45 sec", "1 hr 5 min"
+const formatTimeLeft = (totalSec: number) => {
+  const s = Math.max(0, Math.floor(totalSec));
+  if (s < 60) return `${s} sec`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h} hr ${m} min`;
+  if (m < 10) return `${m} min ${sec} sec`;
+  return `${m} min`;
 };
 
 function StreamPage() {
@@ -85,54 +97,6 @@ function StreamPage() {
   const durationRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
 
-  // Voice-over (Speak in Another Language) state
-  type LangOpt = { code: string; name: string };
-  type VoiceOpt = { id: string; label: string; description: string };
-  const [voiceLangs, setVoiceLangs] = useState<LangOpt[]>([]);
-  const [voiceList, setVoiceList] = useState<VoiceOpt[]>([]);
-  const [voiceLang, setVoiceLang] = useState<string>("es");
-  const [voiceId, setVoiceId] = useState<string>("");
-  const [voiceText, setVoiceText] = useState<string>("");
-  const [voiceEstimate, setVoiceEstimate] = useState<{ credits: number; seconds: number } | null>(null);
-  const [voiceBusy, setVoiceBusy] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceInfo, setVoiceInfo] = useState<string | null>(null);
-  const [voicePricing, setVoicePricing] = useState<{ creditsPerMinute: number; nairaPerCredit: number } | null>(null);
-  // Last freshly-generated clip (eligible to save).
-  type LastClip = {
-    audioBase64: string;
-    mimeType: string;
-    durationSeconds: number;
-    creditsDeducted: number;
-    languageCode: string;
-    languageName: string;
-    voiceId: string;
-    voiceLabel: string;
-    sourceText: string;
-    translatedText: string;
-  };
-  const [lastClip, setLastClip] = useState<LastClip | null>(null);
-  const [savingClip, setSavingClip] = useState(false);
-  type SavedPhrase = {
-    id: string;
-    label: string;
-    source_text: string;
-    language_code: string;
-    language_name: string;
-    voice_id: string;
-    voice_label: string;
-    duration_seconds: number;
-    credits_spent: number;
-    mime_type: string;
-    audio_base64: string;
-    created_at: string;
-  };
-  const [savedPhrases, setSavedPhrases] = useState<SavedPhrase[]>([]);
-  const [savedLoading, setSavedLoading] = useState(false);
-  const [playingId, setPlayingId] = useState<string | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const audioDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
-
   useEffect(() => {
     if (!user) return;
     supabase
@@ -147,42 +111,6 @@ function StreamPage() {
         creditsRef.current = bal;
       });
   }, [user]);
-
-  // Load voice config (languages + voice presets) once.
-  useEffect(() => {
-    getVoiceConfig()
-      .then((cfg) => {
-        setVoiceLangs(cfg.languages);
-        setVoiceList(cfg.voices);
-        setVoicePricing({ creditsPerMinute: cfg.creditsPerMinute, nairaPerCredit: cfg.nairaPerCredit });
-        setVoiceId((prev) => prev || cfg.voices[0]?.id || "");
-      })
-      .catch(() => {});
-  }, []);
-
-  // Load this user's saved phrases.
-  useEffect(() => {
-    if (!user) return;
-    setSavedLoading(true);
-    listSavedPhrases()
-      .then(({ phrases }) => setSavedPhrases(phrases as SavedPhrase[]))
-      .catch(() => {})
-      .finally(() => setSavedLoading(false));
-  }, [user]);
-
-  // Debounced estimate as the user types.
-  useEffect(() => {
-    if (!voiceText.trim()) {
-      setVoiceEstimate(null);
-      return;
-    }
-    const handle = setTimeout(() => {
-      estimateVoiceCost({ data: { text: voiceText.trim() } })
-        .then((r) => setVoiceEstimate({ credits: r.estimatedCredits, seconds: r.estimatedSeconds }))
-        .catch(() => setVoiceEstimate(null));
-    }, 300);
-    return () => clearTimeout(handle);
-  }, [voiceText]);
 
 
   useEffect(() => {
@@ -201,16 +129,13 @@ function StreamPage() {
       try {
         let devices = await navigator.mediaDevices.enumerateDevices();
         let videoInputs = devices.filter((d) => d.kind === "videoinput");
-        // Labels are empty until camera permission has been granted at least once.
         if (videoInputs.length > 0 && videoInputs.every((d) => !d.label)) {
           try {
             const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             tmp.getTracks().forEach((t) => t.stop());
             devices = await navigator.mediaDevices.enumerateDevices();
             videoInputs = devices.filter((d) => d.kind === "videoinput");
-          } catch {
-            // Permission not granted yet — labels stay generic.
-          }
+          } catch {}
         }
         setCameras(videoInputs);
         setSelectedCameraId((prev) => prev || videoInputs[0]?.deviceId || "");
@@ -224,7 +149,6 @@ function StreamPage() {
     return () => navigator.mediaDevices.removeEventListener?.("devicechange", loadCameras);
   }, []);
 
-  // Find an RTCPeerConnection inside the Decart client so we can hot-swap the camera track.
   const findPeerConnection = (): RTCPeerConnection | null => {
     const client = decartClientRef.current as unknown as Record<string, unknown> | null;
     if (!client) return null;
@@ -247,7 +171,7 @@ function StreamPage() {
 
   const handleCameraChange = async (deviceId: string) => {
     setSelectedCameraId(deviceId);
-    if (!mediaStreamRef.current) return; // not streaming yet — selection saved for next start
+    if (!mediaStreamRef.current) return;
 
     try {
       const model = models.realtime("lucy-2.1");
@@ -258,14 +182,12 @@ function StreamPage() {
       const newTrack = newStream.getVideoTracks()[0];
       if (!newTrack) return;
 
-      // Hot-swap on the WebRTC sender so streaming + credit deduction never stops.
       const pc = findPeerConnection();
       if (pc) {
         const sender = pc.getSenders().find((s) => s.track?.kind === "video");
         if (sender) await sender.replaceTrack(newTrack);
       }
 
-      // Swap on the local MediaStream + preview.
       const oldStream = mediaStreamRef.current;
       oldStream.getVideoTracks().forEach((t) => {
         oldStream.removeTrack(t);
@@ -336,14 +258,6 @@ function StreamPage() {
     mediaStreamRef.current = null;
     if (inputVideoRef.current) inputVideoRef.current.srcObject = null;
     if (outputVideoRef.current) outputVideoRef.current.srcObject = null;
-    try {
-      audioDestRef.current?.disconnect();
-    } catch {}
-    audioDestRef.current = null;
-    try {
-      audioCtxRef.current?.close();
-    } catch {}
-    audioCtxRef.current = null;
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
@@ -430,23 +344,9 @@ function StreamPage() {
             outputVideoRef.current.play().catch(() => {});
           }
           try {
-            // Set up a persistent audio context + destination so generated
-            // voice clips can be mixed into the outgoing broadcast stream.
-            if (!audioCtxRef.current) {
-              const Ctx: typeof AudioContext =
-                window.AudioContext ||
-                (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-              audioCtxRef.current = new Ctx();
-              audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
-            }
-            const broadcastStream = new MediaStream();
-            transformedStream.getVideoTracks().forEach((t) => broadcastStream.addTrack(t));
-            const audioTrack = audioDestRef.current?.stream.getAudioTracks()[0];
-            if (audioTrack) broadcastStream.addTrack(audioTrack);
-
             broadcasterStopRef.current?.();
             if (user) {
-              broadcasterStopRef.current = startBroadcaster(user.id, broadcastStream);
+              broadcasterStopRef.current = startBroadcaster(user.id, transformedStream);
             }
           } catch (e) {
             console.error("Broadcaster start failed", e);
@@ -496,7 +396,6 @@ function StreamPage() {
     if (user && totalUsed > 0) {
       const mins = Math.floor(totalSec / 60);
       const secs = totalSec % 60;
-      // Log a usage transaction (0 credits deducted since they were already deducted per-tick)
       await supabase.rpc("log_usage_transaction", {
         p_credits: totalUsed,
         p_amount: totalUsed * NAIRA_PER_CREDIT,
@@ -524,7 +423,6 @@ function StreamPage() {
     if (streaming) applyReference(next, referenceImage);
   };
 
-  // Re-apply prompt when realism settings change mid-stream
   useEffect(() => {
     if (streaming && referenceImage) applyReference(selectedPreset, referenceImage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -537,171 +435,85 @@ function StreamPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Lazily build an AudioContext + broadcast destination for voice playback.
-  const ensureAudio = (): boolean => {
-    if (audioCtxRef.current) return true;
-    try {
-      const Ctx: typeof AudioContext =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      audioCtxRef.current = new Ctx();
-      audioDestRef.current = audioCtxRef.current.createMediaStreamDestination();
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  // Decode + play a base64 MP3 to local speakers + (if streaming) the broadcast.
-  const playBase64Audio = async (audioBase64: string) => {
-    if (!ensureAudio()) throw new Error("Audio is not supported in this browser.");
-    const ctx = audioCtxRef.current!;
-    if (ctx.state === "suspended") await ctx.resume();
-    const bin = atob(audioBase64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
-    const source = ctx.createBufferSource();
-    source.buffer = audioBuffer;
-    if (audioDestRef.current) source.connect(audioDestRef.current);
-    source.connect(ctx.destination);
-    source.start();
-    return new Promise<void>((resolve) => {
-      source.onended = () => resolve();
-    });
-  };
-
-  // Generate a translated voice clip and play it through the outgoing stream.
-  const sendVoiceClip = async () => {
-    setVoiceError(null);
-    setVoiceInfo(null);
-    const text = voiceText.trim();
-    if (!text) {
-      setVoiceError("Type something to say first.");
-      return;
-    }
-    if (!voiceId) {
-      setVoiceError("Pick a voice style.");
-      return;
-    }
-    if (voiceEstimate && credits < voiceEstimate.credits) {
-      setVoiceError(
-        `Not enough credits. This clip needs about ${voiceEstimate.credits} credits — top up to continue.`,
-      );
-      return;
-    }
-    if (!ensureAudio()) {
-      setVoiceError("Audio is not supported in this browser.");
-      return;
-    }
-    setVoiceBusy(true);
-    try {
-      const res = await generateVoiceClip({
-        data: { text, languageCode: voiceLang, voiceId },
-      });
-      // Refresh balance immediately so the user sees the deduction.
-      setCredits((c) => Math.max(0, c - res.creditsDeducted));
-      creditsRef.current = Math.max(0, creditsRef.current - res.creditsDeducted);
-
-      const langName = voiceLangs.find((l) => l.code === voiceLang)?.name ?? voiceLang;
-      const voiceLabel = voiceList.find((v) => v.id === voiceId)?.label ?? "Voice";
-      setLastClip({
-        audioBase64: res.audioBase64,
-        mimeType: res.mimeType,
-        durationSeconds: res.durationSeconds,
-        creditsDeducted: res.creditsDeducted,
-        languageCode: voiceLang,
-        languageName: langName,
-        voiceId,
-        voiceLabel,
-        sourceText: text,
-        translatedText: res.translatedText,
-      });
-
-      await playBase64Audio(res.audioBase64);
-      setVoiceInfo(
-        `Played ${res.durationSeconds}s in ${langName} — ${res.creditsDeducted} credits used.`,
-      );
-      setVoiceText("");
-      setVoiceEstimate(null);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Voice generation failed. Please try again.";
-      setVoiceError(msg);
-    } finally {
-      setVoiceBusy(false);
-    }
-  };
-
-  // Save the most recent generated clip — free, since the user already paid.
-  const saveLastClip = async () => {
-    if (!lastClip) return;
-    setSavingClip(true);
-    setVoiceError(null);
-    try {
-      const defaultLabel = lastClip.sourceText.slice(0, 60);
-      const label = (typeof window !== "undefined"
-        ? window.prompt("Name this phrase", defaultLabel)
-        : defaultLabel) || defaultLabel;
-      const { phrase } = await savePhrase({
-        data: {
-          label: label.trim().slice(0, 120) || defaultLabel,
-          sourceText: lastClip.sourceText,
-          languageCode: lastClip.languageCode,
-          voiceId: lastClip.voiceId,
-          durationSeconds: lastClip.durationSeconds,
-          creditsSpent: lastClip.creditsDeducted,
-          mimeType: lastClip.mimeType,
-          audioBase64: lastClip.audioBase64,
-        },
-      });
-      setSavedPhrases((prev) => [phrase as SavedPhrase, ...prev]);
-      setVoiceInfo("Saved — replay any time for free.");
-      setLastClip(null);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Couldn't save that phrase. Please try again.";
-      setVoiceError(msg);
-    } finally {
-      setSavingClip(false);
-    }
-  };
-
-  // Replay a saved clip — never costs credits.
-  const playSavedPhrase = async (p: SavedPhrase) => {
-    setVoiceError(null);
-    setPlayingId(p.id);
-    try {
-      await playBase64Audio(p.audio_base64);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Couldn't play that clip.";
-      setVoiceError(msg);
-    } finally {
-      setPlayingId(null);
-    }
-  };
-
-  const removeSavedPhrase = async (id: string) => {
-    if (typeof window !== "undefined" && !window.confirm("Delete this saved phrase?")) return;
-    const prev = savedPhrases;
-    setSavedPhrases((p) => p.filter((x) => x.id !== id));
-    try {
-      await deleteSavedPhrase({ data: { id } });
-    } catch {
-      setSavedPhrases(prev);
-      setVoiceError("Couldn't delete that phrase. Please try again.");
-    }
-  };
-
-
   const mmss = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
   const pct = startingCredits > 0 ? Math.max(0, Math.min(100, (credits / startingCredits) * 100)) : 0;
   const cost = used * NAIRA_PER_CREDIT;
+
+  const secondsLeft = Math.floor(credits / RATE);
+  const timeLeftLabel = formatTimeLeft(secondsLeft);
+  const lowBalance = streaming && secondsLeft > 0 && secondsLeft <= LOW_BALANCE_SECONDS;
+  const preflightTime = formatTimeLeft(secondsLeft);
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl">Studio</h1>
         <p className="mt-1 text-sm text-muted-foreground">Upload a reference image and watch your camera transform in real time.</p>
+      </div>
+
+      {/* Prominent time-left banner */}
+      <div className={`mb-6 rounded-xl border p-5 ${
+        streaming
+          ? lowBalance
+            ? "border-amber-500/40 bg-amber-500/5"
+            : "border-primary/30 bg-primary/5"
+          : "border-border bg-card"
+      }`}>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className={`shrink-0 grid place-items-center h-12 w-12 rounded-lg ${
+              streaming ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
+            }`}>
+              <Clock className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                {streaming ? "Stream time left" : "Stream time available"}
+              </div>
+              <div className="mt-1 text-3xl md:text-4xl font-display text-foreground leading-tight">
+                ≈ {timeLeftLabel}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {credits.toLocaleString()} credits · {RATE} credits/sec while streaming
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-start md:items-end gap-2">
+            {streaming ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
+                <Radio className="h-3.5 w-3.5 animate-pulse" />
+                Charging now · meter runs only while live
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
+                <Radio className="h-3.5 w-3.5" />
+                Not streaming — no credits being used
+              </span>
+            )}
+            {!streaming && credits > 0 && (
+              <span className="text-[11px] text-muted-foreground">
+                Your balance gives you about <span className="text-foreground font-medium">{preflightTime}</span> of streaming.
+              </span>
+            )}
+          </div>
+        </div>
+
+        {lowBalance && (
+          <div className="mt-4 flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              About 1 minute of streaming left — top up to keep going.
+            </div>
+            <Link
+              to="/credits"
+              className="shrink-0 inline-flex items-center gap-1 rounded-md bg-amber-500/20 border border-amber-500/40 px-2.5 py-1 text-xs font-medium text-amber-100 hover:bg-amber-500/30"
+            >
+              <Plus className="h-3 w-3" /> Top up
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Realistic vs Stylized mode toggle */}
@@ -899,12 +711,15 @@ function StreamPage() {
         </div>
 
         <aside className="space-y-5">
-          <SidePanel title="Credits Remaining">
-            <div className="text-3xl font-display text-primary">{credits.toLocaleString()}</div>
-            <div className="mt-3 h-2 rounded-full bg-secondary overflow-hidden">
-              <div className="h-full bg-primary transition-all duration-700 ease-linear" style={{ width: `${pct}%` }} />
+          <SidePanel title="Balance">
+            <div className="text-2xl font-display text-foreground">
+              ≈ {timeLeftLabel}
+              <span className="ml-2 text-xs uppercase tracking-wide text-muted-foreground">left</span>
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">≈ {mmss(Math.floor(credits / RATE))} of streaming left</div>
+            <div className="mt-3 h-2 rounded-full bg-secondary overflow-hidden">
+              <div className={`h-full transition-all duration-700 ease-linear ${lowBalance ? "bg-amber-500" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">{credits.toLocaleString()} credits</div>
           </SidePanel>
 
           <SidePanel title="Session Info">
@@ -914,7 +729,7 @@ function StreamPage() {
             <Row k="Status" v={
               <span className="inline-flex items-center gap-1.5 text-primary">
                 <span className={`h-1.5 w-1.5 rounded-full ${streaming ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
-                {streaming ? "Live" : "Idle"}
+                {streaming ? "Live · charging" : "Idle · not charging"}
               </span>
             } />
           </SidePanel>
@@ -969,158 +784,6 @@ function StreamPage() {
               </a>
             )}
           </SidePanel>
-
-          <SidePanel title={
-            <span className="inline-flex items-center gap-1.5">
-              <Languages className="h-3.5 w-3.5 text-primary" /> Speak in Another Language
-            </span>
-          }>
-            <p className="text-xs text-muted-foreground -mt-1 mb-2">
-              Type in English, pick a language and a voice — your audience hears it spoken live.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={voiceLang}
-                onChange={(e) => setVoiceLang(e.target.value)}
-                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-                aria-label="Target language"
-              >
-                {voiceLangs.map((l) => (
-                  <option key={l.code} value={l.code}>{l.name}</option>
-                ))}
-              </select>
-              <select
-                value={voiceId}
-                onChange={(e) => setVoiceId(e.target.value)}
-                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-                aria-label="Voice style"
-              >
-                {voiceList.map((v) => (
-                  <option key={v.id} value={v.id}>{v.label}</option>
-                ))}
-              </select>
-            </div>
-            <textarea
-              value={voiceText}
-              onChange={(e) => setVoiceText(e.target.value)}
-              maxLength={2000}
-              rows={3}
-              placeholder="Type a message in English…"
-              className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:border-primary"
-            />
-            <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>
-                {voiceEstimate
-                  ? `≈ ${voiceEstimate.credits} credits (${voiceEstimate.seconds}s)`
-                  : voicePricing
-                    ? `${voicePricing.creditsPerMinute} credits / min`
-                    : ""}
-              </span>
-              <span>{voiceText.length}/2000</span>
-            </div>
-            {voiceError && (
-              <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
-                {voiceError}
-              </div>
-            )}
-            {voiceInfo && !voiceError && (
-              <div className="mt-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-primary">
-                {voiceInfo}
-              </div>
-            )}
-            <button
-              onClick={sendVoiceClip}
-              disabled={voiceBusy || !voiceText.trim() || !voiceId}
-              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-            >
-              <Send className="h-3.5 w-3.5" />
-              {voiceBusy ? "Generating…" : streaming ? "Speak on Stream" : "Generate & Preview"}
-            </button>
-            {lastClip && (
-              <div className="mt-2 flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
-                <span className="flex-1 text-[11px] text-foreground truncate">
-                  Last clip: <span className="text-muted-foreground">{lastClip.sourceText}</span>
-                </span>
-                <button
-                  onClick={() => playBase64Audio(lastClip.audioBase64).catch(() => {})}
-                  className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary"
-                  title="Replay (free)"
-                >
-                  <Volume2 className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={saveLastClip}
-                  disabled={savingClip}
-                  className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                  title="Save this phrase for free reuse"
-                >
-                  <Bookmark className="h-3 w-3" />
-                  {savingClip ? "Saving…" : "Save"}
-                </button>
-              </div>
-            )}
-            {!streaming && (
-              <p className="mt-2 text-[11px] text-muted-foreground">
-                You can preview clips before going live. While streaming, generated audio is mixed into your broadcast.
-              </p>
-            )}
-          </SidePanel>
-
-          <SidePanel title={
-            <span className="inline-flex items-center gap-1.5">
-              <Bookmark className="h-3.5 w-3.5 text-primary" /> Saved Phrases
-              <span className="ml-1 rounded-sm border border-border bg-background/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {savedPhrases.length}
-              </span>
-            </span>
-          }>
-            <p className="text-xs text-muted-foreground -mt-1 mb-2">
-              Replay saved clips for free — generating new audio is the only thing that costs credits.
-            </p>
-            {savedLoading ? (
-              <p className="text-[11px] text-muted-foreground">Loading…</p>
-            ) : savedPhrases.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">
-                No saved phrases yet. Generate a clip and tap Save to keep it here.
-              </p>
-            ) : (
-              <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {savedPhrases.map((p) => (
-                  <li
-                    key={p.id}
-                    className="rounded-md border border-border bg-background/60 px-2 py-1.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate text-xs font-medium text-foreground">{p.label}</div>
-                        <div className="truncate text-[11px] text-muted-foreground">
-                          {p.language_name} · {p.voice_label} · {p.duration_seconds}s
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => playSavedPhrase(p)}
-                        disabled={playingId === p.id}
-                        className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary disabled:opacity-50"
-                        title={streaming ? "Play on stream (free)" : "Preview (free)"}
-                      >
-                        <Volume2 className="h-3 w-3" />
-                        {playingId === p.id ? "Playing…" : "Play"}
-                      </button>
-                      <button
-                        onClick={() => removeSavedPhrase(p.id)}
-                        className="inline-flex items-center justify-center rounded border border-border bg-card p-1 text-muted-foreground hover:text-destructive hover:border-destructive/40"
-                        title="Delete saved phrase"
-                        aria-label="Delete saved phrase"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SidePanel>
-
 
           <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-4 w-4" /> Top Up Credits
