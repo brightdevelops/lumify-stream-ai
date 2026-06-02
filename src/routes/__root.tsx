@@ -109,13 +109,16 @@ function VisitTracker() {
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
         await fetch("/api/public/track-visit", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             path: pathname,
             referrer: document.referrer || null,
-            user_id: data.session?.user.id ?? null,
           }),
           keepalive: true,
         });
