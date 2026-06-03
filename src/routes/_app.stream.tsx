@@ -351,10 +351,16 @@ function StreamPage() {
       console.error("Broadcaster stop error", e);
     }
     broadcasterStopRef.current = null;
-    try {
-      decartClientRef.current?.disconnect?.();
-    } catch (e) {
-      console.error("Decart disconnect error", e);
+    // Decart SDK exposes `disconnect()` (verified against the type defs);
+    // call it directly so a missing method becomes a visible error rather
+    // than a silent leak.
+    const client = decartClientRef.current;
+    if (client) {
+      try {
+        client.disconnect();
+      } catch (e) {
+        console.error("Decart disconnect error", e);
+      }
     }
     decartClientRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
