@@ -96,6 +96,11 @@ function StreamPage() {
   const usedRef = useRef(0);
   const durationRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
+  const startingRef = useRef(false); // re-entry guard for start()
+  const lastTickAtRef = useRef<number>(0); // wall-clock anchor for metering
+  const fractionalSecRef = useRef(0); // carries sub-second remainder between ticks
+  const accessTokenRef = useRef<string | null>(null); // for keepalive end-session beacon
+  const streamingRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
