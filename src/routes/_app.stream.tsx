@@ -399,8 +399,14 @@ function StreamPage() {
     setError(null);
     if (!user) return;
 
+    // Re-entry guard: double-clicking Start, or a slow connect followed by
+    // another click, must NOT open a second Decart peer.
+    if (startingRef.current || streamingRef.current) return;
+    startingRef.current = true;
+
     if (!referenceImage) {
       setError("Please upload a reference image first");
+      startingRef.current = false;
       return;
     }
 
@@ -412,6 +418,7 @@ function StreamPage() {
     const bal = data?.balance ?? 0;
     if (bal < MIN_CREDITS_TO_START) {
       setError("Insufficient credits, please top up");
+      startingRef.current = false;
       return;
     }
 
@@ -432,6 +439,7 @@ function StreamPage() {
     } catch (e) {
       console.error(e);
       setConnecting(false);
+      startingRef.current = false;
       setError("Camera access was denied. Please allow camera access in your browser to start streaming.");
       return;
     }
@@ -461,6 +469,14 @@ function StreamPage() {
             console.error("Broadcaster start failed", e);
           }
         },
+        // If the Decart peer drops (network loss, server-side close), stop
+        // immediately so the meter doesn't keep ticking against nothing AND
+        // we don't leave an orphan session locally.
+        onConnectionChange: (state) => {
+          if (state === "disconnected" && streamingRef.current) {
+            endStream(false).catch(() => {});
+          }
+        },
       });
       decartClientRef.current = realtimeClient;
 
@@ -474,8 +490,23 @@ function StreamPage() {
       console.error("Decart connect failed", e);
       teardownStream();
       setConnecting(false);
-      setError("Failed to connect to the AI transformation service. Please try again.");
+      startingRef.current = false;
+      const msg = e instanceof Error ? e.message : "";
+      setError(
+        msg.includes("Another stream is already active")
+          ? msg
+          : "Failed to connect to the AI transformation service. Please try again.",
+      );
       return;
+    }
+
+    // Capture the access token so the pagehide beacon can finalize the
+    // session row even after supabase-js shuts down on unload.
+    try {
+      const { data: sessData } = await supabase.auth.getSession();
+      accessTokenRef.current = sessData.session?.access_token ?? null;
+    } catch {
+      accessTokenRef.current = null;
     }
 
     setCredits(bal);
@@ -483,10 +514,14 @@ function StreamPage() {
     creditsRef.current = bal;
     usedRef.current = 0;
     durationRef.current = 0;
+    fractionalSecRef.current = 0;
+    lastTickAtRef.current = Date.now();
     setUsed(0);
     setDuration(0);
     setConnecting(false);
+    streamingRef.current = true;
     setStreaming(true);
+    startingRef.current = false;
 
     if (user) {
       const { data: sess } = await supabase.from("stream_sessions").insert({
