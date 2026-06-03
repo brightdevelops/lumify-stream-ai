@@ -532,8 +532,15 @@ function StreamPage() {
   };
 
   const endStream = async (outOfCredits = false) => {
+    if (!streamingRef.current && !decartClientRef.current) {
+      // Already ended (e.g. by pagehide + onConnectionChange racing). Avoid
+      // double-logging the usage transaction.
+      return;
+    }
+    streamingRef.current = false;
     teardownStream();
     setStreaming(false);
+    accessTokenRef.current = null;
 
     const totalUsed = usedRef.current;
     const totalSec = durationRef.current;
