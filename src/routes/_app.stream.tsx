@@ -96,6 +96,11 @@ function StreamPage() {
   const usedRef = useRef(0);
   const durationRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
+  const startingRef = useRef(false); // re-entry guard for start()
+  const lastTickAtRef = useRef<number>(0); // wall-clock anchor for metering
+  const fractionalSecRef = useRef(0); // carries sub-second remainder between ticks
+  const accessTokenRef = useRef<string | null>(null); // for keepalive end-session beacon
+  const streamingRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
@@ -115,10 +120,67 @@ function StreamPage() {
 
   useEffect(() => {
     return () => {
-      teardownStream();
+      // React unmount (route nav): tear down peer AND finalize session in DB.
+      if (streamingRef.current) {
+        endStream(false).catch(() => {});
+      } else {
+        teardownStream();
+      }
       if (referenceUrl) URL.revokeObjectURL(referenceUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tab close / refresh / browser crash: synchronously disconnect the Decart
+  // peer and mark the DB session ended via a keepalive fetch (regular
+  // supabase-js calls do NOT survive unload).
+  useEffect(() => {
+    const sendEndBeacon = () => {
+      const sid = sessionIdRef.current;
+      const token = accessTokenRef.current;
+      if (!sid || !token) return;
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/stream_sessions?id=eq.${sid}`;
+        const body = JSON.stringify({
+          ended_at: new Date().toISOString(),
+          credits_used: usedRef.current,
+        });
+        // keepalive lets the request finish after the page is gone.
+        fetch(url, {
+          method: "PATCH",
+          keepalive: true,
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+            Authorization: `Bearer ${token}`,
+            Prefer: "return=minimal",
+          },
+          body,
+        }).catch(() => {});
+      } catch {}
+    };
+
+    const handleUnload = () => {
+      if (!streamingRef.current) return;
+      // Tear down peer + tracks synchronously so Decart stops billing now.
+      try {
+        decartClientRef.current?.disconnect();
+      } catch {}
+      try {
+        broadcasterStopRef.current?.();
+      } catch {}
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      sendEndBeacon();
+    };
+
+    // pagehide covers tab close, refresh, and bfcache eviction across browsers.
+    // beforeunload is a belt-and-suspenders fallback (some mobile browsers).
+    window.addEventListener("pagehide", handleUnload);
+    window.addEventListener("beforeunload", handleUnload);
+    return () => {
+      window.removeEventListener("pagehide", handleUnload);
+      window.removeEventListener("beforeunload", handleUnload);
+    };
   }, []);
 
   // Enumerate available cameras
@@ -205,41 +267,82 @@ function StreamPage() {
   };
 
 
-  // Credit tick loop
-  useEffect(() => {
-    if (!streaming || !user) return;
-    const id = setInterval(async () => {
-      const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
-        p_credits: RATE,
-        p_amount: RATE * NAIRA_PER_CREDIT,
-        p_description: undefined,
-        p_log_transaction: false,
-      });
-      if (rpcErr) {
-        console.error("deduct_credits failed", rpcErr);
-        await endStream(false);
-        return;
-      }
-      const newBalance = typeof data === "number" ? data : 0;
-      creditsRef.current = newBalance;
-      usedRef.current = usedRef.current + RATE;
-      durationRef.current = durationRef.current + 1;
-      setCredits(newBalance);
-      setUsed(usedRef.current);
-      setDuration(durationRef.current);
+  // Wall-clock metering: charges for actual elapsed time, not assumed 1-sec
+  // ticks. This is critical because browsers throttle setInterval to as
+  // little as once/minute when the tab is backgrounded — without delta-based
+  // accounting, the user is undercharged while Decart keeps billing us.
+  const runMeterTick = async () => {
+    if (!user || !streamingRef.current) return;
+    const now = Date.now();
+    const elapsedSec = (now - lastTickAtRef.current) / 1000;
+    if (elapsedSec <= 0) return;
+    lastTickAtRef.current = now;
+    fractionalSecRef.current += elapsedSec;
+    const wholeSec = Math.floor(fractionalSecRef.current);
+    if (wholeSec < 1) return;
+    fractionalSecRef.current -= wholeSec;
 
-      if (sessionIdRef.current) {
-        supabase.from("stream_sessions").update({
+    const credits = wholeSec * RATE;
+    const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
+      p_credits: credits,
+      p_amount: credits * NAIRA_PER_CREDIT,
+      p_description: undefined,
+      p_log_transaction: false,
+    });
+    if (rpcErr) {
+      console.error("deduct_credits failed", rpcErr);
+      await endStream(false);
+      return;
+    }
+    const newBalance = typeof data === "number" ? data : 0;
+    creditsRef.current = newBalance;
+    usedRef.current += credits;
+    durationRef.current += wholeSec;
+    setCredits(newBalance);
+    setUsed(usedRef.current);
+    setDuration(durationRef.current);
+
+    if (sessionIdRef.current) {
+      supabase
+        .from("stream_sessions")
+        .update({
           last_heartbeat: new Date().toISOString(),
           credits_used: usedRef.current,
-        }).eq("id", sessionIdRef.current).then(() => {});
-      }
-      if (newBalance <= 0) {
-        await endStream(true);
-      }
+        })
+        .eq("id", sessionIdRef.current)
+        .then(() => {});
+    }
+    if (newBalance <= 0) {
+      await endStream(true);
+    }
+  };
+
+  // Credit tick loop (foreground ~1s; throttled in background — runMeterTick
+  // catches up using wall-clock delta).
+  useEffect(() => {
+    if (!streaming || !user) return;
+    const id = setInterval(() => {
+      runMeterTick();
     }, 1000);
     return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streaming, user]);
+
+  // When the tab becomes visible again, immediately reconcile so we charge
+  // for the time spent backgrounded without waiting for the next throttled tick.
+  useEffect(() => {
+    if (!streaming) return;
+    const onVis = () => {
+      if (document.visibilityState === "visible") runMeterTick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onVis);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming]);
 
   const teardownStream = () => {
     try {
@@ -248,10 +351,16 @@ function StreamPage() {
       console.error("Broadcaster stop error", e);
     }
     broadcasterStopRef.current = null;
-    try {
-      decartClientRef.current?.disconnect?.();
-    } catch (e) {
-      console.error("Decart disconnect error", e);
+    // Decart SDK exposes `disconnect()` (verified against the type defs);
+    // call it directly so a missing method becomes a visible error rather
+    // than a silent leak.
+    const client = decartClientRef.current;
+    if (client) {
+      try {
+        client.disconnect();
+      } catch (e) {
+        console.error("Decart disconnect error", e);
+      }
     }
     decartClientRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -290,8 +399,14 @@ function StreamPage() {
     setError(null);
     if (!user) return;
 
+    // Re-entry guard: double-clicking Start, or a slow connect followed by
+    // another click, must NOT open a second Decart peer.
+    if (startingRef.current || streamingRef.current) return;
+    startingRef.current = true;
+
     if (!referenceImage) {
       setError("Please upload a reference image first");
+      startingRef.current = false;
       return;
     }
 
@@ -303,6 +418,7 @@ function StreamPage() {
     const bal = data?.balance ?? 0;
     if (bal < MIN_CREDITS_TO_START) {
       setError("Insufficient credits, please top up");
+      startingRef.current = false;
       return;
     }
 
@@ -323,6 +439,7 @@ function StreamPage() {
     } catch (e) {
       console.error(e);
       setConnecting(false);
+      startingRef.current = false;
       setError("Camera access was denied. Please allow camera access in your browser to start streaming.");
       return;
     }
@@ -352,6 +469,14 @@ function StreamPage() {
             console.error("Broadcaster start failed", e);
           }
         },
+        // If the Decart peer drops (network loss, server-side close), stop
+        // immediately so the meter doesn't keep ticking against nothing AND
+        // we don't leave an orphan session locally.
+        onConnectionChange: (state) => {
+          if (state === "disconnected" && streamingRef.current) {
+            endStream(false).catch(() => {});
+          }
+        },
       });
       decartClientRef.current = realtimeClient;
 
@@ -365,8 +490,23 @@ function StreamPage() {
       console.error("Decart connect failed", e);
       teardownStream();
       setConnecting(false);
-      setError("Failed to connect to the AI transformation service. Please try again.");
+      startingRef.current = false;
+      const msg = e instanceof Error ? e.message : "";
+      setError(
+        msg.includes("Another stream is already active")
+          ? msg
+          : "Failed to connect to the AI transformation service. Please try again.",
+      );
       return;
+    }
+
+    // Capture the access token so the pagehide beacon can finalize the
+    // session row even after supabase-js shuts down on unload.
+    try {
+      const { data: sessData } = await supabase.auth.getSession();
+      accessTokenRef.current = sessData.session?.access_token ?? null;
+    } catch {
+      accessTokenRef.current = null;
     }
 
     setCredits(bal);
@@ -374,10 +514,14 @@ function StreamPage() {
     creditsRef.current = bal;
     usedRef.current = 0;
     durationRef.current = 0;
+    fractionalSecRef.current = 0;
+    lastTickAtRef.current = Date.now();
     setUsed(0);
     setDuration(0);
     setConnecting(false);
+    streamingRef.current = true;
     setStreaming(true);
+    startingRef.current = false;
 
     if (user) {
       const { data: sess } = await supabase.from("stream_sessions").insert({
@@ -388,8 +532,15 @@ function StreamPage() {
   };
 
   const endStream = async (outOfCredits = false) => {
+    if (!streamingRef.current && !decartClientRef.current) {
+      // Already ended (e.g. by pagehide + onConnectionChange racing). Avoid
+      // double-logging the usage transaction.
+      return;
+    }
+    streamingRef.current = false;
     teardownStream();
     setStreaming(false);
+    accessTokenRef.current = null;
 
     const totalUsed = usedRef.current;
     const totalSec = durationRef.current;
