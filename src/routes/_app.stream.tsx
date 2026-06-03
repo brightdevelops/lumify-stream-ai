@@ -267,41 +267,82 @@ function StreamPage() {
   };
 
 
-  // Credit tick loop
-  useEffect(() => {
-    if (!streaming || !user) return;
-    const id = setInterval(async () => {
-      const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
-        p_credits: RATE,
-        p_amount: RATE * NAIRA_PER_CREDIT,
-        p_description: undefined,
-        p_log_transaction: false,
-      });
-      if (rpcErr) {
-        console.error("deduct_credits failed", rpcErr);
-        await endStream(false);
-        return;
-      }
-      const newBalance = typeof data === "number" ? data : 0;
-      creditsRef.current = newBalance;
-      usedRef.current = usedRef.current + RATE;
-      durationRef.current = durationRef.current + 1;
-      setCredits(newBalance);
-      setUsed(usedRef.current);
-      setDuration(durationRef.current);
+  // Wall-clock metering: charges for actual elapsed time, not assumed 1-sec
+  // ticks. This is critical because browsers throttle setInterval to as
+  // little as once/minute when the tab is backgrounded — without delta-based
+  // accounting, the user is undercharged while Decart keeps billing us.
+  const runMeterTick = async () => {
+    if (!user || !streamingRef.current) return;
+    const now = Date.now();
+    const elapsedSec = (now - lastTickAtRef.current) / 1000;
+    if (elapsedSec <= 0) return;
+    lastTickAtRef.current = now;
+    fractionalSecRef.current += elapsedSec;
+    const wholeSec = Math.floor(fractionalSecRef.current);
+    if (wholeSec < 1) return;
+    fractionalSecRef.current -= wholeSec;
 
-      if (sessionIdRef.current) {
-        supabase.from("stream_sessions").update({
+    const credits = wholeSec * RATE;
+    const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
+      p_credits: credits,
+      p_amount: credits * NAIRA_PER_CREDIT,
+      p_description: undefined,
+      p_log_transaction: false,
+    });
+    if (rpcErr) {
+      console.error("deduct_credits failed", rpcErr);
+      await endStream(false);
+      return;
+    }
+    const newBalance = typeof data === "number" ? data : 0;
+    creditsRef.current = newBalance;
+    usedRef.current += credits;
+    durationRef.current += wholeSec;
+    setCredits(newBalance);
+    setUsed(usedRef.current);
+    setDuration(durationRef.current);
+
+    if (sessionIdRef.current) {
+      supabase
+        .from("stream_sessions")
+        .update({
           last_heartbeat: new Date().toISOString(),
           credits_used: usedRef.current,
-        }).eq("id", sessionIdRef.current).then(() => {});
-      }
-      if (newBalance <= 0) {
-        await endStream(true);
-      }
+        })
+        .eq("id", sessionIdRef.current)
+        .then(() => {});
+    }
+    if (newBalance <= 0) {
+      await endStream(true);
+    }
+  };
+
+  // Credit tick loop (foreground ~1s; throttled in background — runMeterTick
+  // catches up using wall-clock delta).
+  useEffect(() => {
+    if (!streaming || !user) return;
+    const id = setInterval(() => {
+      runMeterTick();
     }, 1000);
     return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streaming, user]);
+
+  // When the tab becomes visible again, immediately reconcile so we charge
+  // for the time spent backgrounded without waiting for the next throttled tick.
+  useEffect(() => {
+    if (!streaming) return;
+    const onVis = () => {
+      if (document.visibilityState === "visible") runMeterTick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onVis);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streaming]);
 
   const teardownStream = () => {
     try {
