@@ -120,10 +120,67 @@ function StreamPage() {
 
   useEffect(() => {
     return () => {
-      teardownStream();
+      // React unmount (route nav): tear down peer AND finalize session in DB.
+      if (streamingRef.current) {
+        endStream(false).catch(() => {});
+      } else {
+        teardownStream();
+      }
       if (referenceUrl) URL.revokeObjectURL(referenceUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tab close / refresh / browser crash: synchronously disconnect the Decart
+  // peer and mark the DB session ended via a keepalive fetch (regular
+  // supabase-js calls do NOT survive unload).
+  useEffect(() => {
+    const sendEndBeacon = () => {
+      const sid = sessionIdRef.current;
+      const token = accessTokenRef.current;
+      if (!sid || !token) return;
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/stream_sessions?id=eq.${sid}`;
+        const body = JSON.stringify({
+          ended_at: new Date().toISOString(),
+          credits_used: usedRef.current,
+        });
+        // keepalive lets the request finish after the page is gone.
+        fetch(url, {
+          method: "PATCH",
+          keepalive: true,
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+            Authorization: `Bearer ${token}`,
+            Prefer: "return=minimal",
+          },
+          body,
+        }).catch(() => {});
+      } catch {}
+    };
+
+    const handleUnload = () => {
+      if (!streamingRef.current) return;
+      // Tear down peer + tracks synchronously so Decart stops billing now.
+      try {
+        decartClientRef.current?.disconnect();
+      } catch {}
+      try {
+        broadcasterStopRef.current?.();
+      } catch {}
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      sendEndBeacon();
+    };
+
+    // pagehide covers tab close, refresh, and bfcache eviction across browsers.
+    // beforeunload is a belt-and-suspenders fallback (some mobile browsers).
+    window.addEventListener("pagehide", handleUnload);
+    window.addEventListener("beforeunload", handleUnload);
+    return () => {
+      window.removeEventListener("pagehide", handleUnload);
+      window.removeEventListener("beforeunload", handleUnload);
+    };
   }, []);
 
   // Enumerate available cameras
