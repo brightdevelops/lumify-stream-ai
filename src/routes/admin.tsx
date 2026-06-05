@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp } from "lucide-react";
@@ -12,17 +12,29 @@ import {
   adminUserTransactions,
   adminGetActiveStreams,
   adminDailyProfit,
-  
+
   type AdminUserRow,
   type CreditStats,
   type TransactionRow,
   type ActiveStream,
   type DailyProfitPoint,
-  
+
 } from "@/lib/admin.functions";
 
 
 export const Route = createFileRoute("/admin")({
+  ssr: false,
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({ to: "/login" });
+    try {
+      const r = await amIAdmin();
+      if (!r.isAdmin) throw redirect({ to: "/dashboard" });
+    } catch (e) {
+      if (e && typeof e === "object" && "to" in e) throw e;
+      throw redirect({ to: "/dashboard" });
+    }
+  },
   component: AdminPage,
 });
 

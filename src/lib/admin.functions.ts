@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const ADMIN_EMAIL = "brightsolutionslab@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "brightsolutionslab@gmail.com";
 
 export type AdminUserRow = {
   user_id: string;
@@ -74,7 +75,9 @@ export type RegistrationDay = {
 
 export const adminRegistrationAnalytics = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { days: number }) => input)
+  .inputValidator((input: unknown) =>
+    z.object({ days: z.number().int().min(1).max(365) }).parse(input),
+  )
   .handler(async ({ context, data }) => {
     const email = context.claims?.email as string | undefined;
     if (email !== ADMIN_EMAIL) throw new Error("Not authorized");
