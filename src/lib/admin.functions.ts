@@ -75,8 +75,9 @@ export type RegistrationDay = {
 
 export const adminRegistrationAnalytics = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { days: number }) => input)
-  .handler(async ({ context, data }) => {
+  .inputValidator((input: unknown) =>
+    z.object({ days: z.number().int().min(1).max(365) }).parse(input),
+  )
     const email = context.claims?.email as string | undefined;
     if (email !== ADMIN_EMAIL) throw new Error("Not authorized");
     const { data: rows, error } = await context.supabase.rpc("admin_registration_analytics", { p_days: data.days });
