@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const ADMIN_EMAIL = "brightsolutionslab@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "brightsolutionslab@gmail.com";
 
 export type AdminUserRow = {
   user_id: string;
