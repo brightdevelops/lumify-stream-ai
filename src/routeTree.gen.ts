@@ -13,10 +13,16 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OutputRouteImport } from './routes/output'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InventorRouteImport } from './routes/inventor'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InventorIndexRouteImport } from './routes/inventor.index'
+import { Route as InventorUsersRouteImport } from './routes/inventor.users'
+import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
+import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
+import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
 import { Route as AppStreamRouteImport } from './routes/_app.stream'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -44,6 +50,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InventorRoute = InventorRouteImport.update({
+  id: '/inventor',
+  path: '/inventor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -62,6 +73,31 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const InventorIndexRoute = InventorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorUsersRoute = InventorUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorMonitorRoute = InventorMonitorRouteImport.update({
+  id: '/monitor',
+  path: '/monitor',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorLedgerRoute = InventorLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorFinanceRoute = InventorFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => InventorRoute,
 } as any)
 const AppStreamRoute = AppStreamRouteImport.update({
   id: '/stream',
@@ -98,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/inventor': typeof InventorRouteWithChildren
   '/login': typeof LoginRoute
   '/output': typeof OutputRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -107,6 +144,11 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/ledger': typeof InventorLedgerRoute
+  '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/users': typeof InventorUsersRoute
+  '/inventor/': typeof InventorIndexRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
 }
 export interface FileRoutesByTo {
@@ -122,6 +164,11 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/ledger': typeof InventorLedgerRoute
+  '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/users': typeof InventorUsersRoute
+  '/inventor': typeof InventorIndexRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
 }
 export interface FileRoutesById {
@@ -130,6 +177,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/admin': typeof AdminRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/inventor': typeof InventorRouteWithChildren
   '/login': typeof LoginRoute
   '/output': typeof OutputRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -139,6 +187,11 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stream': typeof AppStreamRoute
+  '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/ledger': typeof InventorLedgerRoute
+  '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/users': typeof InventorUsersRoute
+  '/inventor/': typeof InventorIndexRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
 }
 export interface FileRouteTypes {
@@ -147,6 +200,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/forgot-password'
+    | '/inventor'
     | '/login'
     | '/output'
     | '/reset-password'
@@ -156,6 +210,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/inventor/finance'
+    | '/inventor/ledger'
+    | '/inventor/monitor'
+    | '/inventor/users'
+    | '/inventor/'
     | '/api/public/track-visit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -171,6 +230,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/inventor/finance'
+    | '/inventor/ledger'
+    | '/inventor/monitor'
+    | '/inventor/users'
+    | '/inventor'
     | '/api/public/track-visit'
   id:
     | '__root__'
@@ -178,6 +242,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/admin'
     | '/forgot-password'
+    | '/inventor'
     | '/login'
     | '/output'
     | '/reset-password'
@@ -187,6 +252,11 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/settings'
     | '/_app/stream'
+    | '/inventor/finance'
+    | '/inventor/ledger'
+    | '/inventor/monitor'
+    | '/inventor/users'
+    | '/inventor/'
     | '/api/public/track-visit'
   fileRoutesById: FileRoutesById
 }
@@ -195,6 +265,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AdminRoute: typeof AdminRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InventorRoute: typeof InventorRouteWithChildren
   LoginRoute: typeof LoginRoute
   OutputRoute: typeof OutputRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -232,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/inventor': {
+      id: '/inventor'
+      path: '/inventor'
+      fullPath: '/inventor'
+      preLoaderRoute: typeof InventorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -259,6 +337,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/inventor/': {
+      id: '/inventor/'
+      path: '/'
+      fullPath: '/inventor/'
+      preLoaderRoute: typeof InventorIndexRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/users': {
+      id: '/inventor/users'
+      path: '/users'
+      fullPath: '/inventor/users'
+      preLoaderRoute: typeof InventorUsersRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/monitor': {
+      id: '/inventor/monitor'
+      path: '/monitor'
+      fullPath: '/inventor/monitor'
+      preLoaderRoute: typeof InventorMonitorRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/ledger': {
+      id: '/inventor/ledger'
+      path: '/ledger'
+      fullPath: '/inventor/ledger'
+      preLoaderRoute: typeof InventorLedgerRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/finance': {
+      id: '/inventor/finance'
+      path: '/finance'
+      fullPath: '/inventor/finance'
+      preLoaderRoute: typeof InventorFinanceRouteImport
+      parentRoute: typeof InventorRoute
     }
     '/_app/stream': {
       id: '/_app/stream'
@@ -323,11 +436,32 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface InventorRouteChildren {
+  InventorFinanceRoute: typeof InventorFinanceRoute
+  InventorLedgerRoute: typeof InventorLedgerRoute
+  InventorMonitorRoute: typeof InventorMonitorRoute
+  InventorUsersRoute: typeof InventorUsersRoute
+  InventorIndexRoute: typeof InventorIndexRoute
+}
+
+const InventorRouteChildren: InventorRouteChildren = {
+  InventorFinanceRoute: InventorFinanceRoute,
+  InventorLedgerRoute: InventorLedgerRoute,
+  InventorMonitorRoute: InventorMonitorRoute,
+  InventorUsersRoute: InventorUsersRoute,
+  InventorIndexRoute: InventorIndexRoute,
+}
+
+const InventorRouteWithChildren = InventorRoute._addFileChildren(
+  InventorRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AdminRoute: AdminRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InventorRoute: InventorRouteWithChildren,
   LoginRoute: LoginRoute,
   OutputRoute: OutputRoute,
   ResetPasswordRoute: ResetPasswordRoute,

@@ -127,5 +127,27 @@ function VisitTracker() {
       }
     })();
   }, [pathname]);
+
+  // site_visits heartbeat: powers Inventor "Active now"
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let sid = window.localStorage.getItem("lumify_site_session");
+    if (!sid) {
+      sid = (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      window.localStorage.setItem("lumify_site_session", sid);
+    }
+    const beat = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        await supabase.from("site_visits").insert({ session_id: sid, user_id: data.user?.id ?? null });
+      } catch {
+        // ignore
+      }
+    };
+    beat();
+    const id = setInterval(beat, 60000);
+    return () => clearInterval(id);
+  }, []);
+
   return null;
 }

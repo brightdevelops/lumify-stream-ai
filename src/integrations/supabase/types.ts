@@ -137,6 +137,27 @@ export type Database = {
         }
         Relationships: []
       }
+      site_visits: {
+        Row: {
+          created_at: string
+          id: string
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       stream_sessions: {
         Row: {
           created_at: string
@@ -379,6 +400,10 @@ export type Database = {
           users: Json
         }[]
       }
+      admin_set_admin: {
+        Args: { make_admin: boolean; target_user_id: string }
+        Returns: undefined
+      }
       admin_top_pages: {
         Args: { p_limit?: number }
         Returns: {
@@ -464,6 +489,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      inventor_visit_stats: { Args: never; Returns: Json }
       log_usage_transaction: {
         Args: { p_amount: number; p_credits: number; p_description?: string }
         Returns: undefined

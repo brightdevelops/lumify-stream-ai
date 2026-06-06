@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield } from "lucide-react";
+import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield, Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,9 +18,10 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isInventor, setIsInventor] = useState(false);
 
   useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
+    if (!user) { setIsAdmin(false); setIsInventor(false); return; }
     let cancelled = false;
     supabase
       .from("user_roles")
@@ -29,12 +30,20 @@ export function AppSidebar() {
       .eq("role", "admin")
       .maybeSingle()
       .then(({ data }) => { if (!cancelled) setIsAdmin(!!data); });
+    supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled) setIsInventor(!!data?.is_admin); });
     return () => { cancelled = true; };
   }, [user]);
 
-  const navItems = isAdmin
-    ? [...items, { to: "/admin" as const, label: "Admin", icon: Shield }]
-    : items;
+  const navItems = [
+    ...items,
+    ...(isAdmin ? [{ to: "/admin" as const, label: "Admin", icon: Shield }] : []),
+    ...(isInventor ? [{ to: "/inventor" as const, label: "Inventor", icon: Wrench }] : []),
+  ];
 
   return (
     <aside className="hidden md:flex h-screen sticky top-0 w-60 shrink-0 flex-col border-r border-border bg-card">
