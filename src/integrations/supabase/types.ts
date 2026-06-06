@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      credit_ledger: {
+        Row: {
+          balance_after: number
+          created_at: string
+          delta: number
+          id: string
+          note: string | null
+          performed_by: string | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          balance_after: number
+          created_at?: string
+          delta: number
+          id?: string
+          note?: string | null
+          performed_by?: string | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          created_at?: string
+          delta?: number
+          id?: string
+          note?: string | null
+          performed_by?: string | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credits: {
         Row: {
           balance: number
@@ -67,27 +100,39 @@ export type Database = {
       }
       profiles: {
         Row: {
+          banned: boolean
           created_at: string
+          credits: number
           email: string
           full_name: string | null
           id: string
+          is_admin: boolean
           last_seen: string | null
+          obs_token: string | null
           stream_token: string
         }
         Insert: {
+          banned?: boolean
           created_at?: string
+          credits?: number
           email: string
           full_name?: string | null
           id: string
+          is_admin?: boolean
           last_seen?: string | null
+          obs_token?: string | null
           stream_token?: string
         }
         Update: {
+          banned?: boolean
           created_at?: string
+          credits?: number
           email?: string
           full_name?: string | null
           id?: string
+          is_admin?: boolean
           last_seen?: string | null
+          obs_token?: string | null
           stream_token?: string
         }
         Relationships: []
@@ -124,30 +169,39 @@ export type Database = {
       }
       transactions: {
         Row: {
-          amount: number
+          amount: number | null
+          amount_ngn: number | null
           created_at: string
           credits: number
           description: string | null
           id: string
-          type: Database["public"]["Enums"]["transaction_type"]
+          package_id: string | null
+          reference: string | null
+          type: Database["public"]["Enums"]["transaction_type"] | null
           user_id: string
         }
         Insert: {
-          amount?: number
+          amount?: number | null
+          amount_ngn?: number | null
           created_at?: string
           credits?: number
           description?: string | null
           id?: string
-          type: Database["public"]["Enums"]["transaction_type"]
+          package_id?: string | null
+          reference?: string | null
+          type?: Database["public"]["Enums"]["transaction_type"] | null
           user_id: string
         }
         Update: {
-          amount?: number
+          amount?: number | null
+          amount_ngn?: number | null
           created_at?: string
           credits?: number
           description?: string | null
           id?: string
-          type?: Database["public"]["Enums"]["transaction_type"]
+          package_id?: string | null
+          reference?: string | null
+          type?: Database["public"]["Enums"]["transaction_type"] | null
           user_id?: string
         }
         Relationships: []
@@ -178,6 +232,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_credits: {
+        Args: { delta: number; note: string; target_user_id: string }
+        Returns: number
+      }
+      admin_ban_user: { Args: { target_user_id: string }; Returns: undefined }
+      admin_delete_user: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       admin_get_active_streams: {
         Args: never
         Returns: {
@@ -213,6 +276,23 @@ export type Database = {
           total_users: number
         }[]
       }
+      admin_get_finance_stats: { Args: never; Returns: Json }
+      admin_get_ledger: {
+        Args: { filter_user_id?: string; row_limit?: number }
+        Returns: {
+          admin_email: string
+          balance_after: number
+          created_at: string
+          delta: number
+          id: string
+          note: string
+          performed_by: string
+          reason: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_get_metrics: { Args: never; Returns: Json }
       admin_get_visit_stats: {
         Args: never
         Returns: {
@@ -247,6 +327,19 @@ export type Database = {
           type: string
           user_email: string
           user_id: string
+        }[]
+      }
+      admin_list_users: {
+        Args: never
+        Returns: {
+          banned: boolean
+          created_at: string
+          credits: number
+          email: string
+          has_streamed: boolean
+          id: string
+          is_admin: boolean
+          last_sign_in_at: string
         }[]
       }
       admin_list_users_full: {
@@ -294,6 +387,7 @@ export type Database = {
           visits: number
         }[]
       }
+      admin_unban_user: { Args: { target_user_id: string }; Returns: undefined }
       admin_user_transactions: {
         Args: { p_user: string }
         Returns: {
@@ -319,6 +413,23 @@ export type Database = {
           visits_week: number
         }[]
       }
+      can_start_stream: {
+        Args: never
+        Returns: {
+          can_stream: boolean
+          current_balance: number
+        }[]
+      }
+      complete_purchase: {
+        Args: {
+          p_amount_ngn: number
+          p_credits: number
+          p_package_id: string
+          p_reference: string
+          target_user_id: string
+        }
+        Returns: undefined
+      }
       deduct_credits: {
         Args: {
           p_amount: number
@@ -327,6 +438,24 @@ export type Database = {
           p_log_transaction?: boolean
         }
         Returns: number
+      }
+      deduct_stream_credits: {
+        Args: { seconds_elapsed: number }
+        Returns: {
+          exhausted: boolean
+          new_balance: number
+        }[]
+      }
+      get_my_ledger: {
+        Args: { row_limit?: number }
+        Returns: {
+          balance_after: number
+          created_at: string
+          delta: number
+          id: string
+          note: string
+          reason: string
+        }[]
       }
       has_role: {
         Args: {
