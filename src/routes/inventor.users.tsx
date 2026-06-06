@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Fragment } from "react";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Search, X } from "lucide-react";
@@ -105,8 +106,8 @@ function UsersPage() {
             {filtered.map((u) => {
               const isSelf = me === u.id;
               return (
-                <>
-                  <tr key={u.id} className="border-t border-border/60">
+                <Fragment key={u.id}>
+                  <tr className="border-t border-border/60">
                     <td className="px-3 py-2">{u.email}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{NUM(u.credits)}</td>
                     <td className="px-3 py-2 text-muted-foreground">{relativeTime(u.last_sign_in_at)}</td>
@@ -155,7 +156,7 @@ function UsersPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>
