@@ -12,9 +12,9 @@ const ANNOUNCEMENT: {
   message: string;
   showOnPaths: string[];
 } | null = {
-  id: "watermark-removed-2026-06",
+  id: "back-online-2026-06",
   message:
-    "We've removed the watermark from your streams! Thanks for your patience while we sorted it out — enjoy clean, professional output. 💚 — The Lumify Team",
+    "🚀 We rebooted, recompiled, and removed the watermark while we were at it. Lumify is back online! Your credits are safe. Thanks for the patience, legends. — The Lumify Team 💚",
   showOnPaths: ["/dashboard", "/stream"],
 };
 // ────────────────────────────────────────────────────────────────────────────
