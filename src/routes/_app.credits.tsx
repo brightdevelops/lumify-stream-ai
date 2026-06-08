@@ -187,10 +187,11 @@ function CreditsPage() {
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
           <button
             onClick={handlePayment}
-            disabled={processing}
-            className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            disabled={processing || PURCHASES_PAUSED}
+            title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
+            className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {processing ? "Processing…" : "Pay with Paystack"}
+            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Paystack"}
           </button>
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
