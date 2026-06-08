@@ -143,6 +143,15 @@ function CreditsPage() {
         <span><span className="text-foreground font-medium">2 credits per second (₦46/sec)</span> · 1 credit = ₦23 · Credits never expire</span>
       </div>
 
+      {PURCHASES_PAUSED && (
+        <div
+          role="status"
+          className="mt-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground"
+        >
+          {PURCHASES_PAUSED_MESSAGE}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6">
         {PACKS.map((p) => {
           const active = selected === p.id;
