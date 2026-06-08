@@ -1,10 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 
 /**
  * Returns the Decart API key to authenticated users only.
  *
  * Guards:
+ *  - Refuses entirely when STREAMING_PAUSED (maintenance) — no Decart
+ *    session can start, so no credits get deducted.
  *  - Requires a minimum credit balance.
  *  - Refuses if the user already has an active stream session (prevents
  *    multi-tab / refresh duplicates that would burn Decart usage twice).
@@ -16,6 +19,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getDecartKey = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if (STREAMING_PAUSED) throw new Error(STREAMING_PAUSED_MESSAGE);
+
     const key = process.env.DECART_API_KEY;
     if (!key) throw new Error("Decart not configured");
 

@@ -5,6 +5,7 @@ import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
+import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 
@@ -603,6 +604,17 @@ function StreamPage() {
         <p className="mt-1 text-sm text-muted-foreground">Upload a reference image and watch your camera transform in real time.</p>
       </div>
 
+      {STREAMING_PAUSED && (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground"
+        >
+          {STREAMING_PAUSED_MESSAGE}
+        </div>
+      )}
+
+
+
       {/* Prominent time-left banner */}
       <div className={`mb-6 rounded-xl border p-5 ${
         streaming
@@ -851,8 +863,13 @@ function StreamPage() {
               </div>
             )}
             <div className="mt-5 flex gap-3">
-              <button onClick={start} disabled={streaming || connecting} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50">
-                <Play className="h-4 w-4" /> {connecting ? "Connecting…" : "Start Stream"}
+              <button
+                onClick={start}
+                disabled={streaming || connecting || STREAMING_PAUSED}
+                title={STREAMING_PAUSED ? "Streaming is temporarily paused for maintenance" : undefined}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Play className="h-4 w-4" /> {STREAMING_PAUSED ? "Streaming paused for maintenance" : connecting ? "Connecting…" : "Start Stream"}
               </button>
               <button onClick={stop} disabled={!streaming} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-5 py-2.5 text-sm text-foreground hover:bg-secondary disabled:opacity-50">
                 <Square className="h-4 w-4" /> Stop
