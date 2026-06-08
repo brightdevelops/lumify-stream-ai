@@ -10,6 +10,14 @@ export const Route = createFileRoute("/_app/credits")({
 
 const PAYSTACK_PUBLIC_KEY = "pk_live_8aa20c0306707d49e656e1fc5d8c44f27359046e";
 
+// ── Maintenance flag ────────────────────────────────────────────────────────
+// Set to false to re-enable credit purchases.
+// Existing credits and streaming are unaffected by this flag.
+const PURCHASES_PAUSED = true;
+const PURCHASES_PAUSED_MESSAGE =
+  "Credit purchases are temporarily paused for maintenance and will be back within 24 hours. Your existing credits and streaming are unaffected. Thanks for your patience! — The Lumify Team";
+// ────────────────────────────────────────────────────────────────────────────
+
 const PACKS = [
   { id: "starter", name: "Starter", credits: 500, price: 11500, amountKobo: 1_150_000 },
   { id: "basic", name: "Basic", credits: 1000, price: 23000, amountKobo: 2_300_000 },
@@ -135,6 +143,15 @@ function CreditsPage() {
         <span><span className="text-foreground font-medium">2 credits per second (₦46/sec)</span> · 1 credit = ₦23 · Credits never expire</span>
       </div>
 
+      {PURCHASES_PAUSED && (
+        <div
+          role="status"
+          className="mt-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground"
+        >
+          {PURCHASES_PAUSED_MESSAGE}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6">
         {PACKS.map((p) => {
           const active = selected === p.id;
@@ -170,10 +187,11 @@ function CreditsPage() {
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
           <button
             onClick={handlePayment}
-            disabled={processing}
-            className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            disabled={processing || PURCHASES_PAUSED}
+            title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
+            className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {processing ? "Processing…" : "Pay with Paystack"}
+            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Paystack"}
           </button>
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
