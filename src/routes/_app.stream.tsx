@@ -5,6 +5,7 @@ import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getDecartKey } from "@/lib/decart.functions";
+import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 
