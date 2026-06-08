@@ -604,6 +604,17 @@ function StreamPage() {
         <p className="mt-1 text-sm text-muted-foreground">Upload a reference image and watch your camera transform in real time.</p>
       </div>
 
+      {STREAMING_PAUSED && (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground"
+        >
+          {STREAMING_PAUSED_MESSAGE}
+        </div>
+      )}
+
+
+
       {/* Prominent time-left banner */}
       <div className={`mb-6 rounded-xl border p-5 ${
         streaming
