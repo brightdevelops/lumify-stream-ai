@@ -10,6 +10,14 @@ export const Route = createFileRoute("/_app/credits")({
 
 const PAYSTACK_PUBLIC_KEY = "pk_live_8aa20c0306707d49e656e1fc5d8c44f27359046e";
 
+// ── Maintenance flag ────────────────────────────────────────────────────────
+// Set to false to re-enable credit purchases.
+// Existing credits and streaming are unaffected by this flag.
+const PURCHASES_PAUSED = true;
+const PURCHASES_PAUSED_MESSAGE =
+  "Credit purchases are temporarily paused for maintenance and will be back within 24 hours. Your existing credits and streaming are unaffected. Thanks for your patience! — The Lumify Team";
+// ────────────────────────────────────────────────────────────────────────────
+
 const PACKS = [
   { id: "starter", name: "Starter", credits: 500, price: 11500, amountKobo: 1_150_000 },
   { id: "basic", name: "Basic", credits: 1000, price: 23000, amountKobo: 2_300_000 },
