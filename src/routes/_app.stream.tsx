@@ -607,7 +607,7 @@ function StreamPage() {
       {STREAMING_PAUSED && (
         <div
           role="status"
-          className="mb-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground"
+          className="mb-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground whitespace-pre-line"
         >
           {STREAMING_PAUSED_MESSAGE}
         </div>

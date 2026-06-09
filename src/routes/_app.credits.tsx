@@ -13,9 +13,9 @@ const PAYSTACK_PUBLIC_KEY = "pk_live_8aa20c0306707d49e656e1fc5d8c44f27359046e";
 // ── Maintenance flag ────────────────────────────────────────────────────────
 // Set to false to re-enable credit purchases.
 // Existing credits and streaming are unaffected by this flag.
-const PURCHASES_PAUSED = false;
+const PURCHASES_PAUSED = true;
 const PURCHASES_PAUSED_MESSAGE =
-  "Credit purchases are temporarily paused for maintenance and will be back within 24 hours. Your existing credits and streaming are unaffected. Thanks for your patience! — The Lumify Team";
+  "⚡ Lumify is leveling up.\n\nWe're rolling out backend upgrades to make your streams faster, smoother, and more reliable. During this short maintenance window, new credit purchases and live streaming are temporarily paused.\n\nYour credits are 100% safe. Every credit in your wallet is stored securely and will be exactly where you left it when we're back — nothing expires, nothing is lost.\n\nWe're a team that ships. Lumify isn't going anywhere — we're building this for the long run, and these upgrades are part of making it bulletproof. Thanks for streaming with us. We'll be back shortly. 🚀\n\n— The Lumify Team";
 // ────────────────────────────────────────────────────────────────────────────
 
 const PACKS = [
@@ -146,7 +146,7 @@ function CreditsPage() {
       {PURCHASES_PAUSED && (
         <div
           role="status"
-          className="mt-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground"
+          className="mt-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground whitespace-pre-line"
         >
           {PURCHASES_PAUSED_MESSAGE}
         </div>
