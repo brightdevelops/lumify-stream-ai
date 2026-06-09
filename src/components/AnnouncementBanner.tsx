@@ -37,7 +37,7 @@ export function AnnouncementBanner() {
   return (
     <div className="border-b border-primary/30 bg-primary/10 text-foreground">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-2.5 flex items-start gap-3">
-        <p className="flex-1 text-sm leading-relaxed">{ANNOUNCEMENT.message}</p>
+        <p className="flex-1 text-sm leading-relaxed whitespace-pre-line">{ANNOUNCEMENT.message}</p>
         <button
           onClick={() => {
             localStorage.setItem(storageKey, "1");
