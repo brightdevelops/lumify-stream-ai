@@ -12,9 +12,9 @@ const ANNOUNCEMENT: {
   message: string;
   showOnPaths: string[];
 } | null = {
-  id: "back-online-2026-06",
+  id: "maintenance-2026-06-09",
   message:
-    "🚀 We rebooted, recompiled, and removed the watermark while we were at it. Lumify is back online! Your credits are safe. Thanks for the patience, legends. — The Lumify Team 💚",
+    "⚡ Lumify is leveling up.\n\nWe're rolling out backend upgrades to make your streams faster, smoother, and more reliable. During this short maintenance window, new credit purchases and live streaming are temporarily paused.\n\nYour credits are 100% safe. Every credit in your wallet is stored securely and will be exactly where you left it when we're back — nothing expires, nothing is lost.\n\nWe're a team that ships. Lumify isn't going anywhere — we're building this for the long run, and these upgrades are part of making it bulletproof. Thanks for streaming with us. We'll be back shortly. 🚀\n\n— The Lumify Team",
   showOnPaths: ["/dashboard", "/stream"],
 };
 // ────────────────────────────────────────────────────────────────────────────
