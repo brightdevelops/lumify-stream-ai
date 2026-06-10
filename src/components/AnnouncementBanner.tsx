@@ -6,16 +6,15 @@ import { X } from "lucide-react";
 // To take the banner down: set ANNOUNCEMENT to null.
 // To change the message: update `message` AND bump `id` (so previously
 // dismissed users see the new one).
-// To change where it shows: edit `showOnPaths`.
 const ANNOUNCEMENT: {
   id: string;
   message: string;
   showOnPaths: string[];
 } | null = {
-  id: "maintenance-2026-06-09",
+  id: "back-online-2026-06-10",
   message:
-    "⚡ Lumify is leveling up.\n\nWe're rolling out backend upgrades to make your streams faster, smoother, and more reliable. During this short maintenance window, new credit purchases and live streaming are temporarily paused.\n\nYour credits are 100% safe. Every credit in your wallet is stored securely and will be exactly where you left it when we're back — nothing expires, nothing is lost.\n\nWe're a team that ships. Lumify isn't going anywhere — we're building this for the long run, and these upgrades are part of making it bulletproof. Thanks for streaming with us. We'll be back shortly. 🚀\n\n— The Lumify Team",
-  showOnPaths: ["/dashboard", "/stream"],
+    "We're back online! Streaming is fully restored — thank you for your patience. 💚 — The Lumify Team",
+  showOnPaths: ["/dashboard", "/stream", "/credits"],
 };
 // ────────────────────────────────────────────────────────────────────────────
 
