@@ -254,6 +254,97 @@ export type Database = {
         }
         Relationships: []
       }
+      stream_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          image_name: string | null
+          mode: string | null
+          prompt: string | null
+          realism: number | null
+          session_id: string | null
+          style: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          image_name?: string | null
+          mode?: string | null
+          prompt?: string | null
+          realism?: number | null
+          session_id?: string | null
+          style?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          image_name?: string | null
+          mode?: string | null
+          prompt?: string | null
+          realism?: number | null
+          session_id?: string | null
+          style?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "stream_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stream_recordings: {
+        Row: {
+          chunk_index: number
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          mime_type: string | null
+          session_id: string | null
+          size_bytes: number | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          chunk_index?: number
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          mime_type?: string | null
+          session_id?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          chunk_index?: number
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          mime_type?: string | null
+          session_id?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_recordings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "stream_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stream_sessions: {
         Row: {
           created_at: string
@@ -434,6 +525,10 @@ export type Database = {
         }[]
       }
       admin_get_metrics: { Args: never; Returns: Json }
+      admin_get_session_detail: {
+        Args: { p_session_id: string }
+        Returns: Json
+      }
       admin_get_visit_stats: {
         Args: never
         Returns: {
@@ -455,6 +550,22 @@ export type Database = {
           user_email: string
           user_id: string
           visit_count: number
+        }[]
+      }
+      admin_list_stream_recordings: {
+        Args: { p_limit?: number }
+        Returns: {
+          chunk_count: number
+          ended_at: string
+          is_vpn: boolean
+          last_country: string
+          last_recording_at: string
+          session_id: string
+          started_at: string
+          total_bytes: number
+          total_duration_seconds: number
+          user_email: string
+          user_id: string
         }[]
       }
       admin_list_transactions: {
