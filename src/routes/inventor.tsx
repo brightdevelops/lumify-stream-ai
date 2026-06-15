@@ -24,6 +24,7 @@ const TABS = [
   { to: "/inventor/users", label: "Users" },
   { to: "/inventor/ledger", label: "Ledger" },
   { to: "/inventor/monitor", label: "Monitor" },
+  { to: "/inventor/recordings", label: "Recordings" },
   { to: "/inventor/finance", label: "Finance" },
 ] as const;
 

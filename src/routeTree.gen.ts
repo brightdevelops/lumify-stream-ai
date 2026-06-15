@@ -21,6 +21,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorUsersRouteImport } from './routes/inventor.users'
+import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
 import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
@@ -91,6 +92,11 @@ const InventorIndexRoute = InventorIndexRouteImport.update({
 const InventorUsersRoute = InventorUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorRecordingsRoute = InventorRecordingsRouteImport.update({
+  id: '/recordings',
+  path: '/recordings',
   getParentRoute: () => InventorRoute,
 } as any)
 const InventorMonitorRoute = InventorMonitorRouteImport.update({
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
+    | '/inventor/recordings'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/track-visit'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
+    | '/inventor/recordings'
     | '/inventor/users'
     | '/inventor'
     | '/api/public/track-visit'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
+    | '/inventor/recordings'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/track-visit'
@@ -412,6 +424,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventorUsersRouteImport
       parentRoute: typeof InventorRoute
     }
+    '/inventor/recordings': {
+      id: '/inventor/recordings'
+      path: '/recordings'
+      fullPath: '/inventor/recordings'
+      preLoaderRoute: typeof InventorRecordingsRouteImport
+      parentRoute: typeof InventorRoute
+    }
     '/inventor/monitor': {
       id: '/inventor/monitor'
       path: '/monitor'
@@ -521,6 +540,7 @@ interface InventorRouteChildren {
   InventorFinanceRoute: typeof InventorFinanceRoute
   InventorLedgerRoute: typeof InventorLedgerRoute
   InventorMonitorRoute: typeof InventorMonitorRoute
+  InventorRecordingsRoute: typeof InventorRecordingsRoute
   InventorUsersRoute: typeof InventorUsersRoute
   InventorIndexRoute: typeof InventorIndexRoute
 }
@@ -529,6 +549,7 @@ const InventorRouteChildren: InventorRouteChildren = {
   InventorFinanceRoute: InventorFinanceRoute,
   InventorLedgerRoute: InventorLedgerRoute,
   InventorMonitorRoute: InventorMonitorRoute,
+  InventorRecordingsRoute: InventorRecordingsRoute,
   InventorUsersRoute: InventorUsersRoute,
   InventorIndexRoute: InventorIndexRoute,
 }

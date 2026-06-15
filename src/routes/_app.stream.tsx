@@ -8,6 +8,7 @@ import { getDecartKey } from "@/lib/decart.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
+import { startSessionRecorder, logStreamEvent, type RecorderHandle } from "@/lib/stream-recorder";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -55,6 +56,7 @@ function StreamPage() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
   const broadcasterStopRef = useRef<(() => void) | null>(null);
+  const recorderRef = useRef<RecorderHandle | null>(null);
   const [copied, setCopied] = useState(false);
   const [streamToken, setStreamToken] = useState<string | null>(null);
 
@@ -352,6 +354,13 @@ function StreamPage() {
       console.error("Broadcaster stop error", e);
     }
     broadcasterStopRef.current = null;
+    // Stop the session recorder (fires final ondataavailable and uploads).
+    try {
+      void recorderRef.current?.stop();
+    } catch (e) {
+      console.error("Recorder stop error", e);
+    }
+    recorderRef.current = null;
     // Decart SDK exposes `disconnect()` (verified against the type defs);
     // call it directly so a missing method becomes a visible error rather
     // than a silent leak.
@@ -393,7 +402,18 @@ function StreamPage() {
     setReferenceImage(file);
     setReferenceUrl(URL.createObjectURL(file));
     setError(null);
-    if (streaming) applyReference(selectedPreset, file);
+    if (streaming) {
+      applyReference(selectedPreset, file);
+      if (user) {
+        void logStreamEvent({
+          userId: user.id,
+          sessionId: sessionIdRef.current,
+          eventType: "image_change",
+          imageName: file.name,
+          prompt: buildPrompt(selectedPreset, mode, realism),
+        });
+      }
+    }
   };
 
   const start = async () => {
@@ -469,6 +489,17 @@ function StreamPage() {
           } catch (e) {
             console.error("Broadcaster start failed", e);
           }
+          // Start session recording of the AI output (disclosed in Terms).
+          try {
+            recorderRef.current?.stop();
+          } catch {}
+          if (user) {
+            recorderRef.current = startSessionRecorder({
+              userId: user.id,
+              sessionId: sessionIdRef.current,
+              stream: transformedStream,
+            });
+          }
         },
         // If the Decart peer drops (network loss, server-side close), stop
         // immediately so the meter doesn't keep ticking against nothing AND
@@ -529,6 +560,16 @@ function StreamPage() {
         user_id: user.id,
       } as never).select("id").maybeSingle();
       sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
+      void logStreamEvent({
+        userId: user.id,
+        sessionId: sessionIdRef.current,
+        eventType: "start",
+        prompt: buildPrompt(selectedPreset, mode, realism),
+        style: selectedPreset,
+        mode,
+        realism: mode === "realistic" ? realism : null,
+        imageName: referenceImage?.name ?? null,
+      });
     }
   };
 
@@ -572,11 +613,34 @@ function StreamPage() {
     const next = selectedPreset === p ? null : p;
     setSelectedPreset(next);
     setError(null);
-    if (streaming) applyReference(next, referenceImage);
+    if (streaming) {
+      applyReference(next, referenceImage);
+      if (user) {
+        void logStreamEvent({
+          userId: user.id,
+          sessionId: sessionIdRef.current,
+          eventType: "style_change",
+          style: next,
+          mode,
+          prompt: buildPrompt(next, mode, realism),
+        });
+      }
+    }
   };
 
   useEffect(() => {
     if (streaming && referenceImage) applyReference(selectedPreset, referenceImage);
+    if (streaming && user) {
+      void logStreamEvent({
+        userId: user.id,
+        sessionId: sessionIdRef.current,
+        eventType: "mode_change",
+        mode,
+        realism: mode === "realistic" ? realism : null,
+        style: selectedPreset,
+        prompt: buildPrompt(selectedPreset, mode, realism),
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
 
@@ -764,6 +828,15 @@ function StreamPage() {
             <Panel label="AI Output" accent>
               <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
               {!streaming && <PanelEmpty hint="Waiting for stream" />}
+              {streaming && (
+                <div
+                  className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-md bg-black/70 backdrop-blur px-2 py-1 text-[11px] font-medium text-red-400 border border-red-500/40"
+                  title="Session is being recorded for safety review (see Terms of Service)"
+                >
+                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  REC
+                </div>
+              )}
               {connecting && (
                 <div className="absolute inset-0 grid place-items-center bg-black/60">
                   <div className="text-center">
