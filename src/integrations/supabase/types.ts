@@ -194,6 +194,8 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean
+          last_country: string | null
+          last_ip: string | null
           last_seen: string | null
           obs_token: string | null
           stream_token: string
@@ -206,6 +208,8 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean
+          last_country?: string | null
+          last_ip?: string | null
           last_seen?: string | null
           obs_token?: string | null
           stream_token?: string
@@ -218,6 +222,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean
+          last_country?: string | null
+          last_ip?: string | null
           last_seen?: string | null
           obs_token?: string | null
           stream_token?: string
@@ -471,6 +477,8 @@ export type Database = {
           has_streamed: boolean
           id: string
           is_admin: boolean
+          last_country: string
+          last_ip: string
           last_sign_in_at: string
         }[]
       }
