@@ -30,7 +30,7 @@ function AppLayout() {
       <AppSidebar />
       <div className="flex-1 min-w-0 flex flex-col">
         <MobileNav />
-        <AnnouncementBanner />
+        
         <main className="flex-1 min-w-0">
           <Outlet />
         </main>
