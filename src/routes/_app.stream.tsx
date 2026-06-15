@@ -8,6 +8,7 @@ import { getDecartKey } from "@/lib/decart.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
+import { startSessionRecorder, logStreamEvent, type RecorderHandle } from "@/lib/stream-recorder";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -55,6 +56,7 @@ function StreamPage() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
   const broadcasterStopRef = useRef<(() => void) | null>(null);
+  const recorderRef = useRef<RecorderHandle | null>(null);
   const [copied, setCopied] = useState(false);
   const [streamToken, setStreamToken] = useState<string | null>(null);
 
