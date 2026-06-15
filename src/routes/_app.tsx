@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
-import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_app")({
