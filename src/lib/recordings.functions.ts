@@ -59,7 +59,7 @@ export const inventorListRecordings = createServerFn({ method: "GET" })
 export const inventorGetSessionDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ session_id: z.string().uuid() }).parse(input),
+    z.object({ session_id: z.string().uuid().nullable() }).parse(input),
   )
   .handler(async ({ context, data }) => {
     const { data: detail, error } = await context.supabase.rpc("admin_get_session_detail", {
