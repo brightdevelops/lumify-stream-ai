@@ -102,7 +102,7 @@ function UsersPage() {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">No users.</td></tr>
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">No users.</td></tr>
             )}
             {filtered.map((u) => {
               const isSelf = me === u.id;
@@ -112,6 +112,12 @@ function UsersPage() {
                     <td className="px-3 py-2">{u.email}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{NUM(u.credits)}</td>
                     <td className="px-3 py-2 text-muted-foreground">{relativeTime(u.last_sign_in_at)}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-foreground">{u.last_country ?? "—"}</span>
+                        <span className="text-[11px] font-mono">{u.last_ip ?? "no ip"}</span>
+                      </div>
+                    </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1">
                         <span className={"rounded-full px-2 py-0.5 text-[10px] " + (u.is_admin ? "border border-primary/30 bg-primary/10 text-primary" : "border border-border text-muted-foreground")}>
