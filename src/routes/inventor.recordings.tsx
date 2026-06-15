@@ -96,11 +96,11 @@ function RecordingsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s) => (
-                <tr key={s.session_id} className="border-b border-border last:border-b-0">
+              {filtered.map((s, idx) => (
+                <tr key={s.session_id ?? `row-${idx}`} className="border-b border-border last:border-b-0">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-foreground truncate max-w-[260px]">{s.user_email ?? s.user_id}</div>
-                    <div className="text-[11px] text-muted-foreground font-mono">{s.session_id.slice(0, 8)}…</div>
+                    <div className="font-medium text-foreground truncate max-w-[260px]">{s.user_email ?? s.user_id ?? "unknown"}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">{(s.session_id ?? "no-session").slice(0, 8)}…</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
