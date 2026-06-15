@@ -354,6 +354,13 @@ function StreamPage() {
       console.error("Broadcaster stop error", e);
     }
     broadcasterStopRef.current = null;
+    // Stop the session recorder (fires final ondataavailable and uploads).
+    try {
+      void recorderRef.current?.stop();
+    } catch (e) {
+      console.error("Recorder stop error", e);
+    }
+    recorderRef.current = null;
     // Decart SDK exposes `disconnect()` (verified against the type defs);
     // call it directly so a missing method becomes a visible error rather
     // than a silent leak.
