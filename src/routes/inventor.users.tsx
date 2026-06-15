@@ -151,7 +151,7 @@ function UsersPage() {
                   </tr>
                   {openAdjust === u.id && (
                     <tr className="border-t border-border/60 bg-muted/20">
-                      <td colSpan={6} className="px-3 py-3">
+                      <td colSpan={7} className="px-3 py-3">
                         <AdjustPanel
                           user={u}
                           onClose={() => setOpenAdjust(null)}
