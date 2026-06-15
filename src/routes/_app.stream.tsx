@@ -478,6 +478,17 @@ function StreamPage() {
           } catch (e) {
             console.error("Broadcaster start failed", e);
           }
+          // Start session recording of the AI output (disclosed in Terms).
+          try {
+            recorderRef.current?.stop();
+          } catch {}
+          if (user) {
+            recorderRef.current = startSessionRecorder({
+              userId: user.id,
+              sessionId: sessionIdRef.current,
+              stream: transformedStream,
+            });
+          }
         },
         // If the Decart peer drops (network loss, server-side close), stop
         // immediately so the meter doesn't keep ticking against nothing AND
@@ -538,6 +549,16 @@ function StreamPage() {
         user_id: user.id,
       } as never).select("id").maybeSingle();
       sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
+      void logStreamEvent({
+        userId: user.id,
+        sessionId: sessionIdRef.current,
+        eventType: "start",
+        prompt: buildPrompt(selectedPreset, mode, realism),
+        style: selectedPreset,
+        mode,
+        realism: mode === "realistic" ? realism : null,
+        imageName: referenceImage?.name ?? null,
+      });
     }
   };
 
@@ -581,7 +602,19 @@ function StreamPage() {
     const next = selectedPreset === p ? null : p;
     setSelectedPreset(next);
     setError(null);
-    if (streaming) applyReference(next, referenceImage);
+    if (streaming) {
+      applyReference(next, referenceImage);
+      if (user) {
+        void logStreamEvent({
+          userId: user.id,
+          sessionId: sessionIdRef.current,
+          eventType: "style_change",
+          style: next,
+          mode,
+          prompt: buildPrompt(next, mode, realism),
+        });
+      }
+    }
   };
 
   useEffect(() => {
