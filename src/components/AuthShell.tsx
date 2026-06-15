@@ -17,6 +17,7 @@ export function AuthShell({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -24,6 +25,10 @@ export function AuthShell({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (mode === "signup" && !acceptedTerms) {
+      setError("You must accept the Terms of Service to create an account.");
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -48,6 +53,7 @@ export function AuthShell({
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen grid place-items-center bg-background px-4 py-12">
@@ -94,10 +100,29 @@ export function AuthShell({
                 </Link>
               </div>
             )}
+            {mode === "signup" && (
+              <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                />
+                <span>
+                  I agree to the{" "}
+                  <Link to="/terms" target="_blank" className="text-primary hover:underline">
+                    Terms of Service
+                  </Link>
+                  , including that my stream sessions (AI-generated output and style choices) may be
+                  recorded for safety review.
+                </span>
+              </label>
+            )}
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button type="submit" disabled={loading} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
               {loading ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
             </button>
+
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
