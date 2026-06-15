@@ -402,7 +402,18 @@ function StreamPage() {
     setReferenceImage(file);
     setReferenceUrl(URL.createObjectURL(file));
     setError(null);
-    if (streaming) applyReference(selectedPreset, file);
+    if (streaming) {
+      applyReference(selectedPreset, file);
+      if (user) {
+        void logStreamEvent({
+          userId: user.id,
+          sessionId: sessionIdRef.current,
+          eventType: "image_change",
+          imageName: file.name,
+          prompt: buildPrompt(selectedPreset, mode, realism),
+        });
+      }
+    }
   };
 
   const start = async () => {
