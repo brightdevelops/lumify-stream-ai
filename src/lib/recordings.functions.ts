@@ -63,7 +63,7 @@ export const inventorGetSessionDetail = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { data: detail, error } = await context.supabase.rpc("admin_get_session_detail", {
-      p_session_id: data.session_id,
+      p_session_id: data.session_id as string,
     });
     if (error) throw new Error(error.message);
     return { detail: (detail ?? { chunks: [], events: [] }) as SessionDetail };
