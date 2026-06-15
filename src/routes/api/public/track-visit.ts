@@ -58,16 +58,16 @@ export const Route = createFileRoute("/api/public/track-visit")({
               // ip-api.com (free, no key): returns country + hosting/proxy flags via 'status' field.
               // Fields: country, proxy (vpn/proxy/tor), hosting (datacenter)
               const res = await fetch(
-                `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,proxy,hosting`,
+                `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,proxy`,
                 { headers: { "user-agent": "lumify-inventor/1.0" } },
               );
               if (res.ok) {
                 const json = (await res.json()) as {
-                  status?: string; country?: string; proxy?: boolean; hosting?: boolean;
+                  status?: string; country?: string; proxy?: boolean;
                 };
                 if (json.status === "success") {
                   if (typeof json.country === "string" && json.country.length < 100) country = json.country;
-                  isVpn = !!(json.proxy || json.hosting);
+                  isVpn = !!json.proxy;
                 }
               }
               // Fallback for country only if ip-api failed
