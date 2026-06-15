@@ -29,6 +29,8 @@ export type InventorUser = {
   has_streamed: boolean;
   last_sign_in_at: string | null;
   created_at: string;
+  last_ip: string | null;
+  last_country: string | null;
 };
 
 export type LedgerRow = {

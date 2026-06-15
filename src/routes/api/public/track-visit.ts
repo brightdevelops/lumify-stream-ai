@@ -49,6 +49,36 @@ export const Route = createFileRoute("/api/public/track-visit")({
             user_id: userId,
             ip,
           } as never);
+
+          // Track IP + country on the user's profile (signed-in users only).
+          if (userId && ip) {
+            let country: string | null = null;
+            try {
+              const cfCountry = request.headers.get("cf-ipcountry");
+              if (cfCountry && cfCountry !== "XX" && cfCountry !== "T1") {
+                country = cfCountry;
+              } else {
+                const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/country_name/`, {
+                  headers: { "user-agent": "lumify-inventor/1.0" },
+                });
+                if (res.ok) {
+                  const text = (await res.text()).trim();
+                  if (text && !text.toLowerCase().startsWith("undefined") && text.length < 100) country = text;
+                }
+              }
+            } catch {
+              country = null;
+            }
+            try {
+              await supabaseAdmin
+                .from("profiles")
+                .update({ last_ip: ip, ...(country ? { last_country: country } : {}) } as never)
+                .eq("id", userId);
+            } catch {
+              /* ignore */
+            }
+          }
+
           return new Response("ok", { status: 200 });
         } catch (err) {
           console.error("track-visit failed", err);
