@@ -59,11 +59,11 @@ export const inventorListRecordings = createServerFn({ method: "GET" })
 export const inventorGetSessionDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ session_id: z.string().uuid() }).parse(input),
+    z.object({ session_id: z.string().uuid().nullable() }).parse(input),
   )
   .handler(async ({ context, data }) => {
     const { data: detail, error } = await context.supabase.rpc("admin_get_session_detail", {
-      p_session_id: data.session_id,
+      p_session_id: data.session_id as string,
     });
     if (error) throw new Error(error.message);
     return { detail: (detail ?? { chunks: [], events: [] }) as SessionDetail };
@@ -96,19 +96,21 @@ export const inventorSignRecordingUrls = createServerFn({ method: "POST" })
 export const inventorDeleteSessionRecordings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ session_id: z.string().uuid() }).parse(input),
+    z.object({ session_id: z.string().uuid().nullable() }).parse(input),
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows } = await supabaseAdmin
-      .from("stream_recordings")
-      .select("storage_path")
-      .eq("session_id", data.session_id);
+    const q = supabaseAdmin.from("stream_recordings").select("storage_path");
+    const { data: rows } = data.session_id == null
+      ? await q.is("session_id", null)
+      : await q.eq("session_id", data.session_id);
     const paths = (rows ?? []).map((r: { storage_path: string }) => r.storage_path);
     if (paths.length) {
       await supabaseAdmin.storage.from("stream-recordings").remove(paths);
     }
-    await supabaseAdmin.from("stream_recordings").delete().eq("session_id", data.session_id);
+    const del = supabaseAdmin.from("stream_recordings").delete();
+    if (data.session_id == null) await del.is("session_id", null);
+    else await del.eq("session_id", data.session_id);
     return { ok: true, removed: paths.length };
   });

@@ -198,9 +198,9 @@ function SessionModal({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold">{session.user_email ?? session.user_id}</h3>
+            <h3 className="text-lg font-semibold">{session.user_email ?? session.user_id ?? "Unknown user"}</h3>
             <p className="text-xs text-muted-foreground">
-              Session {session.session_id.slice(0, 8)}… · {fmtDate(session.started_at)} · {fmtDur(session.total_duration_seconds)}
+              Session {(session.session_id ?? "no-session").slice(0, 8)}… · {fmtDate(session.started_at)} · {fmtDur(session.total_duration_seconds)}
             </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">✕</button>
