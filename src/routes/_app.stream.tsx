@@ -630,6 +630,17 @@ function StreamPage() {
 
   useEffect(() => {
     if (streaming && referenceImage) applyReference(selectedPreset, referenceImage);
+    if (streaming && user) {
+      void logStreamEvent({
+        userId: user.id,
+        sessionId: sessionIdRef.current,
+        eventType: "mode_change",
+        mode,
+        realism: mode === "realistic" ? realism : null,
+        style: selectedPreset,
+        prompt: buildPrompt(selectedPreset, mode, realism),
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
 
