@@ -114,7 +114,15 @@ function UsersPage() {
                     <td className="px-3 py-2 text-muted-foreground">{relativeTime(u.last_sign_in_at)}</td>
                     <td className="px-3 py-2 text-muted-foreground">
                       <div className="flex flex-col leading-tight">
-                        <span className="text-foreground">{u.last_country ?? "—"}</span>
+                        <span className="text-foreground flex items-center gap-1.5">
+                          {u.last_country ?? "—"}
+                          {u.is_vpn && (
+                            <span title="IP belongs to a VPN, proxy, or hosting/datacenter — country may be spoofed"
+                              className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-300">
+                              VPN
+                            </span>
+                          )}
+                        </span>
                         <span className="text-[11px] font-mono">{u.last_ip ?? "no ip"}</span>
                       </div>
                     </td>

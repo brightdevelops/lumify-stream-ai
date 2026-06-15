@@ -50,32 +50,42 @@ export const Route = createFileRoute("/api/public/track-visit")({
             ip,
           } as never);
 
-          // Track IP + country on the user's profile (signed-in users only).
+          // Track IP + country + VPN flag on the user's profile (signed-in users only).
           if (userId && ip) {
             let country: string | null = null;
+            let isVpn: boolean | null = null;
             try {
-              const cfCountry = request.headers.get("cf-ipcountry");
-              if (cfCountry && cfCountry !== "XX" && cfCountry !== "T1") {
-                country = cfCountry;
-              } else {
-                // ipwho.is: free, no key, generous limits, returns JSON
-                const res = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country`, {
-                  headers: { "user-agent": "lumify-inventor/1.0" },
-                });
-                if (res.ok) {
-                  const json = (await res.json()) as { success?: boolean; country?: string };
-                  if (json.success && typeof json.country === "string" && json.country.length < 100) {
-                    country = json.country;
-                  }
+              // ip-api.com (free, no key): returns country + hosting/proxy flags via 'status' field.
+              // Fields: country, proxy (vpn/proxy/tor), hosting (datacenter)
+              const res = await fetch(
+                `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,proxy`,
+                { headers: { "user-agent": "lumify-inventor/1.0" } },
+              );
+              if (res.ok) {
+                const json = (await res.json()) as {
+                  status?: string; country?: string; proxy?: boolean;
+                };
+                if (json.status === "success") {
+                  if (typeof json.country === "string" && json.country.length < 100) country = json.country;
+                  isVpn = !!json.proxy;
                 }
               }
+              // Fallback for country only if ip-api failed
+              if (!country) {
+                const cfCountry = request.headers.get("cf-ipcountry");
+                if (cfCountry && cfCountry !== "XX" && cfCountry !== "T1") country = cfCountry;
+              }
             } catch {
-              country = null;
+              /* ignore */
             }
             try {
               await supabaseAdmin
                 .from("profiles")
-                .update({ last_ip: ip, ...(country ? { last_country: country } : {}) } as never)
+                .update({
+                  last_ip: ip,
+                  ...(country ? { last_country: country } : {}),
+                  ...(isVpn !== null ? { is_vpn: isVpn } : {}),
+                } as never)
                 .eq("id", userId);
             } catch {
               /* ignore */

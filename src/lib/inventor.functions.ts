@@ -31,6 +31,7 @@ export type InventorUser = {
   created_at: string;
   last_ip: string | null;
   last_country: string | null;
+  is_vpn: boolean | null;
 };
 
 export type LedgerRow = {

@@ -194,6 +194,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean
+          is_vpn: boolean | null
           last_country: string | null
           last_ip: string | null
           last_seen: string | null
@@ -208,6 +209,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean
+          is_vpn?: boolean | null
           last_country?: string | null
           last_ip?: string | null
           last_seen?: string | null
@@ -222,6 +224,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean
+          is_vpn?: boolean | null
           last_country?: string | null
           last_ip?: string | null
           last_seen?: string | null
@@ -477,6 +480,7 @@ export type Database = {
           has_streamed: boolean
           id: string
           is_admin: boolean
+          is_vpn: boolean
           last_country: string
           last_ip: string
           last_sign_in_at: string
