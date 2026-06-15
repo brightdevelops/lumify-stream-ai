@@ -828,6 +828,15 @@ function StreamPage() {
             <Panel label="AI Output" accent>
               <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
               {!streaming && <PanelEmpty hint="Waiting for stream" />}
+              {streaming && (
+                <div
+                  className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-md bg-black/70 backdrop-blur px-2 py-1 text-[11px] font-medium text-red-400 border border-red-500/40"
+                  title="Session is being recorded for safety review (see Terms of Service)"
+                >
+                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  REC
+                </div>
+              )}
               {connecting && (
                 <div className="absolute inset-0 grid place-items-center bg-black/60">
                   <div className="text-center">
