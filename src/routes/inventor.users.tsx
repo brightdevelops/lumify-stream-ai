@@ -94,6 +94,7 @@ function UsersPage() {
               <th className="px-3 py-2">Email</th>
               <th className="px-3 py-2 text-right">Balance</th>
               <th className="px-3 py-2">Last active</th>
+              <th className="px-3 py-2">Location</th>
               <th className="px-3 py-2">Role</th>
               <th className="px-3 py-2">Joined</th>
               <th className="px-3 py-2 text-right">Actions</th>
