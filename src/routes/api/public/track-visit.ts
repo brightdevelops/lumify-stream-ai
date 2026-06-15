@@ -58,12 +58,15 @@ export const Route = createFileRoute("/api/public/track-visit")({
               if (cfCountry && cfCountry !== "XX" && cfCountry !== "T1") {
                 country = cfCountry;
               } else {
-                const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/country_name/`, {
+                // ipwho.is: free, no key, generous limits, returns JSON
+                const res = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}?fields=success,country`, {
                   headers: { "user-agent": "lumify-inventor/1.0" },
                 });
                 if (res.ok) {
-                  const text = (await res.text()).trim();
-                  if (text && !text.toLowerCase().startsWith("undefined") && text.length < 100) country = text;
+                  const json = (await res.json()) as { success?: boolean; country?: string };
+                  if (json.success && typeof json.country === "string" && json.country.length < 100) {
+                    country = json.country;
+                  }
                 }
               }
             } catch {
