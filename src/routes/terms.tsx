@@ -70,47 +70,6 @@ function TermsPage() {
             </p>
           </section>
 
-          <section>
-            <h2 className="text-xl text-foreground">5. Session Recording &amp; Safety Review</h2>
-            <p className="mt-3 text-foreground">
-              You expressly consent that Lumify may record, store, and review your stream sessions
-              for safety, fraud prevention, abuse investigation, and legal compliance.
-            </p>
-            <p className="mt-3">Specifically, you understand and agree that:</p>
-            <ul className="mt-3 list-disc pl-6 space-y-1">
-              <li>
-                The <span className="text-foreground">AI-generated output video</span> of your
-                session may be recorded and stored on our servers, associated with your account
-                email.
-              </li>
-              <li>
-                The <span className="text-foreground">prompts and styles</span> you select during a
-                session are logged with timestamps.
-              </li>
-              <li>
-                A visible <span className="text-foreground">recording indicator</span> (a red
-                "● REC" badge) is shown on the stream page while recording is active.
-              </li>
-              <li>
-                Recordings are kept for a limited retention window (currently 30 days) and then
-                automatically deleted, unless retained longer for an active abuse investigation
-                or as required by law.
-              </li>
-              <li>
-                Access to recordings is restricted to Lumify's safety and operations team. We may
-                disclose recordings to law enforcement when legally required or when we believe in
-                good faith that disclosure is necessary to prevent serious harm.
-              </li>
-              <li>
-                We do <span className="text-foreground">not</span> record your raw webcam input,
-                microphone, screen, or any other device data beyond the AI output stream produced
-                by the Service.
-              </li>
-            </ul>
-            <p className="mt-3">
-              If you do not consent to session recording, do not start a stream.
-            </p>
-          </section>
 
           <section>
             <h2 className="text-xl text-foreground">6. Payments &amp; Credits</h2>
