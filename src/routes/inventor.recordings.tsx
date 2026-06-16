@@ -158,7 +158,11 @@ function SessionModal({
     detailFn({ data: { session_id: session.session_id } })
       .then(async (r) => {
         setDetail(r.detail);
-        const paths = r.detail.chunks.map((c) => c.storage_path);
+        const chunkPaths = r.detail.chunks.map((c) => c.storage_path);
+        const imagePaths = r.detail.events
+          .map((e) => e.image_path)
+          .filter((p): p is string => !!p);
+        const paths = [...chunkPaths, ...imagePaths];
         if (paths.length) {
           const { urls: signed } = await signFn({ data: { paths, expires_in: 600 } });
           const map: Record<string, string> = {};
@@ -166,7 +170,7 @@ function SessionModal({
             if (u.signedUrl) map[u.path] = u.signedUrl;
           });
           setUrls(map);
-          setActive(paths[0] ?? null);
+          setActive(chunkPaths[0] ?? null);
         }
       })
       .catch((e) => setErr(e?.message ?? "Failed to load session"));
