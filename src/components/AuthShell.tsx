@@ -113,8 +113,7 @@ export function AuthShell({
                   <Link to="/terms" target="_blank" className="text-primary hover:underline">
                     Terms of Service
                   </Link>
-                  , including that my stream sessions (AI-generated output and style choices) may be
-                  recorded for safety review.
+                  .
                 </span>
               </label>
             )}
