@@ -489,15 +489,17 @@ function StreamPage() {
           } catch (e) {
             console.error("Broadcaster start failed", e);
           }
-          // Start session recording of the AI output (disclosed in Terms).
+          // Start session recording: webcam + AI output composite (disclosed in Terms).
           try {
             recorderRef.current?.stop();
           } catch {}
-          if (user) {
+          if (user && mediaStreamRef.current) {
             recorderRef.current = startSessionRecorder({
               userId: user.id,
               sessionId: sessionIdRef.current,
-              stream: transformedStream,
+              webcamStream: mediaStreamRef.current,
+              outputStream: transformedStream,
+              referenceImageUrl: referenceUrl,
             });
           }
         },
