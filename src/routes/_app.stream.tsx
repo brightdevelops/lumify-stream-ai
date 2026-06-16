@@ -575,6 +575,17 @@ function StreamPage() {
         user_id: user.id,
       } as never).select("id").maybeSingle();
       sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
+      try {
+        recorderRef.current?.setSessionId(sessionIdRef.current);
+      } catch {}
+      let initialImagePath: string | null = null;
+      if (referenceImage) {
+        initialImagePath = await uploadSwapImage({
+          userId: user.id,
+          sessionId: sessionIdRef.current,
+          file: referenceImage,
+        });
+      }
       void logStreamEvent({
         userId: user.id,
         sessionId: sessionIdRef.current,
@@ -584,6 +595,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         imageName: referenceImage?.name ?? null,
+        imagePath: initialImagePath,
       });
     }
   };
