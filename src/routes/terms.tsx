@@ -6,7 +6,7 @@ export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
       { title: "Terms of Service — Lumify" },
-      { name: "description", content: "Terms of Service for Lumify, including session recording and acceptable use." },
+      { name: "description", content: "Terms of Service for Lumify, including acceptable use and payments." },
     ],
   }),
 });
