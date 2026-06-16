@@ -72,7 +72,7 @@ function TermsPage() {
 
 
           <section>
-            <h2 className="text-xl text-foreground">6. Payments &amp; Credits</h2>
+            <h2 className="text-xl text-foreground">5. Payments &amp; Credits</h2>
             <p className="mt-3">
               Credits are sold in fixed packs in Nigerian Naira (NGN) via Paystack. Credits never
               expire but are non-refundable except where required by law. Prices and credit-burn
@@ -81,18 +81,18 @@ function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">7. Privacy</h2>
+            <h2 className="text-xl text-foreground">6. Privacy</h2>
             <p className="mt-3">
               We collect the data described above (account info, payment records, IP and country,
-              session recordings, and style logs) to operate the Service, prevent abuse, and comply
-              with the law. We do not sell your personal data. You may request deletion of your
-              account by contacting support; deletion removes your profile, recordings, and logs
-              within 30 days, except where retention is required by law.
+              and style logs) to operate the Service, prevent abuse, and comply with the law. We
+              do not sell your personal data. You may request deletion of your account by
+              contacting support; deletion removes your profile and logs within 30 days, except
+              where retention is required by law.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">8. Disclaimers</h2>
+            <h2 className="text-xl text-foreground">7. Disclaimers</h2>
             <p className="mt-3">
               The Service is provided "as is" without warranties of any kind. Lumify is not liable
               for indirect or consequential damages. Our maximum liability is limited to the
@@ -101,7 +101,7 @@ function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">9. Changes</h2>
+            <h2 className="text-xl text-foreground">8. Changes</h2>
             <p className="mt-3">
               We may update these Terms from time to time. Continued use of the Service after an
               update constitutes acceptance of the revised Terms.
@@ -109,7 +109,7 @@ function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">10. Contact</h2>
+            <h2 className="text-xl text-foreground">9. Contact</h2>
             <p className="mt-3">
               For questions about these Terms or to report abuse, contact us through the support
               channel listed on lumifylive.com.
