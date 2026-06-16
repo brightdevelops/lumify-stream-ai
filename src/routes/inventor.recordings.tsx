@@ -268,6 +268,15 @@ function SessionModal({
                       {e.style && <div className="mt-1 text-foreground">Style: {e.style}</div>}
                       {e.mode && <div className="text-muted-foreground">Mode: {e.mode}{e.realism != null ? ` (${e.realism}/10)` : ""}</div>}
                       {e.image_name && <div className="text-muted-foreground truncate">Image: {e.image_name}</div>}
+                      {e.image_path && urls[e.image_path] && (
+                        <a href={urls[e.image_path]} target="_blank" rel="noreferrer" className="mt-1 block">
+                          <img
+                            src={urls[e.image_path]}
+                            alt="Swap-to reference"
+                            className="mt-1 max-h-32 rounded border border-border object-cover"
+                          />
+                        </a>
+                      )}
                       {e.prompt && (
                         <div className="mt-1 text-muted-foreground line-clamp-3">{e.prompt}</div>
                       )}
