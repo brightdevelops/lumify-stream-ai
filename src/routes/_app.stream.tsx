@@ -399,19 +399,32 @@ function StreamPage() {
       return;
     }
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
+    const url = URL.createObjectURL(file);
     setReferenceImage(file);
-    setReferenceUrl(URL.createObjectURL(file));
+    setReferenceUrl(url);
     setError(null);
+    // Push the new swap image into the active recorder composite immediately.
+    try {
+      recorderRef.current?.setReferenceImage(url);
+    } catch {}
     if (streaming) {
       applyReference(selectedPreset, file);
       if (user) {
-        void logStreamEvent({
-          userId: user.id,
-          sessionId: sessionIdRef.current,
-          eventType: "image_change",
-          imageName: file.name,
-          prompt: buildPrompt(selectedPreset, mode, realism),
-        });
+        void (async () => {
+          const imagePath = await uploadSwapImage({
+            userId: user.id,
+            sessionId: sessionIdRef.current,
+            file,
+          });
+          await logStreamEvent({
+            userId: user.id,
+            sessionId: sessionIdRef.current,
+            eventType: "image_change",
+            imageName: file.name,
+            imagePath,
+            prompt: buildPrompt(selectedPreset, mode, realism),
+          });
+        })();
       }
     }
   };
