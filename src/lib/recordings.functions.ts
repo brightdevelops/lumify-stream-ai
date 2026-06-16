@@ -33,6 +33,7 @@ export type SessionDetail = {
     mode: string | null;
     realism: number | null;
     image_name: string | null;
+    image_path: string | null;
     created_at: string;
   }>;
 };
