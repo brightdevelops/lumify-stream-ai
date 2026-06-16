@@ -260,6 +260,7 @@ export type Database = {
           event_type: string
           id: string
           image_name: string | null
+          image_path: string | null
           mode: string | null
           prompt: string | null
           realism: number | null
@@ -272,6 +273,7 @@ export type Database = {
           event_type: string
           id?: string
           image_name?: string | null
+          image_path?: string | null
           mode?: string | null
           prompt?: string | null
           realism?: number | null
@@ -284,6 +286,7 @@ export type Database = {
           event_type?: string
           id?: string
           image_name?: string | null
+          image_path?: string | null
           mode?: string | null
           prompt?: string | null
           realism?: number | null

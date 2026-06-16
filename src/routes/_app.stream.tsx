@@ -8,7 +8,7 @@ import { getDecartKey } from "@/lib/decart.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
-import { startSessionRecorder, logStreamEvent, type RecorderHandle } from "@/lib/stream-recorder";
+import { startSessionRecorder, logStreamEvent, uploadSwapImage, type RecorderHandle } from "@/lib/stream-recorder";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -399,19 +399,32 @@ function StreamPage() {
       return;
     }
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
+    const url = URL.createObjectURL(file);
     setReferenceImage(file);
-    setReferenceUrl(URL.createObjectURL(file));
+    setReferenceUrl(url);
     setError(null);
+    // Push the new swap image into the active recorder composite immediately.
+    try {
+      recorderRef.current?.setReferenceImage(url);
+    } catch {}
     if (streaming) {
       applyReference(selectedPreset, file);
       if (user) {
-        void logStreamEvent({
-          userId: user.id,
-          sessionId: sessionIdRef.current,
-          eventType: "image_change",
-          imageName: file.name,
-          prompt: buildPrompt(selectedPreset, mode, realism),
-        });
+        void (async () => {
+          const imagePath = await uploadSwapImage({
+            userId: user.id,
+            sessionId: sessionIdRef.current,
+            file,
+          });
+          await logStreamEvent({
+            userId: user.id,
+            sessionId: sessionIdRef.current,
+            eventType: "image_change",
+            imageName: file.name,
+            imagePath,
+            prompt: buildPrompt(selectedPreset, mode, realism),
+          });
+        })();
       }
     }
   };
@@ -489,15 +502,17 @@ function StreamPage() {
           } catch (e) {
             console.error("Broadcaster start failed", e);
           }
-          // Start session recording of the AI output (disclosed in Terms).
+          // Start session recording: webcam + AI output composite (disclosed in Terms).
           try {
             recorderRef.current?.stop();
           } catch {}
-          if (user) {
+          if (user && mediaStreamRef.current) {
             recorderRef.current = startSessionRecorder({
               userId: user.id,
               sessionId: sessionIdRef.current,
-              stream: transformedStream,
+              webcamStream: mediaStreamRef.current,
+              outputStream: transformedStream,
+              referenceImageUrl: referenceUrl,
             });
           }
         },
@@ -560,6 +575,17 @@ function StreamPage() {
         user_id: user.id,
       } as never).select("id").maybeSingle();
       sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
+      try {
+        recorderRef.current?.setSessionId(sessionIdRef.current);
+      } catch {}
+      let initialImagePath: string | null = null;
+      if (referenceImage) {
+        initialImagePath = await uploadSwapImage({
+          userId: user.id,
+          sessionId: sessionIdRef.current,
+          file: referenceImage,
+        });
+      }
       void logStreamEvent({
         userId: user.id,
         sessionId: sessionIdRef.current,
@@ -569,6 +595,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         imageName: referenceImage?.name ?? null,
+        imagePath: initialImagePath,
       });
     }
   };
