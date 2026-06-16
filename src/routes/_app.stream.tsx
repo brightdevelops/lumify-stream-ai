@@ -8,7 +8,7 @@ import { getDecartKey } from "@/lib/decart.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
-import { startSessionRecorder, logStreamEvent, type RecorderHandle } from "@/lib/stream-recorder";
+import { startSessionRecorder, logStreamEvent, uploadSwapImage, type RecorderHandle } from "@/lib/stream-recorder";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
