@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.admin_get_session_detail(uuid) FROM PUBLIC, anon;
