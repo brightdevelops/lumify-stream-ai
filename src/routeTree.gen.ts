@@ -31,6 +31,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
+import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -144,6 +145,11 @@ const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
   path: '/api/public/track-visit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
+  id: '/api/public/nowpayments-ipn',
+  path: '/api/public/nowpayments-ipn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
+  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -207,6 +214,7 @@ export interface FileRoutesByTo {
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
+  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -235,6 +243,7 @@ export interface FileRoutesById {
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
+  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -263,6 +272,7 @@ export interface FileRouteTypes {
     | '/inventor/recordings'
     | '/inventor/users'
     | '/inventor/'
+    | '/api/public/nowpayments-ipn'
     | '/api/public/track-visit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/inventor/recordings'
     | '/inventor/users'
     | '/inventor'
+    | '/api/public/nowpayments-ipn'
     | '/api/public/track-visit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/inventor/recordings'
     | '/inventor/users'
     | '/inventor/'
+    | '/api/public/nowpayments-ipn'
     | '/api/public/track-visit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -332,6 +344,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -494,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTrackVisitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/nowpayments-ipn': {
+      id: '/api/public/nowpayments-ipn'
+      path: '/api/public/nowpayments-ipn'
+      fullPath: '/api/public/nowpayments-ipn'
+      preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -569,6 +589,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
