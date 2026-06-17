@@ -71,6 +71,7 @@ function CreditsPage() {
   const [selected, setSelected] = useState("basic");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cryptoUrl, setCryptoUrl] = useState<string | null>(null);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
 
@@ -151,8 +152,8 @@ function CreditsPage() {
       // from inside the Lovable preview iframe appears as "nothing happens".
       const win = window.open(invoiceUrl, "_blank", "noopener,noreferrer");
       if (!win) {
-        // Popup blocked — fall back to top-level navigation.
-        window.top ? (window.top.location.href = invoiceUrl) : (window.location.href = invoiceUrl);
+        setError("Your browser blocked the popup. Please allow popups for this site, or click the link below to open the crypto checkout.");
+        setCryptoUrl(invoiceUrl);
       }
       setProcessing(false);
     } catch (e: any) {
@@ -213,6 +214,16 @@ function CreditsPage() {
             <Row k={<span className="text-foreground">Total</span>} v={<span className="text-foreground font-display text-xl">₦{pack.price.toLocaleString()}</span>} />
           </div>
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+          {cryptoUrl && (
+            <a
+              href={cryptoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-sm text-primary underline"
+            >
+              Open crypto checkout →
+            </a>
+          )}
           <button
             onClick={handlePayment}
             disabled={processing || PURCHASES_PAUSED}
