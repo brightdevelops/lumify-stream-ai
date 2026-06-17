@@ -7,9 +7,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const CHUNK_MS = 30_000; // 30 seconds per chunk
-const CANVAS_W = 1280;
-const CANVAS_H = 480;
+// Low-overhead safety-review recording: half-res, low fps, low bitrate.
+const CANVAS_W = 640;
+const CANVAS_H = 240;
 const HALF_W = CANVAS_W / 2;
+const RECORD_FPS = 8;
+const VIDEO_BITRATE = 400_000;
 
 export type RecorderHandle = {
   stop: () => Promise<void>;
