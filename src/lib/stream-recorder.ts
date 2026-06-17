@@ -220,7 +220,8 @@ export function startSessionRecorder(opts: {
     rec.start(CHUNK_MS);
   } catch (e) {
     console.error("MediaRecorder.start failed", e);
-    cancelAnimationFrame(rafId);
+    stoppedDraw = true;
+    if (timerId) clearTimeout(timerId);
     return null;
   }
 
@@ -228,7 +229,7 @@ export function startSessionRecorder(opts: {
     if (stopped) return;
     stopped = true;
     stoppedDraw = true;
-    cancelAnimationFrame(rafId);
+    if (timerId) clearTimeout(timerId);
     try {
       if (rec.state !== "inactive") {
         const done = new Promise<void>((resolve) => {
