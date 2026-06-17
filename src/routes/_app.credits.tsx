@@ -214,6 +214,16 @@ function CreditsPage() {
             <Row k={<span className="text-foreground">Total</span>} v={<span className="text-foreground font-display text-xl">₦{pack.price.toLocaleString()}</span>} />
           </div>
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+          {cryptoUrl && (
+            <a
+              href={cryptoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-sm text-primary underline"
+            >
+              Open crypto checkout →
+            </a>
+          )}
           <button
             onClick={handlePayment}
             disabled={processing || PURCHASES_PAUSED}
