@@ -71,6 +71,7 @@ function CreditsPage() {
   const [selected, setSelected] = useState("basic");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cryptoUrl, setCryptoUrl] = useState<string | null>(null);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
 
