@@ -195,6 +195,17 @@ function CreditsPage() {
           >
             {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave"}
           </button>
+          <button
+            onClick={handleCryptoPayment}
+            disabled={processing || PURCHASES_PAUSED}
+            className="mt-3 w-full rounded-md border border-primary/40 bg-secondary px-4 py-3 text-sm font-medium text-foreground hover:border-primary disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {processing ? "Opening crypto checkout…" : "Pay with Crypto (BTC, ETH, USDT…)"}
+          </button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Crypto payments are confirmed on-chain — credits typically appear within a few minutes after you send.
+          </p>
+
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
               <span key={m} className="rounded-full border border-border bg-secondary px-3 py-1 text-xs text-muted-foreground">{m}</span>
