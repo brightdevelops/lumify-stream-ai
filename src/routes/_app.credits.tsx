@@ -151,8 +151,8 @@ function CreditsPage() {
       // from inside the Lovable preview iframe appears as "nothing happens".
       const win = window.open(invoiceUrl, "_blank", "noopener,noreferrer");
       if (!win) {
-        // Popup blocked — fall back to top-level navigation.
-        window.top ? (window.top.location.href = invoiceUrl) : (window.location.href = invoiceUrl);
+        setError("Your browser blocked the popup. Please allow popups for this site, or click the link below to open the crypto checkout.");
+        setCryptoUrl(invoiceUrl);
       }
       setProcessing(false);
     } catch (e: any) {
