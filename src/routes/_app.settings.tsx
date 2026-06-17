@@ -122,14 +122,14 @@ function SettingsPage() {
   );
 }
 
-function Field({ label, defaultValue, type = "text" }: { label: string; defaultValue: string; type?: string }) {
+function Field({ label, defaultValue, value, type = "text", readOnly }: { label: string; defaultValue?: string; value?: string; type?: string; readOnly?: boolean }) {
   return (
     <label className="block">
       <span className="block text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{label}</span>
       <input
         type={type}
-        defaultValue={defaultValue}
-        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-primary"
+        {...(value !== undefined ? { value, readOnly: true } : { defaultValue, readOnly })}
+        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-primary read-only:opacity-70 read-only:cursor-not-allowed"
       />
     </label>
   );
