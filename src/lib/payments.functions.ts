@@ -127,6 +127,12 @@ export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
 
     // Convert NGN → USD (NOWPayments invoices in fiat, settles in crypto).
     const priceUsd = Math.max(1, Math.round((pack.amountNgn / NGN_PER_USD) * 100) / 100);
+    // NOWPayments rejects invoices under ~$10 (varies per coin). Block early.
+    if (priceUsd < 10) {
+      throw new Error(
+        `Crypto payments require a minimum of about $10. The ${pack.name} pack is only ~$${priceUsd.toFixed(2)}. Please choose a larger pack.`,
+      );
+    }
 
     const orderId = `lumify_${data.packId}_${userId.slice(0, 8)}_${Date.now()}`;
     const origin = data.returnOrigin.replace(/\/$/, "");
