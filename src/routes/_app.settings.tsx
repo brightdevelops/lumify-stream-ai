@@ -54,8 +54,8 @@ function SettingsPage() {
 
       <section className="mt-8 rounded-xl border border-border bg-card p-6 space-y-5">
         <h2 className="text-lg">Profile</h2>
-        <Field label="Display name" defaultValue="Creator" />
-        <Field label="Email" defaultValue="you@studio.com" type="email" />
+        <Field label="Display name" defaultValue={displayName} />
+        <Field label="Email" value={email} type="email" readOnly />
         <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Save changes</button>
       </section>
 
