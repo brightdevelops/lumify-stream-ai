@@ -147,7 +147,14 @@ function CreditsPage() {
       const { invoiceUrl } = await createNowPaymentsInvoice({
         data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise", returnOrigin: window.location.origin },
       });
-      window.location.href = invoiceUrl;
+      // Open in a new tab — NOWPayments blocks iframing, so top-level navigation
+      // from inside the Lovable preview iframe appears as "nothing happens".
+      const win = window.open(invoiceUrl, "_blank", "noopener,noreferrer");
+      if (!win) {
+        // Popup blocked — fall back to top-level navigation.
+        window.top ? (window.top.location.href = invoiceUrl) : (window.location.href = invoiceUrl);
+      }
+      setProcessing(false);
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Could not start crypto checkout");
