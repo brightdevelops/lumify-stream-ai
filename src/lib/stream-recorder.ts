@@ -7,9 +7,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const CHUNK_MS = 30_000; // 30 seconds per chunk
-const CANVAS_W = 1280;
-const CANVAS_H = 480;
+// Low-overhead safety-review recording: half-res, low fps, low bitrate.
+const CANVAS_W = 640;
+const CANVAS_H = 240;
 const HALF_W = CANVAS_W / 2;
+const RECORD_FPS = 8;
+const VIDEO_BITRATE = 400_000;
 
 export type RecorderHandle = {
   stop: () => Promise<void>;
@@ -114,10 +117,16 @@ export function startSessionRecorder(opts: {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  let rafId = 0;
+  let timerId: ReturnType<typeof setTimeout> | null = null;
   let stoppedDraw = false;
+  const FRAME_MS = Math.round(1000 / RECORD_FPS);
   const draw = () => {
     if (stoppedDraw) return;
+    // Skip drawing when tab is hidden to save CPU/GPU.
+    if (typeof document !== "undefined" && document.hidden) {
+      timerId = setTimeout(draw, 250);
+      return;
+    }
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
@@ -127,33 +136,33 @@ export function startSessionRecorder(opts: {
 
     // Labels
     ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(8, 8, 110, 24);
-    ctx.fillRect(HALF_W + 8, 8, 110, 24);
+    ctx.fillRect(4, 4, 70, 14);
+    ctx.fillRect(HALF_W + 4, 4, 70, 14);
     ctx.fillStyle = "#fff";
-    ctx.font = "14px system-ui, sans-serif";
-    ctx.fillText("USER (cam)", 16, 25);
-    ctx.fillText("AI OUTPUT", HALF_W + 16, 25);
+    ctx.font = "9px system-ui, sans-serif";
+    ctx.fillText("USER (cam)", 8, 14);
+    ctx.fillText("AI OUTPUT", HALF_W + 8, 14);
 
     // Inset: swap-to reference image (top-right of right pane)
     if (refImg && refImg.naturalWidth > 0) {
-      const iw = 180;
-      const ih = 135;
-      const ix = CANVAS_W - iw - 12;
-      const iy = 40;
+      const iw = 90;
+      const ih = 68;
+      const ix = CANVAS_W - iw - 6;
+      const iy = 22;
       ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillRect(ix - 4, iy - 4, iw + 8, ih + 8 + 18);
+      ctx.fillRect(ix - 2, iy - 2, iw + 4, ih + 4 + 12);
       drawCover(ctx, refImg, ix, iy, iw, ih);
       ctx.fillStyle = "#fff";
-      ctx.font = "12px system-ui, sans-serif";
-      ctx.fillText("SWAPPED TO", ix + 4, iy + ih + 14);
+      ctx.font = "8px system-ui, sans-serif";
+      ctx.fillText("SWAPPED TO", ix + 2, iy + ih + 10);
     }
 
-    rafId = requestAnimationFrame(draw);
+    timerId = setTimeout(draw, FRAME_MS);
   };
-  rafId = requestAnimationFrame(draw);
+  timerId = setTimeout(draw, FRAME_MS);
 
   // @ts-ignore
-  const compStream: MediaStream = canvas.captureStream(15);
+  const compStream: MediaStream = canvas.captureStream(RECORD_FPS);
 
   const mimeType = pickMimeType();
   const ext = extFromMime(mimeType);
@@ -162,10 +171,11 @@ export function startSessionRecorder(opts: {
 
   let rec: MediaRecorder;
   try {
-    rec = new MediaRecorder(compStream, { mimeType, videoBitsPerSecond: 800_000 });
+    rec = new MediaRecorder(compStream, { mimeType, videoBitsPerSecond: VIDEO_BITRATE });
   } catch (e) {
     console.error("MediaRecorder init failed", e);
-    cancelAnimationFrame(rafId);
+    stoppedDraw = true;
+    if (timerId) clearTimeout(timerId);
     return null;
   }
 
@@ -210,7 +220,8 @@ export function startSessionRecorder(opts: {
     rec.start(CHUNK_MS);
   } catch (e) {
     console.error("MediaRecorder.start failed", e);
-    cancelAnimationFrame(rafId);
+    stoppedDraw = true;
+    if (timerId) clearTimeout(timerId);
     return null;
   }
 
@@ -218,7 +229,7 @@ export function startSessionRecorder(opts: {
     if (stopped) return;
     stopped = true;
     stoppedDraw = true;
-    cancelAnimationFrame(rafId);
+    if (timerId) clearTimeout(timerId);
     try {
       if (rec.state !== "inactive") {
         const done = new Promise<void>((resolve) => {
