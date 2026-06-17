@@ -3,6 +3,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// NGN → USD conversion used when invoicing crypto (NOWPayments prices in USD).
+// Tunable via env so we can react to FX moves without a code change.
+const NGN_PER_USD = Number(process.env.NGN_PER_USD ?? 1600);
+
+
+
 // Server-authoritative price table — amounts in NGN (major units)
 const PACKS: Record<string, { name: string; credits: number; amountNgn: number }> = {
   starter: { name: "Starter", credits: 500, amountNgn: 11_500 },
@@ -96,3 +102,112 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
 
     return { ok: true, alreadyCredited: false };
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOWPayments (crypto) — runs alongside Flutterwave.
+// Flow: createNowPaymentsInvoice → user is redirected to hosted checkout →
+// NOWPayments fires IPN to /api/public/nowpayments-ipn → we credit the user.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        packId: z.enum(["starter", "basic", "pro", "enterprise"]),
+        returnOrigin: z.string().url(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const pack = PACKS[data.packId];
+    const apiKey = process.env.NOWPAYMENTS_API_KEY;
+    if (!apiKey) throw new Error("Crypto payments not configured");
+
+    // Convert NGN → USD (NOWPayments invoices in fiat, settles in crypto).
+    const priceUsd = Math.max(1, Math.round((pack.amountNgn / NGN_PER_USD) * 100) / 100);
+
+    const orderId = `lumify_${data.packId}_${userId.slice(0, 8)}_${Date.now()}`;
+    const origin = data.returnOrigin.replace(/\/$/, "");
+
+    const res = await fetch("https://api.nowpayments.io/v1/invoice", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        price_amount: priceUsd,
+        price_currency: "usd",
+        order_id: orderId,
+        order_description: `Lumify Credits — ${pack.name} pack (${pack.credits} credits)`,
+        ipn_callback_url: `${origin}/api/public/nowpayments-ipn`,
+        success_url: `${origin}/credits?crypto=success&order=${encodeURIComponent(orderId)}`,
+        cancel_url: `${origin}/credits?crypto=cancel`,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Failed to create crypto invoice (${res.status}) ${text.slice(0, 200)}`);
+    }
+
+    const payload = (await res.json()) as { id: string; invoice_url: string };
+    if (!payload?.invoice_url) throw new Error("NOWPayments returned no invoice URL");
+
+    return { invoiceUrl: payload.invoice_url, orderId, priceUsd };
+  });
+
+/**
+ * Helper used by the IPN webhook (NOT exported as a server fn — called from
+ * the public webhook route after HMAC verification). Credits the user by
+ * parsing packId + userId prefix from the order_id we generated.
+ */
+export async function creditNowPaymentsOrder(opts: {
+  orderId: string;
+  paidUsd: number;
+}) {
+  const { orderId, paidUsd } = opts;
+  // orderId shape: lumify_<packId>_<userIdPrefix8>_<ts>
+  const m = /^lumify_(starter|basic|pro|enterprise)_([a-f0-9]{8})_\d+$/.exec(orderId);
+  if (!m) throw new Error(`Unrecognized order_id: ${orderId}`);
+  const packId = m[1] as keyof typeof PACKS;
+  const userPrefix = m[2];
+  const pack = PACKS[packId];
+
+  // Resolve full user id from the 8-char prefix.
+  const { data: profile, error: profErr } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .like("id", `${userPrefix}%`)
+    .limit(2);
+  if (profErr) throw new Error(profErr.message);
+  if (!profile || profile.length !== 1) {
+    throw new Error(`Could not resolve user for order ${orderId} (matches: ${profile?.length ?? 0})`);
+  }
+  const userId = profile[0].id as string;
+
+  // Validate amount paid covers pack price (allow 2% slack for FX drift).
+  const expectedUsd = pack.amountNgn / NGN_PER_USD;
+  if (paidUsd + 0.01 < expectedUsd * 0.98) {
+    throw new Error(`Underpaid: got $${paidUsd}, expected ~$${expectedUsd.toFixed(2)}`);
+  }
+
+  // Idempotency
+  const marker = `NOWPayments:${orderId}`;
+  const { data: existing } = await supabaseAdmin
+    .from("transactions")
+    .select("id")
+    .eq("user_id", userId)
+    .like("description", `%${marker}%`)
+    .maybeSingle();
+  if (existing) return { alreadyCredited: true };
+
+  const { error: rpcErr } = await supabaseAdmin.rpc("purchase_credits_for_user", {
+    p_user_id: userId,
+    p_credits: pack.credits,
+    p_amount: pack.amountNgn,
+    p_description: `Credit purchase — ${pack.name} pack (${marker})`,
+  });
+  if (rpcErr) throw new Error(rpcErr.message);
+
+  return { alreadyCredited: false };
+}

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey } from "@/lib/payments.functions";
+import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createNowPaymentsInvoice } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
@@ -135,6 +135,25 @@ function CreditsPage() {
     }
   };
 
+  const handleCryptoPayment = async () => {
+    if (PURCHASES_PAUSED) return;
+    if (!user) {
+      setError("You must be logged in.");
+      return;
+    }
+    setError(null);
+    setProcessing(true);
+    try {
+      const { invoiceUrl } = await createNowPaymentsInvoice({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise", returnOrigin: window.location.origin },
+      });
+      window.location.href = invoiceUrl;
+    } catch (e: any) {
+      setProcessing(false);
+      setError(e?.message ?? "Could not start crypto checkout");
+    }
+  };
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <h1 className="text-3xl">Buy Credits</h1>
@@ -195,6 +214,17 @@ function CreditsPage() {
           >
             {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave"}
           </button>
+          <button
+            onClick={handleCryptoPayment}
+            disabled={processing || PURCHASES_PAUSED}
+            className="mt-3 w-full rounded-md border border-primary/40 bg-secondary px-4 py-3 text-sm font-medium text-foreground hover:border-primary disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {processing ? "Opening crypto checkout…" : "Pay with Crypto (BTC, ETH, USDT…)"}
+          </button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Crypto payments are confirmed on-chain — credits typically appear within a few minutes after you send.
+          </p>
+
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
               <span key={m} className="rounded-full border border-border bg-secondary px-3 py-1 text-xs text-muted-foreground">{m}</span>
