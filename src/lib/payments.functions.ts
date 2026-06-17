@@ -3,6 +3,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// NGN → USD conversion used when invoicing crypto (NOWPayments prices in USD).
+// Tunable via env so we can react to FX moves without a code change.
+const NGN_PER_USD = Number(process.env.NGN_PER_USD ?? 1600);
+
+
+
 // Server-authoritative price table — amounts in NGN (major units)
 const PACKS: Record<string, { name: string; credits: number; amountNgn: number }> = {
   starter: { name: "Starter", credits: 500, amountNgn: 11_500 },
