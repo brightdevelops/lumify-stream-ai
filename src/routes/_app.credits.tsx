@@ -135,6 +135,25 @@ function CreditsPage() {
     }
   };
 
+  const handleCryptoPayment = async () => {
+    if (PURCHASES_PAUSED) return;
+    if (!user) {
+      setError("You must be logged in.");
+      return;
+    }
+    setError(null);
+    setProcessing(true);
+    try {
+      const { invoiceUrl } = await createNowPaymentsInvoice({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise", returnOrigin: window.location.origin },
+      });
+      window.location.href = invoiceUrl;
+    } catch (e: any) {
+      setProcessing(false);
+      setError(e?.message ?? "Could not start crypto checkout");
+    }
+  };
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <h1 className="text-3xl">Buy Credits</h1>
