@@ -11,10 +11,13 @@ export const Route = createFileRoute("/_app/settings")({
 });
 
 function SettingsPage() {
+  const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const email = user?.email ?? "";
+  const displayName = (user?.user_metadata?.full_name as string | undefined) ?? email.split("@")[0] ?? "";
 
   const obsUrl = token ? `${OUTPUT_ORIGIN}/output?token=${token}` : "";
 
