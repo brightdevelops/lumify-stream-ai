@@ -1,31 +1,87 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { StatusBadge } from "./_app.dashboard";
 
 export const Route = createFileRoute("/_app/billing")({
   component: BillingPage,
 });
 
-const TXNS = [
-  { desc: "Credit purchase — Basic pack", date: "Today, 09:18", credits: 1000, status: "Paid" },
-  { desc: "Stream session — Cyberpunk preset", date: "Today, 14:02", credits: -420, status: "Complete" },
-  { desc: "Stream session — Anime preset", date: "Yesterday, 21:11", credits: -680, status: "Complete" },
-  { desc: "Stream session — Oil Painting", date: "May 24, 17:48", credits: -240, status: "Complete" },
-  { desc: "Credit purchase — Starter pack", date: "May 22, 11:03", credits: 500, status: "Paid" },
-  { desc: "Stream session — Neon Glow", date: "May 20, 19:30", credits: -360, status: "Complete" },
-  { desc: "Credit purchase — Pro pack", date: "May 17, 08:55", credits: 2000, status: "Paid" },
-  { desc: "Refund request", date: "May 12, 13:20", credits: 0, status: "Pending" },
-];
+type Txn = {
+  id: string;
+  type: string | null;
+  credits: number;
+  amount: number | null;
+  amount_ngn: number | null;
+  description: string | null;
+  package_id: string | null;
+  reference: string | null;
+  created_at: string;
+};
+
+function fmtDate(s: string) {
+  const d = new Date(s);
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function fmtNGN(n: number) {
+  return "₦" + n.toLocaleString();
+}
+
+function describe(t: Txn) {
+  if (t.description) return t.description;
+  if (t.type === "purchase") return t.package_id ? `Credit purchase — ${t.package_id}` : "Credit purchase";
+  if (t.type === "usage") return "Stream session";
+  return t.type ?? "Transaction";
+}
 
 function BillingPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [txns, setTxns] = useState<Txn[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id,type,credits,amount,amount_ngn,description,package_id,reference,created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (cancelled) return;
+      if (error) setErr(error.message);
+      else setTxns((data ?? []) as Txn[]);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [user, authLoading]);
+
+  const stats = useMemo(() => {
+    let spent = 0;
+    let purchased = 0;
+    for (const t of txns) {
+      if (t.type === "purchase") {
+        spent += Number(t.amount_ngn ?? t.amount ?? 0);
+        purchased += t.credits;
+      }
+    }
+    return { spent, purchased, count: txns.length };
+  }, [txns]);
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <h1 className="text-3xl">Billing</h1>
       <p className="mt-1 text-sm text-muted-foreground">Every purchase and stream session, in one place.</p>
 
       <div className="grid gap-4 sm:grid-cols-3 mt-8">
-        <Stat label="Total Spent" value="₦86,250" hint="Lifetime" />
-        <Stat label="Credits Purchased" value="6,500" hint="Lifetime" highlight />
-        <Stat label="Transactions" value="24" hint="All time" />
+        <Stat label="Total Spent" value={fmtNGN(stats.spent)} hint="Lifetime" />
+        <Stat label="Credits Purchased" value={stats.purchased.toLocaleString()} hint="Lifetime" highlight />
+        <Stat label="Transactions" value={stats.count.toLocaleString()} hint="All time" />
       </div>
 
       <div className="mt-8 rounded-xl border border-border bg-card overflow-hidden">
@@ -43,16 +99,26 @@ function BillingPage() {
               </tr>
             </thead>
             <tbody>
-              {TXNS.map((t, i) => (
-                <tr key={i} className="border-t border-border">
-                  <td className="px-6 py-4">{t.desc}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{t.date}</td>
-                  <td className={`px-6 py-4 text-right font-medium ${t.credits > 0 ? "text-primary" : t.credits < 0 ? "text-muted-foreground" : "text-muted-foreground"}`}>
-                    {t.credits > 0 ? "+" : ""}{t.credits ? t.credits.toLocaleString() : "—"}
-                  </td>
-                  <td className="px-6 py-4"><StatusBadge status={t.status} /></td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground">Loading…</td></tr>
+              ) : err ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-destructive">{err}</td></tr>
+              ) : txns.length === 0 ? (
+                <tr><td colSpan={4} className="px-6 py-10 text-center text-muted-foreground">No transactions yet.</td></tr>
+              ) : txns.map((t) => {
+                const signed = t.type === "usage" ? -Math.abs(t.credits) : t.credits;
+                const status = t.type === "purchase" ? "Paid" : t.type === "usage" ? "Complete" : "—";
+                return (
+                  <tr key={t.id} className="border-t border-border">
+                    <td className="px-6 py-4">{describe(t)}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{fmtDate(t.created_at)}</td>
+                    <td className={`px-6 py-4 text-right font-medium ${signed > 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {signed > 0 ? "+" : ""}{signed ? signed.toLocaleString() : "—"}
+                    </td>
+                    <td className="px-6 py-4"><StatusBadge status={status} /></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
