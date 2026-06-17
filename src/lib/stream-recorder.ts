@@ -171,10 +171,11 @@ export function startSessionRecorder(opts: {
 
   let rec: MediaRecorder;
   try {
-    rec = new MediaRecorder(compStream, { mimeType, videoBitsPerSecond: 800_000 });
+    rec = new MediaRecorder(compStream, { mimeType, videoBitsPerSecond: VIDEO_BITRATE });
   } catch (e) {
     console.error("MediaRecorder init failed", e);
-    cancelAnimationFrame(rafId);
+    stoppedDraw = true;
+    if (timerId) clearTimeout(timerId);
     return null;
   }
 
