@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Copy, Check, RefreshCw } from "lucide-react";
 import { getMyStreamToken, regenerateMyStreamToken } from "@/lib/stream-token.functions";
+import { useAuth } from "@/hooks/use-auth";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -10,10 +11,13 @@ export const Route = createFileRoute("/_app/settings")({
 });
 
 function SettingsPage() {
+  const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const email = user?.email ?? "";
+  const displayName = (user?.user_metadata?.full_name as string | undefined) ?? email.split("@")[0] ?? "";
 
   const obsUrl = token ? `${OUTPUT_ORIGIN}/output?token=${token}` : "";
 
@@ -50,8 +54,8 @@ function SettingsPage() {
 
       <section className="mt-8 rounded-xl border border-border bg-card p-6 space-y-5">
         <h2 className="text-lg">Profile</h2>
-        <Field label="Display name" defaultValue="Creator" />
-        <Field label="Email" defaultValue="you@studio.com" type="email" />
+        <Field label="Display name" defaultValue={displayName} />
+        <Field label="Email" value={email} type="email" readOnly />
         <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Save changes</button>
       </section>
 
@@ -118,14 +122,14 @@ function SettingsPage() {
   );
 }
 
-function Field({ label, defaultValue, type = "text" }: { label: string; defaultValue: string; type?: string }) {
+function Field({ label, defaultValue, value, type = "text", readOnly }: { label: string; defaultValue?: string; value?: string; type?: string; readOnly?: boolean }) {
   return (
     <label className="block">
       <span className="block text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{label}</span>
       <input
         type={type}
-        defaultValue={defaultValue}
-        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-primary"
+        {...(value !== undefined ? { value, readOnly: true } : { defaultValue, readOnly })}
+        className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-primary read-only:opacity-70 read-only:cursor-not-allowed"
       />
     </label>
   );
