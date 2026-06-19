@@ -967,6 +967,22 @@ function StreamPage() {
               </div>
             )}
 
+            <div className="mt-4 flex items-center gap-2">
+              <label htmlFor="background-input" className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                Background
+              </label>
+              <input
+                id="background-input"
+                type="text"
+                value={background}
+                onChange={(e) => setBackground(e.target.value)}
+                disabled={streaming || connecting}
+                placeholder="optional — e.g. neon city at night (leave empty to keep your real background)"
+                className="flex-1 h-8 rounded-md border border-border bg-background/60 px-2.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
+              />
+            </div>
+
+
             {error && (
               <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
