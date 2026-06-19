@@ -33,22 +33,17 @@ const buildPrompt = (
   background?: string | null,
 ) => {
   const bg = background?.trim();
-  // Front-load the background instruction so it isn't drowned out by the
-  // character/reference description. Repeat the key directive at the end —
-  // Decart's image-conditioned model weighs the reference image heavily, so
-  // background changes need an emphatic, repeated cue.
-  const bgPrefix = bg
-    ? `Scene background: ${bg}. Completely replace the original room/environment behind the person with this scene — walls, floor, ceiling, windows, and all background objects must match: ${bg}. `
-    : "";
-  const bgSuffix = bg
-    ? ` The entire background behind and around the person MUST be: ${bg}. Do not keep any of the original room. Keep the person sharp and well-composited into this new environment with matching lighting.`
-    : "";
+  // Per Decart's docs (Lucy 2.1 is prompt-driven and supports live setPrompt),
+  // we incorporate the user's background description directly into the prompt
+  // as a natural clause: "...with a <bg> background". Keep it concise — long
+  // emphatic instructions don't improve the model's behavior.
+  const bgClause = bg ? `, with a ${bg} background` : "";
   if (mode === "realistic") {
-    return `${bgPrefix}Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgSuffix}`;
+    return `Transform into this character while keeping a natural, human appearance${bgClause}. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
   }
-  return bgPrefix + (preset
+  return (preset
     ? `Transform into this character in ${preset} style`
-    : "Transform into this character") + bgSuffix;
+    : "Transform into this character") + bgClause + ".";
 };
 
 
