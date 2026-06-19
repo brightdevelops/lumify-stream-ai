@@ -72,8 +72,38 @@ function CreditsPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cryptoUrl, setCryptoUrl] = useState<string | null>(null);
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [issueMethod, setIssueMethod] = useState<"crypto" | "card" | "other">("crypto");
+  const [issueRef, setIssueRef] = useState("");
+  const [issueMsg, setIssueMsg] = useState("");
+  const [issueSubmitting, setIssueSubmitting] = useState(false);
+  const [issueSent, setIssueSent] = useState(false);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
+
+  const submitIssue = async () => {
+    if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
+    setIssueSubmitting(true);
+    setError(null);
+    try {
+      await reportPaymentIssue({
+        data: {
+          method: issueMethod,
+          message: issueMsg.trim(),
+          orderReference: issueRef.trim() || null,
+          packId: pack.id as "starter" | "basic" | "pro" | "enterprise",
+        },
+      });
+      setIssueSent(true);
+      setIssueMsg(""); setIssueRef("");
+      setTimeout(() => { setIssueOpen(false); setIssueSent(false); }, 2500);
+    } catch (e: any) {
+      setError(e?.message ?? "Could not send report");
+    } finally {
+      setIssueSubmitting(false);
+    }
+  };
+
 
   const handlePayment = async () => {
     if (PURCHASES_PAUSED) return;
