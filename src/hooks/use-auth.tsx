@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureFreshSupabaseSession } from "@/lib/auth-session";
 
 type AuthCtx = {
   user: User | null;
@@ -41,15 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         applySession(s);
         return;
       }
-      // Event with null session that is NOT a sign-out — e.g. a transient
-      // refresh failure. If we previously had a session, keep the old one
-      // and let auto-refresh retry; don't bounce the user.
-      if (!hadSessionRef.current) applySession(null);
+      hadSessionRef.current = false;
+      applySession(null);
     });
 
     // 2. Then read the persisted session from storage.
-    supabase.auth.getSession().then(({ data }) => {
-      applySession(data.session ?? null);
+    ensureFreshSupabaseSession().then((freshSession) => {
+      applySession(freshSession);
       if (mounted) setLoading(false);
     });
 
@@ -66,22 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     //    access token may be expired by the time the user returns.
     const onVisible = async () => {
       if (document.visibilityState !== "visible") return;
-      const { data } = await supabase.auth.getSession();
-      const nowSec = Math.floor(Date.now() / 1000);
-      const expiresAt = data.session?.expires_at ?? 0;
-      if (data.session && expiresAt - nowSec < 60) {
-        const { data: refreshed, error } = await supabase.auth.refreshSession();
-        if (error) {
-          // Refresh token rejected (e.g. expired) — sign out so the UI
-          // routes to /login instead of looping on 401s.
-          await supabase.auth.signOut();
-          applySession(null);
-          return;
-        }
-        applySession(refreshed.session);
-        return;
-      }
-      applySession(data.session ?? null);
+      const freshSession = await ensureFreshSupabaseSession({ redirectToLogin: true });
+      applySession(freshSession);
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);

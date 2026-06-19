@@ -3,6 +3,7 @@ import { Coins, Clock, TrendingUp, Wallet, Video, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { ensureFreshSupabaseSession } from "@/lib/auth-session";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -34,6 +35,8 @@ function Dashboard() {
     if (!user) return;
     let cancelled = false;
     (async () => {
+      const session = await ensureFreshSupabaseSession({ redirectToLogin: true });
+      if (!session) return;
       const [{ data: c }, { data: t }] = await Promise.all([
         supabase.from("credits").select("balance").eq("user_id", user.id).maybeSingle(),
         supabase.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
