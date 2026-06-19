@@ -18,9 +18,10 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
       const { data: refreshed, error } = await supabase.auth.refreshSession()
       if (!error && refreshed.session) {
         session = refreshed.session
-      } else if (session && expiresAt <= nowSec) {
-        // Refresh failed and the cached token is already expired — don't
-        // send a known-expired bearer (server will 401). Drop the header.
+      } else {
+        // Refresh failed (refresh token expired/invalid) — clear the dead
+        // session so the app routes to /login instead of looping on 401s.
+        await supabase.auth.signOut().catch(() => {})
         session = null
       }
     }
