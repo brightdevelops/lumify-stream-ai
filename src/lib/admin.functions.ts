@@ -230,3 +230,59 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
     return { points, credits_used_today: creditsUsedToday, credits_used_month: creditsUsedMonth };
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Crypto invoices + payment issue tickets
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type CryptoInvoiceRow = {
+  id: string; user_id: string; user_email: string | null; full_name: string | null;
+  order_id: string; pack_id: string; credits: number; price_usd: number; amount_ngn: number;
+  status: string; invoice_url: string | null; paid_at: string | null; created_at: string;
+};
+
+export type PaymentIssueRow = {
+  id: string; user_id: string; user_email: string | null; full_name: string | null;
+  method: string; order_reference: string | null; pack_id: string | null;
+  message: string; status: string; admin_note: string | null;
+  resolved_at: string | null; created_at: string;
+};
+
+export const adminListCryptoInvoices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { status?: string | null; limit?: number }) => input)
+  .handler(async ({ context, data }) => {
+    await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
+    const { data: rows, error } = await context.supabase.rpc("admin_list_crypto_invoices", {
+      p_status: data.status ?? undefined,
+      p_limit: data.limit ?? 200,
+    });
+    if (error) throw new Error(error.message);
+    return { invoices: (rows ?? []) as CryptoInvoiceRow[] };
+  });
+
+export const adminListPaymentIssues = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { status?: string | null; limit?: number }) => input)
+  .handler(async ({ context, data }) => {
+    await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
+    const { data: rows, error } = await context.supabase.rpc("admin_list_payment_issues", {
+      p_status: data.status ?? undefined,
+      p_limit: data.limit ?? 200,
+    });
+    if (error) throw new Error(error.message);
+    return { issues: (rows ?? []) as PaymentIssueRow[] };
+  });
+
+export const adminUpdatePaymentIssue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; status: "open" | "in_progress" | "resolved" | "dismissed"; note?: string | null }) => input)
+  .handler(async ({ context, data }) => {
+    await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
+    const { error } = await context.supabase.rpc("admin_update_payment_issue", {
+      p_id: data.id, p_status: data.status, p_note: data.note ?? undefined,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
