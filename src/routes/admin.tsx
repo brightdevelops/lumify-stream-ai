@@ -647,6 +647,20 @@ function AdminPage() {
               <div><div className="text-xs text-muted-foreground">Used</div><div className="text-lg">{fmtNum(selectedUser.total_credits_used)}</div></div>
               <div><div className="text-xs text-muted-foreground">Spent</div><div className="text-lg">{fmtMoney(selectedUser.total_spent)}</div></div>
             </div>
+            {(() => {
+              const purchases = userTx.filter((t) => t.type === "purchase");
+              const cardCount = purchases.filter((t) => paymentMethod(t.description) === "card").length;
+              const cryptoCount = purchases.filter((t) => paymentMethod(t.description) === "crypto").length;
+              const pendingCrypto = cryptoInvoices.filter((ci) => ci.user_id === selectedUser.user_id && ci.status === "pending").length;
+              return (
+                <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-border text-xs">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1"><CreditCard className="h-3 w-3" /> {cardCount} card</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1"><Bitcoin className="h-3 w-3" /> {cryptoCount} crypto</span>
+                  {pendingCrypto > 0 && <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-600 px-2.5 py-1">{pendingCrypto} pending crypto invoice{pendingCrypto > 1 ? "s" : ""}</span>}
+                </div>
+              );
+            })()}
+
             <div className="max-h-96 overflow-auto">
               <Tbl headers={["Date", "Type", "Credits", "Amount", "Description"]}>
                 {userTxLoading ? (
