@@ -8,26 +8,33 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
     const { data } = await supabase.auth.getSession()
     let session = data.session
-    // getSession() returns the cached session without refreshing. Proactively
-    // refresh when the access token has expired or is within 60s of expiring
-    // so the server middleware doesn't reject with "JWT has expired".
     const nowSec = Math.floor(Date.now() / 1000)
     const expiresAt = session?.expires_at ?? 0
-    const isStale = !session || expiresAt - nowSec < 60
-    if (isStale) {
+    // Refresh if we have a session that's expired or expiring within 60s.
+    if (session && expiresAt - nowSec < 60) {
       const { data: refreshed, error } = await supabase.auth.refreshSession()
       if (!error && refreshed.session) {
         session = refreshed.session
       } else {
-        // Refresh failed (refresh token expired/invalid) — clear the dead
-        // session so the app routes to /login instead of looping on 401s.
+        // Refresh token is dead — clear local session and redirect to login
+        // rather than calling the server with a known-expired bearer.
         await supabase.auth.signOut().catch(() => {})
-        session = null
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+          window.location.assign('/login')
+        }
+        throw new Error('Session expired. Please sign in again.')
       }
     }
-    const token = session?.access_token
+    // Re-check freshness after potential refresh.
+    const finalExp = session?.expires_at ?? 0
+    if (!session || finalExp - Math.floor(Date.now() / 1000) <= 0) {
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login')
+      }
+      throw new Error('Not authenticated.')
+    }
     return next({
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${session.access_token}` },
     })
   },
 )
