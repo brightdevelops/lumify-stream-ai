@@ -159,8 +159,22 @@ export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
     const payload = (await res.json()) as { id: string; invoice_url: string };
     if (!payload?.invoice_url) throw new Error("NOWPayments returned no invoice URL");
 
+    // Log invoice creation so admins can see who started crypto checkout
+    // and whether it ever completed.
+    await supabaseAdmin.from("crypto_invoices").insert({
+      user_id: userId,
+      order_id: orderId,
+      pack_id: data.packId,
+      credits: pack.credits,
+      price_usd: priceUsd,
+      amount_ngn: pack.amountNgn,
+      status: "pending",
+      invoice_url: payload.invoice_url,
+    });
+
     return { invoiceUrl: payload.invoice_url, orderId, priceUsd };
   });
+
 
 /**
  * Helper used by the IPN webhook (NOT exported as a server fn — called from
@@ -205,7 +219,13 @@ export async function creditNowPaymentsOrder(opts: {
     .eq("user_id", userId)
     .like("description", `%${marker}%`)
     .maybeSingle();
-  if (existing) return { alreadyCredited: true };
+  if (existing) {
+    await supabaseAdmin
+      .from("crypto_invoices")
+      .update({ status: "paid", paid_at: new Date().toISOString() })
+      .eq("order_id", orderId);
+    return { alreadyCredited: true };
+  }
 
   const { error: rpcErr } = await supabaseAdmin.rpc("purchase_credits_for_user", {
     p_user_id: userId,
@@ -215,5 +235,39 @@ export async function creditNowPaymentsOrder(opts: {
   });
   if (rpcErr) throw new Error(rpcErr.message);
 
+  await supabaseAdmin
+    .from("crypto_invoices")
+    .update({ status: "paid", paid_at: new Date().toISOString() })
+    .eq("order_id", orderId);
+
   return { alreadyCredited: false };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User-facing payment issue reporting
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const reportPaymentIssue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        method: z.enum(["crypto", "card", "other"]),
+        message: z.string().min(5).max(2000),
+        orderReference: z.string().max(200).optional().nullable(),
+        packId: z.enum(["starter", "basic", "pro", "enterprise"]).optional().nullable(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await supabaseAdmin.from("payment_issues").insert({
+      user_id: context.userId,
+      method: data.method,
+      message: data.message,
+      order_reference: data.orderReference ?? null,
+      pack_id: data.packId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

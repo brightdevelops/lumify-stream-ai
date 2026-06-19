@@ -68,6 +68,51 @@ export type Database = {
         }
         Relationships: []
       }
+      crypto_invoices: {
+        Row: {
+          amount_ngn: number
+          created_at: string
+          credits: number
+          id: string
+          invoice_url: string | null
+          order_id: string
+          pack_id: string
+          paid_at: string | null
+          price_usd: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_ngn: number
+          created_at?: string
+          credits: number
+          id?: string
+          invoice_url?: string | null
+          order_id: string
+          pack_id: string
+          paid_at?: string | null
+          price_usd: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_ngn?: number
+          created_at?: string
+          credits?: number
+          id?: string
+          invoice_url?: string | null
+          order_id?: string
+          pack_id?: string
+          paid_at?: string | null
+          price_usd?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -182,6 +227,51 @@ export type Database = {
           referrer?: string | null
           user_agent?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      payment_issues: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          message: string
+          method: string
+          order_reference: string | null
+          pack_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          method: string
+          order_reference?: string | null
+          pack_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          method?: string
+          order_reference?: string | null
+          pack_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -541,6 +631,41 @@ export type Database = {
           visits_today: number
         }[]
       }
+      admin_list_crypto_invoices: {
+        Args: { p_limit?: number; p_status?: string }
+        Returns: {
+          amount_ngn: number
+          created_at: string
+          credits: number
+          full_name: string
+          id: string
+          invoice_url: string
+          order_id: string
+          pack_id: string
+          paid_at: string
+          price_usd: number
+          status: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_list_payment_issues: {
+        Args: { p_limit?: number; p_status?: string }
+        Returns: {
+          admin_note: string
+          created_at: string
+          full_name: string
+          id: string
+          message: string
+          method: string
+          order_reference: string
+          pack_id: string
+          resolved_at: string
+          status: string
+          user_email: string
+          user_id: string
+        }[]
+      }
       admin_list_recent_visits: {
         Args: { p_limit?: number }
         Returns: {
@@ -650,6 +775,10 @@ export type Database = {
         }[]
       }
       admin_unban_user: { Args: { target_user_id: string }; Returns: undefined }
+      admin_update_payment_issue: {
+        Args: { p_id: string; p_note?: string; p_status: string }
+        Returns: undefined
+      }
       admin_user_transactions: {
         Args: { p_user: string }
         Returns: {
