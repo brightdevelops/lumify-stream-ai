@@ -33,16 +33,24 @@ const buildPrompt = (
   background?: string | null,
 ) => {
   const bg = background?.trim();
+  // Front-load the background instruction so it isn't drowned out by the
+  // character/reference description. Repeat the key directive at the end —
+  // Decart's image-conditioned model weighs the reference image heavily, so
+  // background changes need an emphatic, repeated cue.
+  const bgPrefix = bg
+    ? `Scene background: ${bg}. Completely replace the original room/environment behind the person with this scene — walls, floor, ceiling, windows, and all background objects must match: ${bg}. `
+    : "";
   const bgSuffix = bg
-    ? ` Replace the background behind the person with: ${bg}. Keep the person sharp and well-composited against this new background.`
+    ? ` The entire background behind and around the person MUST be: ${bg}. Do not keep any of the original room. Keep the person sharp and well-composited into this new environment with matching lighting.`
     : "";
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgSuffix}`;
+    return `${bgPrefix}Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgSuffix}`;
   }
-  return (preset
+  return bgPrefix + (preset
     ? `Transform into this character in ${preset} style`
     : "Transform into this character") + bgSuffix;
 };
+
 
 // Human-friendly time-left formatter: "7 min 30 sec", "45 sec", "1 hr 5 min"
 const formatTimeLeft = (totalSec: number) => {
