@@ -458,9 +458,9 @@ function StreamPage() {
       return;
     }
 
-    // Lock in the background description at start; mid-stream changes to the
-    // input won't take effect until the next start.
+    // Sync the ref so prompt-building helpers see the current background.
     backgroundRef.current = background.trim();
+
 
 
 
