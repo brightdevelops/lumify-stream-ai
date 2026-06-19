@@ -64,6 +64,9 @@ function AdminPage() {
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
   const profitFn = useServerFn(adminDailyProfit);
+  const cryptoInvFn = useServerFn(adminListCryptoInvoices);
+  const issuesFn = useServerFn(adminListPaymentIssues);
+  const updateIssueFn = useServerFn(adminUpdatePaymentIssue);
   
 
   const [authChecked, setAuthChecked] = useState(false);
@@ -76,6 +79,10 @@ function AdminPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [active, setActive] = useState<ActiveStream[]>([]);
+  const [cryptoInvoices, setCryptoInvoices] = useState<CryptoInvoiceRow[]>([]);
+  const [paymentIssues, setPaymentIssues] = useState<PaymentIssueRow[]>([]);
+  const [cryptoFilter, setCryptoFilter] = useState<"all" | "pending" | "paid" | "expired" | "cancelled">("all");
+  const [issueFilter, setIssueFilter] = useState<"all" | "open" | "in_progress" | "resolved" | "dismissed">("open");
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,7 +90,8 @@ function AdminPage() {
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "created_at", dir: "desc" });
-  const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage">("all");
+  const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage" | "crypto" | "card">("all");
+
   const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive">("all");
   const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
   const [userTx, setUserTx] = useState<Omit<TransactionRow, "user_id" | "user_email">[]>([]);
