@@ -159,8 +159,22 @@ export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
     const payload = (await res.json()) as { id: string; invoice_url: string };
     if (!payload?.invoice_url) throw new Error("NOWPayments returned no invoice URL");
 
+    // Log invoice creation so admins can see who started crypto checkout
+    // and whether it ever completed.
+    await supabaseAdmin.from("crypto_invoices").insert({
+      user_id: userId,
+      order_id: orderId,
+      pack_id: data.packId,
+      credits: pack.credits,
+      price_usd: priceUsd,
+      amount_ngn: pack.amountNgn,
+      status: "pending",
+      invoice_url: payload.invoice_url,
+    });
+
     return { invoiceUrl: payload.invoice_url, orderId, priceUsd };
   });
+
 
 /**
  * Helper used by the IPN webhook (NOT exported as a server fn — called from
