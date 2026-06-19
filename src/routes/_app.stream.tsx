@@ -538,12 +538,14 @@ function StreamPage() {
       teardownStream();
       setConnecting(false);
       startingRef.current = false;
-      const msg = e instanceof Error ? e.message : "";
-      setError(
-        msg.includes("Another stream is already active")
-          ? msg
-          : "Failed to connect to the AI transformation service. Please try again.",
-      );
+      const msg = e instanceof Error ? e.message : String(e ?? "");
+      if (msg.includes("Another stream is already active") || msg.includes("Insufficient credits")) {
+        setError(msg);
+      } else {
+        setError(
+          `Failed to connect to the AI transformation service. This is usually caused by your network or browser blocking WebRTC (common on corporate/school Wi-Fi, VPNs, or strict ad-blockers). Try: (1) a different network or mobile hotspot, (2) Chrome incognito with extensions disabled, (3) disabling VPN/ad-blocker. Technical details: ${msg || "unknown error"}`,
+        );
+      }
       return;
     }
 
