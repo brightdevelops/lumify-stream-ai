@@ -979,8 +979,8 @@ function StreamPage() {
                 type="text"
                 value={background}
                 onChange={(e) => setBackground(e.target.value)}
-                disabled={streaming || connecting}
-                placeholder="optional — e.g. neon city at night (leave empty to keep your real background)"
+                disabled={connecting}
+                placeholder="optional — e.g. neon city at night (updates live while streaming)"
                 className="flex-1 h-8 rounded-md border border-border bg-background/60 px-2.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
               />
             </div>
