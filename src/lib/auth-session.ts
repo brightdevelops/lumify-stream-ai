@@ -8,9 +8,7 @@ let sessionCheck: Promise<Session | null> | null = null;
 function decodeBase64Url(value: string) {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-  if (typeof atob === "function") return atob(padded);
-  if (typeof Buffer !== "undefined") return Buffer.from(padded, "base64").toString("utf8");
-  return "";
+  return typeof atob === "function" ? atob(padded) : "";
 }
 
 function getJwtExpiry(accessToken: string | undefined) {
