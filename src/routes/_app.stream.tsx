@@ -455,6 +455,12 @@ function StreamPage() {
       return;
     }
 
+    // Lock in the background description at start; mid-stream changes to the
+    // input won't take effect until the next start.
+    backgroundRef.current = background.trim();
+
+
+
     const { data } = await supabase
       .from("credits")
       .select("balance")
