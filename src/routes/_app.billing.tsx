@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { StatusBadge } from "./_app.dashboard";
@@ -38,28 +39,26 @@ function describe(t: Txn) {
 
 function BillingPage() {
   const { user, loading: authLoading } = useAuth();
-  const [txns, setTxns] = useState<Txn[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
+  const { data: txns = [], isLoading, error } = useQuery({
+    queryKey: ["billing-transactions", user?.id],
+    enabled: !!user && !authLoading,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("transactions")
         .select("id,type,credits,amount,amount_ngn,description,package_id,reference,created_at")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(200);
-      if (cancelled) return;
-      if (error) setErr(error.message);
-      else setTxns((data ?? []) as Txn[]);
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [user, authLoading]);
+      if (error) throw error;
+      return (data ?? []) as Txn[];
+    },
+  });
+
+  const loading = authLoading || isLoading;
+  const err = error ? (error as Error).message : null;
 
   const stats = useMemo(() => {
     let spent = 0;
