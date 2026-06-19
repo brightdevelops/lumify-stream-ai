@@ -33,22 +33,17 @@ const buildPrompt = (
   background?: string | null,
 ) => {
   const bg = background?.trim();
-  // Front-load the background instruction so it isn't drowned out by the
-  // character/reference description. Repeat the key directive at the end —
-  // Decart's image-conditioned model weighs the reference image heavily, so
-  // background changes need an emphatic, repeated cue.
-  const bgPrefix = bg
-    ? `Scene background: ${bg}. Completely replace the original room/environment behind the person with this scene — walls, floor, ceiling, windows, and all background objects must match: ${bg}. `
-    : "";
-  const bgSuffix = bg
-    ? ` The entire background behind and around the person MUST be: ${bg}. Do not keep any of the original room. Keep the person sharp and well-composited into this new environment with matching lighting.`
-    : "";
+  // Per Decart's docs (Lucy 2.1 is prompt-driven and supports live setPrompt),
+  // we incorporate the user's background description directly into the prompt
+  // as a natural clause: "...with a <bg> background". Keep it concise — long
+  // emphatic instructions don't improve the model's behavior.
+  const bgClause = bg ? `, with a ${bg} background` : "";
   if (mode === "realistic") {
-    return `${bgPrefix}Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgSuffix}`;
+    return `Transform into this character while keeping a natural, human appearance${bgClause}. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
   }
-  return bgPrefix + (preset
+  return (preset
     ? `Transform into this character in ${preset} style`
-    : "Transform into this character") + bgSuffix;
+    : "Transform into this character") + bgClause + ".";
 };
 
 
@@ -463,9 +458,9 @@ function StreamPage() {
       return;
     }
 
-    // Lock in the background description at start; mid-stream changes to the
-    // input won't take effect until the next start.
+    // Sync the ref so prompt-building helpers see the current background.
     backgroundRef.current = background.trim();
+
 
 
 
@@ -697,6 +692,27 @@ function StreamPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
+
+  // Live background updates: push the new prompt to Decart (and update the
+  // ref used by other callers) as the user edits the background mid-stream.
+  // Debounced so we don't spam the realtime API on every keystroke.
+  useEffect(() => {
+    if (!streaming) return;
+    const t = setTimeout(() => {
+      backgroundRef.current = background.trim();
+      const client = decartClientRef.current;
+      if (!client) return;
+      try {
+        void client.set({
+          prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        } as never);
+      } catch (e) {
+        console.error("Decart background update failed", e);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [background, streaming]);
 
   const clearReference = () => {
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
@@ -984,8 +1000,8 @@ function StreamPage() {
                 type="text"
                 value={background}
                 onChange={(e) => setBackground(e.target.value)}
-                disabled={streaming || connecting}
-                placeholder="optional — e.g. neon city at night (leave empty to keep your real background)"
+                disabled={connecting}
+                placeholder="optional — e.g. neon city at night (updates live while streaming)"
                 className="flex-1 h-8 rounded-md border border-border bg-background/60 px-2.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
               />
             </div>
