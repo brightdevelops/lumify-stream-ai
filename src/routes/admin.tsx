@@ -115,9 +115,14 @@ function AdminPage() {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [s, u, a, p] = await Promise.all([statsFn(), usersFn(), activeFn(), profitFn()]);
+      const [s, u, a, p, ci, pi] = await Promise.all([
+        statsFn(), usersFn(), activeFn(), profitFn(),
+        cryptoInvFn({ data: { status: cryptoFilter === "all" ? null : cryptoFilter, limit: 200 } }),
+        issuesFn({ data: { status: issueFilter === "all" ? null : issueFilter, limit: 200 } }),
+      ]);
       setStats(s.stats); setUsers(u.users); setActive(a.streams);
       setDailyProfit(p.points); setCreditsUsedToday(p.credits_used_today); setCreditsUsedMonth(p.credits_used_month);
+      setCryptoInvoices(ci.invoices); setPaymentIssues(pi.issues);
 
       setLastUpdated(new Date());
       setError(null);
@@ -126,7 +131,7 @@ function AdminPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [statsFn, usersFn, activeFn, profitFn]);
+  }, [statsFn, usersFn, activeFn, profitFn, cryptoInvFn, issuesFn, cryptoFilter, issueFilter]);
 
 
   // Initial + interval refresh of dynamic data
@@ -143,13 +148,19 @@ function AdminPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Transactions on filter change
+  // Transactions on filter change.
+  // Card vs Crypto is a client-side filter on description; both translate to
+  // a server-side "purchase" type filter, then we narrow further in memory.
   useEffect(() => {
     if (!authChecked) return;
-    txFn({ data: { type: txFilter === "all" ? null : txFilter, limit: 500 } })
+    const serverType: "purchase" | "usage" | null =
+      txFilter === "all" ? null :
+      txFilter === "usage" ? "usage" : "purchase";
+    txFn({ data: { type: serverType, limit: 500 } })
       .then((r) => setTransactions(r.transactions))
       .catch(() => {});
   }, [authChecked, txFilter, txFn]);
+
 
   // Load user drill-down
   useEffect(() => {
