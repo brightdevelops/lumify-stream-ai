@@ -693,6 +693,27 @@ function StreamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
 
+  // Live background updates: push the new prompt to Decart (and update the
+  // ref used by other callers) as the user edits the background mid-stream.
+  // Debounced so we don't spam the realtime API on every keystroke.
+  useEffect(() => {
+    if (!streaming) return;
+    const t = setTimeout(() => {
+      backgroundRef.current = background.trim();
+      const client = decartClientRef.current;
+      if (!client) return;
+      try {
+        void client.set({
+          prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        } as never);
+      } catch (e) {
+        console.error("Decart background update failed", e);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [background, streaming]);
+
   const clearReference = () => {
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
     setReferenceImage(null);
