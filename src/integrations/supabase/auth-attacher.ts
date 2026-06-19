@@ -8,15 +8,21 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
     const { data } = await supabase.auth.getSession()
     let session = data.session
-    // getSession() returns the cached session without refreshing. If the tab
-    // was idle long enough for the access token to expire (or expire within
-    // the next 30s), proactively refresh so the server middleware doesn't
-    // reject the RPC with "JWT has expired".
+    // getSession() returns the cached session without refreshing. Proactively
+    // refresh when the access token has expired or is within 60s of expiring
+    // so the server middleware doesn't reject with "JWT has expired".
     const nowSec = Math.floor(Date.now() / 1000)
     const expiresAt = session?.expires_at ?? 0
-    if (session && expiresAt - nowSec < 30) {
-      const { data: refreshed } = await supabase.auth.refreshSession()
-      if (refreshed.session) session = refreshed.session
+    const isStale = !session || expiresAt - nowSec < 60
+    if (isStale) {
+      const { data: refreshed, error } = await supabase.auth.refreshSession()
+      if (!error && refreshed.session) {
+        session = refreshed.session
+      } else if (session && expiresAt <= nowSec) {
+        // Refresh failed and the cached token is already expired — don't
+        // send a known-expired bearer (server will 401). Drop the header.
+        session = null
+      }
     }
     const token = session?.access_token
     return next({
