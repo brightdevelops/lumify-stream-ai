@@ -289,7 +289,60 @@ function CreditsPage() {
               <span key={m} className="rounded-full border border-border bg-secondary px-3 py-1 text-xs text-muted-foreground">{m}</span>
             ))}
           </div>
+
+          <div className="mt-5 pt-4 border-t border-border">
+            {!issueOpen ? (
+              <button
+                onClick={() => { setIssueOpen(true); setIssueSent(false); }}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Having trouble with a payment? Report an issue
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">Report a payment issue</h4>
+                  <button onClick={() => setIssueOpen(false)} className="text-xs text-muted-foreground hover:text-foreground">close</button>
+                </div>
+                {issueSent ? (
+                  <p className="text-sm text-emerald-500">Thanks — we received your report. The team will reach out shortly.</p>
+                ) : (
+                  <>
+                    <div className="flex gap-1 text-xs">
+                      {(["crypto", "card", "other"] as const).map((m) => (
+                        <button key={m} onClick={() => setIssueMethod(m)}
+                          className={`px-3 py-1 rounded-md border capitalize ${issueMethod === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      value={issueRef}
+                      onChange={(e) => setIssueRef(e.target.value)}
+                      placeholder="Transaction reference / order ID (if any)"
+                      className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
+                    />
+                    <textarea
+                      value={issueMsg}
+                      onChange={(e) => setIssueMsg(e.target.value)}
+                      placeholder="Describe what went wrong (e.g. paid in BTC but credits never arrived, transaction stuck pending…)"
+                      rows={3}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                    <button
+                      onClick={submitIssue}
+                      disabled={issueSubmitting}
+                      className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                    >
+                      {issueSubmitting ? "Sending…" : "Send report"}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
 
         <div className="rounded-xl border border-border bg-card p-6">
           <h3 className="text-sm uppercase tracking-wide text-muted-foreground">What you get</h3>
