@@ -26,13 +26,22 @@ const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
 
 const REALISM_KEYWORDS = "photorealistic, natural human skin texture, realistic lighting, high detail, lifelike";
 
-const buildPrompt = (preset: string | null, mode: "realistic" | "stylized", realism: number) => {
+const buildPrompt = (
+  preset: string | null,
+  mode: "realistic" | "stylized",
+  realism: number,
+  background?: string | null,
+) => {
+  const bg = background?.trim();
+  const bgSuffix = bg
+    ? ` Replace the background behind the person with: ${bg}. Keep the person sharp and well-composited against this new background.`
+    : "";
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
+    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgSuffix}`;
   }
-  return preset
+  return (preset
     ? `Transform into this character in ${preset} style`
-    : "Transform into this character";
+    : "Transform into this character") + bgSuffix;
 };
 
 // Human-friendly time-left formatter: "7 min 30 sec", "45 sec", "1 hr 5 min"
