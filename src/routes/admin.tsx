@@ -438,51 +438,195 @@ function AdminPage() {
           title="Credits monitor"
           icon={Coins}
           actions={
-            <div className="flex gap-1 text-xs">
-              {(["all", "purchase", "usage"] as const).map((t) => (
+            <div className="flex gap-1 text-xs flex-wrap">
+              {(["all", "purchase", "usage", "card", "crypto"] as const).map((t) => (
                 <button key={t} onClick={() => setTxFilter(t)}
-                  className={`px-3 py-1 rounded-md border ${txFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                  className={`px-3 py-1 rounded-md border capitalize ${txFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
                   {t}
                 </button>
               ))}
             </div>
           }
         >
-          <div className="hidden md:block">
-            <Tbl headers={["User", "Type", "Credits", "Amount", "Description", "Date"]}>
-              {transactions.length === 0 ? (
-                <tr><Td colSpan={6} className="text-center text-muted-foreground py-8">No transactions.</Td></tr>
-              ) : transactions.map((t) => (
-                <tr key={t.id} className="border-t border-border">
-                  <Td>{t.user_email ?? <span className="text-muted-foreground italic">unknown</span>}</Td>
-                  <Td><span className={`text-xs px-2 py-0.5 rounded-full ${t.type === "purchase" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>{t.type}</span></Td>
-                  <Td>{fmtNum(t.credits)}</Td>
-                  <Td>{fmtMoney(t.amount)}</Td>
-                  <Td className="text-muted-foreground truncate max-w-xs">{t.description || "—"}</Td>
-                  <Td className="text-muted-foreground text-xs whitespace-nowrap">{fmtDate(t.created_at)}</Td>
-                </tr>
-              ))}
-            </Tbl>
-          </div>
-          <div className="md:hidden divide-y divide-border">
-            {transactions.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">No transactions.</div>
-            ) : transactions.map((t) => (
-              <div key={t.id} className="p-4 space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium truncate">{t.user_email ?? <span className="text-muted-foreground italic">unknown</span>}</span>
-                  <span className={`shrink-0 text-[10px] px-2 py-0.5 rounded-full ${t.type === "purchase" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>{t.type}</span>
+          {(() => {
+            const filtered = transactions.filter((t) => {
+              if (txFilter === "card") return paymentMethod(t.description) === "card";
+              if (txFilter === "crypto") return paymentMethod(t.description) === "crypto";
+              return true;
+            });
+            return (
+              <>
+                <div className="hidden md:block">
+                  <Tbl headers={["User", "Type", "Method", "Credits", "Amount", "Description", "Date"]}>
+                    {filtered.length === 0 ? (
+                      <tr><Td colSpan={7} className="text-center text-muted-foreground py-8">No transactions.</Td></tr>
+                    ) : filtered.map((t) => (
+                      <tr key={t.id} className="border-t border-border">
+                        <Td>{t.user_email ?? <span className="text-muted-foreground italic">unknown</span>}</Td>
+                        <Td><span className={`text-xs px-2 py-0.5 rounded-full ${t.type === "purchase" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>{t.type}</span></Td>
+                        <Td><MethodBadge method={paymentMethod(t.description)} /></Td>
+                        <Td>{fmtNum(t.credits)}</Td>
+                        <Td>{fmtMoney(t.amount)}</Td>
+                        <Td className="text-muted-foreground truncate max-w-xs">{t.description || "—"}</Td>
+                        <Td className="text-muted-foreground text-xs whitespace-nowrap">{fmtDate(t.created_at)}</Td>
+                      </tr>
+                    ))}
+                  </Tbl>
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                  <span><span className="text-muted-foreground">Credits:</span> {fmtNum(t.credits)}</span>
-                  <span><span className="text-muted-foreground">Amount:</span> {fmtMoney(t.amount)}</span>
+                <div className="md:hidden divide-y divide-border">
+                  {filtered.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-muted-foreground">No transactions.</div>
+                  ) : filtered.map((t) => (
+                    <div key={t.id} className="p-4 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium truncate">{t.user_email ?? <span className="text-muted-foreground italic">unknown</span>}</span>
+                        <div className="flex gap-1 shrink-0">
+                          <MethodBadge method={paymentMethod(t.description)} />
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${t.type === "purchase" ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"}`}>{t.type}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                        <span><span className="text-muted-foreground">Credits:</span> {fmtNum(t.credits)}</span>
+                        <span><span className="text-muted-foreground">Amount:</span> {fmtMoney(t.amount)}</span>
+                      </div>
+                      {t.description && <div className="text-xs text-muted-foreground truncate">{t.description}</div>}
+                      <div className="text-[11px] text-muted-foreground">{fmtDate(t.created_at)}</div>
+                    </div>
+                  ))}
                 </div>
-                {t.description && <div className="text-xs text-muted-foreground truncate">{t.description}</div>}
-                <div className="text-[11px] text-muted-foreground">{fmtDate(t.created_at)}</div>
-              </div>
-            ))}
-          </div>
+              </>
+            );
+          })()}
         </Section>
+
+        {/* Crypto invoices — including pending/failed attempts */}
+        <Section
+          title="Crypto checkouts (NOWPayments)"
+          icon={Bitcoin}
+          actions={
+            <div className="flex gap-1 text-xs flex-wrap">
+              {(["all", "pending", "paid", "expired", "cancelled"] as const).map((t) => (
+                <button key={t} onClick={() => setCryptoFilter(t)}
+                  className={`px-3 py-1 rounded-md border capitalize ${cryptoFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {cryptoInvoices.length === 0 ? (
+            <Empty>No crypto checkouts {cryptoFilter !== "all" ? `with status "${cryptoFilter}"` : "yet"}.</Empty>
+          ) : (
+            <>
+              <div className="hidden md:block">
+                <Tbl headers={["User", "Pack", "Credits", "Amount", "Status", "Started", "Paid", "Link"]}>
+                  {cryptoInvoices.map((ci) => (
+                    <tr key={ci.id} className="border-t border-border">
+                      <Td>
+                        <div className="font-medium">{ci.full_name || ci.user_email?.split("@")[0]}</div>
+                        <div className="text-xs text-muted-foreground">{ci.user_email}</div>
+                      </Td>
+                      <Td className="capitalize">{ci.pack_id}</Td>
+                      <Td>{fmtNum(ci.credits)}</Td>
+                      <Td>{fmtMoney(ci.amount_ngn)} <span className="text-xs text-muted-foreground">(${ci.price_usd})</span></Td>
+                      <Td><InvoiceStatusBadge status={ci.status} /></Td>
+                      <Td className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(ci.created_at)}</Td>
+                      <Td className="text-xs text-muted-foreground whitespace-nowrap">{ci.paid_at ? fmtDate(ci.paid_at) : "—"}</Td>
+                      <Td>
+                        {ci.invoice_url ? (
+                          <a href={ci.invoice_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">open</a>
+                        ) : "—"}
+                      </Td>
+                    </tr>
+                  ))}
+                </Tbl>
+              </div>
+              <div className="md:hidden divide-y divide-border">
+                {cryptoInvoices.map((ci) => (
+                  <div key={ci.id} className="p-4 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium truncate">{ci.user_email}</span>
+                      <InvoiceStatusBadge status={ci.status} />
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      <span className="capitalize"><span className="text-muted-foreground">Pack:</span> {ci.pack_id}</span>
+                      <span><span className="text-muted-foreground">Credits:</span> {fmtNum(ci.credits)}</span>
+                      <span><span className="text-muted-foreground">Amount:</span> {fmtMoney(ci.amount_ngn)}</span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">Started {fmtDate(ci.created_at)} · {ci.paid_at ? `Paid ${fmtDate(ci.paid_at)}` : "Not paid"}</div>
+                    {ci.invoice_url && <a href={ci.invoice_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">open invoice</a>}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </Section>
+
+        {/* Payment issue tickets */}
+        <Section
+          title="Payment issues reported"
+          icon={LifeBuoy}
+          actions={
+            <div className="flex gap-1 text-xs flex-wrap">
+              {(["all", "open", "in_progress", "resolved", "dismissed"] as const).map((t) => (
+                <button key={t} onClick={() => setIssueFilter(t)}
+                  className={`px-3 py-1 rounded-md border ${issueFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                  {t.replace("_", " ")}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {paymentIssues.length === 0 ? (
+            <Empty>No issues {issueFilter !== "all" ? `with status "${issueFilter.replace("_", " ")}"` : "reported"}.</Empty>
+          ) : (
+            <div className="divide-y divide-border">
+              {paymentIssues.map((pi) => (
+                <div key={pi.id} className="p-4 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{pi.full_name || pi.user_email}</div>
+                      <div className="text-xs text-muted-foreground truncate">{pi.user_email}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{pi.method}</span>
+                      <IssueStatusBadge status={pi.status} />
+                    </div>
+                  </div>
+                  <div className="text-sm whitespace-pre-wrap">{pi.message}</div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                    {pi.pack_id && <span>Pack: <span className="capitalize text-foreground">{pi.pack_id}</span></span>}
+                    {pi.order_reference && <span>Ref: <code className="text-foreground">{pi.order_reference}</code></span>}
+                    <span>Reported {fmtDate(pi.created_at)}</span>
+                    {pi.resolved_at && <span>Resolved {fmtDate(pi.resolved_at)}</span>}
+                  </div>
+                  {pi.admin_note && <div className="text-xs rounded-md border border-border bg-secondary/40 px-2.5 py-1.5">Admin note: {pi.admin_note}</div>}
+                  {pi.status !== "resolved" && pi.status !== "dismissed" && (
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        className="text-xs px-2.5 py-1 rounded-md border border-border hover:bg-secondary"
+                        onClick={async () => { await updateIssueFn({ data: { id: pi.id, status: "in_progress" } }); load(); }}
+                      >Mark in progress</button>
+                      <button
+                        className="text-xs px-2.5 py-1 rounded-md border border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10"
+                        onClick={async () => {
+                          const note = prompt("Resolution note (optional):") ?? undefined;
+                          await updateIssueFn({ data: { id: pi.id, status: "resolved", note } });
+                          load();
+                        }}
+                      >Resolve</button>
+                      <button
+                        className="text-xs px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:bg-secondary"
+                        onClick={async () => { await updateIssueFn({ data: { id: pi.id, status: "dismissed" } }); load(); }}
+                      >Dismiss</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
 
       </div>
 
