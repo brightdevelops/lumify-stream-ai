@@ -103,6 +103,8 @@ function StreamPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
+  const [background, setBackground] = useState<string>("");
+  const backgroundRef = useRef<string>("");
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
