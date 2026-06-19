@@ -19,16 +19,20 @@ function FinancePage() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    finFn().then((r) => setFin(r.finance)).catch((e) => setErr(String(e?.message ?? e)));
-  }, [finFn]);
-
-  useEffect(() => {
     let cancelled = false;
-    const tick = () => visFn().then((r) => !cancelled && setVis(r.stats)).catch(() => {});
-    tick();
-    const id = setInterval(tick, 30000);
+    Promise.all([finFn(), visFn()])
+      .then(([f, v]) => {
+        if (cancelled) return;
+        setFin(f.finance);
+        setVis(v.stats);
+      })
+      .catch((e) => !cancelled && setErr(String(e?.message ?? e)));
+    const id = setInterval(() => {
+      visFn().then((r) => !cancelled && setVis(r.stats)).catch(() => {});
+    }, 30000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [visFn]);
+  }, [finFn, visFn]);
+
 
   if (err) return <p className="text-sm text-destructive">{err}</p>;
   if (!fin) return <p className="text-sm text-muted-foreground">Loading…</p>;
