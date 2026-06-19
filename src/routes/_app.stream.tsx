@@ -26,13 +26,22 @@ const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
 
 const REALISM_KEYWORDS = "photorealistic, natural human skin texture, realistic lighting, high detail, lifelike";
 
-const buildPrompt = (preset: string | null, mode: "realistic" | "stylized", realism: number) => {
+const buildPrompt = (
+  preset: string | null,
+  mode: "realistic" | "stylized",
+  realism: number,
+  background?: string | null,
+) => {
+  const bg = background?.trim();
+  const bgSuffix = bg
+    ? ` Replace the background behind the person with: ${bg}. Keep the person sharp and well-composited against this new background.`
+    : "";
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
+    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgSuffix}`;
   }
-  return preset
+  return (preset
     ? `Transform into this character in ${preset} style`
-    : "Transform into this character";
+    : "Transform into this character") + bgSuffix;
 };
 
 // Human-friendly time-left formatter: "7 min 30 sec", "45 sec", "1 hr 5 min"
@@ -94,6 +103,8 @@ function StreamPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
+  const [background, setBackground] = useState<string>("");
+  const backgroundRef = useRef<string>("");
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
@@ -383,7 +394,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset, mode, realism),
+        prompt: buildPrompt(preset, mode, realism, backgroundRef.current),
         image,
         enhance: true,
       } as never);
@@ -422,7 +433,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism),
+            prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
           });
         })();
       }
@@ -443,6 +454,12 @@ function StreamPage() {
       startingRef.current = false;
       return;
     }
+
+    // Lock in the background description at start; mid-stream changes to the
+    // input won't take effect until the next start.
+    backgroundRef.current = background.trim();
+
+
 
     const { data } = await supabase
       .from("credits")
@@ -529,7 +546,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
         image: photo,
         enhance: true,
       } as never);
@@ -592,7 +609,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -651,7 +668,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism),
+          prompt: buildPrompt(next, mode, realism, backgroundRef.current),
         });
       }
     }
@@ -667,7 +684,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -949,6 +966,22 @@ function StreamPage() {
                 Realistic Mode is on — style presets are disabled to keep the result natural and human.
               </div>
             )}
+
+            <div className="mt-4 flex items-center gap-2">
+              <label htmlFor="background-input" className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                Background
+              </label>
+              <input
+                id="background-input"
+                type="text"
+                value={background}
+                onChange={(e) => setBackground(e.target.value)}
+                disabled={streaming || connecting}
+                placeholder="optional — e.g. neon city at night (leave empty to keep your real background)"
+                className="flex-1 h-8 rounded-md border border-border bg-background/60 px-2.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
+              />
+            </div>
+
 
             {error && (
               <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
