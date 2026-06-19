@@ -700,15 +700,13 @@ function StreamPage() {
     if (!streaming) return;
     const t = setTimeout(() => {
       backgroundRef.current = background.trim();
-      const client = decartClientRef.current;
-      if (!client) return;
-      try {
-        void client.set({
-          prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
-        } as never);
-      } catch (e) {
-        console.error("Decart background update failed", e);
-      }
+      // IMPORTANT: re-send the reference image with the prompt. Decart's
+      // realtime `set()` replaces state atomically — sending `{ prompt }`
+      // alone wipes the previously-set reference image and the model falls
+      // back to text-only generation. Routing through applyReference keeps
+      // the image attached on every live update.
+      if (!referenceImage) return;
+      void applyReference(selectedPreset, referenceImage);
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
