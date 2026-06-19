@@ -758,3 +758,43 @@ function ProfitStat({ label, value, sub, tone }: { label: string; value: string;
     </div>
   );
 }
+
+// Identify the payment method by parsing the marker we stamp into
+// transactions.description when crediting a purchase.
+function paymentMethod(description: string | null): "card" | "crypto" | "unknown" {
+  if (!description) return "unknown";
+  if (description.includes("NOWPayments:")) return "crypto";
+  if (description.includes("Flutterwave:")) return "card";
+  return "unknown";
+}
+
+function MethodBadge({ method }: { method: "card" | "crypto" | "unknown" }) {
+  if (method === "crypto") {
+    return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500"><Bitcoin className="h-3 w-3" /> crypto</span>;
+  }
+  if (method === "card") {
+    return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-500"><CreditCard className="h-3 w-3" /> card</span>;
+  }
+  return <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">—</span>;
+}
+
+function InvoiceStatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    paid: "bg-emerald-500/15 text-emerald-500",
+    pending: "bg-amber-500/15 text-amber-500",
+    expired: "bg-muted text-muted-foreground",
+    cancelled: "bg-muted text-muted-foreground",
+  };
+  return <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${map[status] ?? "bg-muted text-muted-foreground"}`}>{status}</span>;
+}
+
+function IssueStatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    open: "bg-rose-500/15 text-rose-500",
+    in_progress: "bg-amber-500/15 text-amber-500",
+    resolved: "bg-emerald-500/15 text-emerald-500",
+    dismissed: "bg-muted text-muted-foreground",
+  };
+  return <span className={`text-xs px-2 py-0.5 rounded-full ${map[status] ?? "bg-muted text-muted-foreground"}`}>{status.replace("_", " ")}</span>;
+}
+
