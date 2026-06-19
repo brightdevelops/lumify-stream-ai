@@ -33,18 +33,21 @@ const buildPrompt = (
   background?: string | null,
 ) => {
   const bg = background?.trim();
-  // Per Decart's docs (Lucy 2.1 is prompt-driven and supports live setPrompt),
-  // we incorporate the user's background description directly into the prompt
-  // as a natural clause: "...with a <bg> background". Keep it concise — long
-  // emphatic instructions don't improve the model's behavior.
-  const bgClause = bg ? `, with a ${bg} background` : "";
+  // Lucy 2.1 is a holistic video-to-video model — it transforms the whole
+  // frame, not segmented regions. We can bias it toward background-only
+  // edits with explicit wording, but it cannot perfectly isolate the
+  // background from the subject.
+  const bgClause = bg
+    ? ` Replace ONLY the background environment behind the person with: ${bg}. Keep the person, their face, body, pose, and clothing exactly the same — do not alter the subject, only swap the scenery behind them.`
+    : "";
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance${bgClause}. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
+    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgClause}`;
   }
   return (preset
-    ? `Transform into this character in ${preset} style`
-    : "Transform into this character") + bgClause + ".";
+    ? `Transform into this character in ${preset} style.`
+    : "Transform into this character.") + bgClause;
 };
+
 
 
 // Human-friendly time-left formatter: "7 min 30 sec", "45 sec", "1 hr 5 min"
