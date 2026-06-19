@@ -61,12 +61,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("storage", onStorage);
 
-    // 4. On tab refocus, proactively re-check the session. This catches
-    //    cases where the tab was backgrounded long enough for the access
-    //    token to expire and the browser throttled the refresh timer.
-    const onVisible = () => {
+    // 4. On tab refocus, proactively refresh the session. The browser
+    //    throttles refresh timers in backgrounded tabs, so the cached
+    //    access token may be expired by the time the user returns.
+    const onVisible = async () => {
       if (document.visibilityState !== "visible") return;
-      supabase.auth.getSession().then(({ data }) => applySession(data.session ?? null));
+      const { data } = await supabase.auth.getSession();
+      const nowSec = Math.floor(Date.now() / 1000);
+      const expiresAt = data.session?.expires_at ?? 0;
+      if (data.session && expiresAt - nowSec < 60) {
+        const { data: refreshed, error } = await supabase.auth.refreshSession();
+        if (error) {
+          // Refresh token rejected (e.g. expired) — sign out so the UI
+          // routes to /login instead of looping on 401s.
+          await supabase.auth.signOut();
+          applySession(null);
+          return;
+        }
+        applySession(refreshed.session);
+        return;
+      }
+      applySession(data.session ?? null);
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
