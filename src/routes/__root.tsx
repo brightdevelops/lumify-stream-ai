@@ -129,6 +129,7 @@ function VisitTracker() {
   }, [pathname]);
 
   // site_visits heartbeat: powers Inventor "Active now"
+  // Throttled to 5min and only when the tab is visible to keep the table small.
   useEffect(() => {
     if (typeof window === "undefined") return;
     let sid = window.localStorage.getItem("lumify_site_session");
@@ -137,6 +138,7 @@ function VisitTracker() {
       window.localStorage.setItem("lumify_site_session", sid);
     }
     const beat = async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const { data } = await supabase.auth.getUser();
         await supabase.from("site_visits").insert({ session_id: sid, user_id: data.user?.id ?? null });
@@ -145,9 +147,10 @@ function VisitTracker() {
       }
     };
     beat();
-    const id = setInterval(beat, 60000);
+    const id = setInterval(beat, 5 * 60_000);
     return () => clearInterval(id);
   }, []);
+
 
   return null;
 }
