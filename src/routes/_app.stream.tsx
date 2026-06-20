@@ -684,24 +684,8 @@ function StreamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
 
-  // Live background updates: push the new prompt to Decart (and update the
-  // ref used by other callers) as the user edits the background mid-stream.
-  // Debounced so we don't spam the realtime API on every keystroke.
-  useEffect(() => {
-    if (!streaming) return;
-    const t = setTimeout(() => {
-      backgroundRef.current = background.trim();
-      // IMPORTANT: re-send the reference image with the prompt. Decart's
-      // realtime `set()` replaces state atomically — sending `{ prompt }`
-      // alone wipes the previously-set reference image and the model falls
-      // back to text-only generation. Routing through applyReference keeps
-      // the image attached on every live update.
-      if (!referenceImage) return;
-      void applyReference(selectedPreset, referenceImage);
-    }, 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [background, streaming]);
+
+
 
   const clearReference = () => {
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
