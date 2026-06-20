@@ -30,6 +30,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
+import { Route as AppAvatarRouteImport } from './routes/_app.avatar'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -140,6 +141,11 @@ const AppBillingRoute = AppBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAvatarRoute = AppAvatarRouteImport.update({
+  id: '/avatar',
+  path: '/avatar',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
   id: '/api/public/track-visit',
   path: '/api/public/track-visit',
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/avatar': typeof AppAvatarRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/avatar': typeof AppAvatarRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/_app/avatar': typeof AppAvatarRoute
   '/_app/billing': typeof AppBillingRoute
   '/_app/credits': typeof AppCreditsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/terms'
+    | '/avatar'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/terms'
+    | '/avatar'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/terms'
+    | '/_app/avatar'
     | '/_app/billing'
     | '/_app/credits'
     | '/_app/dashboard'
@@ -500,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/avatar': {
+      id: '/_app/avatar'
+      path: '/avatar'
+      fullPath: '/avatar'
+      preLoaderRoute: typeof AppAvatarRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/public/track-visit': {
       id: '/api/public/track-visit'
       path: '/api/public/track-visit'
@@ -539,6 +558,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAvatarRoute: typeof AppAvatarRoute
   AppBillingRoute: typeof AppBillingRoute
   AppCreditsRoute: typeof AppCreditsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -547,6 +567,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAvatarRoute: AppAvatarRoute,
   AppBillingRoute: AppBillingRoute,
   AppCreditsRoute: AppCreditsRoute,
   AppDashboardRoute: AppDashboardRoute,
