@@ -450,8 +450,7 @@ function StreamPage() {
       return;
     }
 
-    // Sync the ref so prompt-building helpers see the current background.
-    backgroundRef.current = background.trim();
+
 
 
 
