@@ -142,7 +142,12 @@ function AvatarPage() {
       setJobs(await listFn());
       toast.success("Generation started — rendering takes 1–3 minutes");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to start");
+      const msg = e instanceof Error ? e.message : "Failed to start";
+      if (isNsfwError(msg)) {
+        toast.error("Photo rejected", { description: "HeyGen's content filter flagged this image. Try a clear, well-lit, front-facing headshot." });
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSubmitting(false);
     }
