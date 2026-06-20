@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      avatar_jobs: {
+        Row: {
+          audio_path: string | null
+          created_at: string
+          credits_charged: number | null
+          error: string | null
+          heygen_video_id: string | null
+          id: string
+          portrait_path: string
+          script: string
+          source_lang: string
+          status: string
+          target_lang: string
+          translated_script: string | null
+          updated_at: string
+          user_id: string
+          video_url: string | null
+          voice_id: string
+        }
+        Insert: {
+          audio_path?: string | null
+          created_at?: string
+          credits_charged?: number | null
+          error?: string | null
+          heygen_video_id?: string | null
+          id?: string
+          portrait_path: string
+          script: string
+          source_lang?: string
+          status?: string
+          target_lang?: string
+          translated_script?: string | null
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+          voice_id: string
+        }
+        Update: {
+          audio_path?: string | null
+          created_at?: string
+          credits_charged?: number | null
+          error?: string | null
+          heygen_video_id?: string | null
+          id?: string
+          portrait_path?: string
+          script?: string
+          source_lang?: string
+          status?: string
+          target_lang?: string
+          translated_script?: string | null
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+          voice_id?: string
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           balance_after: number
