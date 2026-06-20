@@ -101,7 +101,13 @@ export const createAvatarJob = createServerFn({ method: "POST" })
         headers: { "x-api-key": heygenKey, "Content-Type": contentType },
         body: portraitBytes,
       });
-      if (!photoUp.ok) await fail(`HeyGen photo upload failed: ${photoUp.status} ${await photoUp.text()}`);
+      if (!photoUp.ok) {
+        const errText = await photoUp.text();
+        if (errText.includes("400168") || errText.toLowerCase().includes("nsfw")) {
+          await fail("Your photo was flagged by HeyGen's content filter. Please upload a different, clearly appropriate portrait photo (well-lit, face visible, no suggestive content).");
+        }
+        await fail(`HeyGen photo upload failed: ${photoUp.status} ${errText}`);
+      }
       const photoJson = await photoUp.json() as { data?: { talking_photo_id?: string } };
       const talkingPhotoId = photoJson.data?.talking_photo_id;
       if (!talkingPhotoId) await fail(`HeyGen photo upload: no talking_photo_id (${JSON.stringify(photoJson)})`);
