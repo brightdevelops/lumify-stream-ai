@@ -44,6 +44,34 @@ const LANGS = [
 
 type Job = Awaited<ReturnType<typeof listAvatarJobs>>[number];
 
+const isNsfwError = (msg?: string | null) =>
+  !!msg && (msg.includes("400168") || /nsfw|content filter|flagged/i.test(msg));
+
+function NsfwTips({ message }: { message?: string | null }) {
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="bg-destructive/10 border border-destructive/30 text-destructive p-3 rounded">
+        <div className="font-semibold mb-1">Photo rejected by content filter</div>
+        <div className="text-xs opacity-90">{message || "HeyGen flagged this image as NSFW."}</div>
+      </div>
+      <div className="bg-muted/40 border border-border rounded p-3 space-y-2">
+        <div className="font-medium">Try a photo that follows these tips:</div>
+        <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+          <li>Clear, front-facing headshot (shoulders up)</li>
+          <li>Bright, even lighting — avoid heavy shadows on the face</li>
+          <li>Sharp focus, no motion blur or heavy filters</li>
+          <li>Plain or simple background</li>
+          <li>Fully clothed (shirt visible), neutral expression</li>
+          <li>No sunglasses, masks, or hands covering the face</li>
+          <li>One person only, eyes open, looking at the camera</li>
+          <li>Use a real photo (not AI-generated or anime)</li>
+        </ul>
+        <div className="text-xs text-muted-foreground pt-1">The filter can be strict — even normal selfies sometimes get flagged. A different photo usually fixes it.</div>
+      </div>
+    </div>
+  );
+}
+
 function AvatarPage() {
   const { user } = useAuth();
   const router = useRouter();
