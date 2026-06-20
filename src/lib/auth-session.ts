@@ -1,7 +1,11 @@
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-const REFRESH_MARGIN_SECONDS = 120;
+// Margin below which we proactively ask the SDK to refresh. Kept small so we
+// don't race the SDK's built-in autoRefresh (which also runs on tab focus and
+// near expiry). Rotating refresh tokens can only be consumed once — if we
+// refresh while the SDK is also refreshing, one call comes back invalid.
+const REFRESH_MARGIN_SECONDS = 30;
 
 let sessionCheck: Promise<Session | null> | null = null;
 
@@ -27,46 +31,39 @@ function getExpiresAt(session: Session) {
   return getJwtExpiry(session.access_token) || session.expires_at || 0;
 }
 
-async function clearSession(redirectToLogin: boolean) {
-  await supabase.auth.signOut({ scope: "local" }).catch(() => {});
-  if (redirectToLogin && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-    window.location.assign("/login");
-  }
-  return null;
-}
-
-async function refreshOrClear(redirectToLogin: boolean) {
-  const { data, error } = await supabase.auth.refreshSession();
-  if (error || !data.session) return clearSession(redirectToLogin);
-  return data.session;
-}
-
-async function runSessionCheck(redirectToLogin: boolean) {
+async function runSessionCheck() {
   const { data } = await supabase.auth.getSession();
-  let session = data.session ?? null;
+  const session = data.session ?? null;
   if (!session) return null;
 
   const nowSec = Math.floor(Date.now() / 1000);
-  if (getExpiresAt(session) - nowSec < REFRESH_MARGIN_SECONDS) {
-    session = await refreshOrClear(redirectToLogin);
-    if (!session) return null;
+  const expiresAt = getExpiresAt(session);
+
+  // Only refresh if the token is actually expired or within the small margin.
+  // Never sign the user out from here — transient errors (offline, CORS,
+  // server hiccup, or a refresh-token race with the SDK's autoRefresh) must
+  // not bounce a freshly-signed-in user back to /login. If the token is truly
+  // dead, server requests will surface that on their own and the SDK / auth
+  // listener will emit SIGNED_OUT.
+  if (expiresAt - nowSec < REFRESH_MARGIN_SECONDS) {
+    const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } }));
+    if (refreshed?.session) return refreshed.session;
   }
-
-  const verified = await supabase.auth.getUser();
-  if (!verified.error && verified.data.user) return session;
-
-  session = await refreshOrClear(redirectToLogin);
-  if (!session) return null;
-
-  const reverified = await supabase.auth.getUser();
-  if (reverified.error || !reverified.data.user) return clearSession(redirectToLogin);
 
   return session;
 }
 
-export function ensureFreshSupabaseSession(options: { redirectToLogin?: boolean } = {}) {
+/**
+ * Returns the current Supabase session, refreshed if close to expiry.
+ * Non-destructive: never signs the user out, never redirects.
+ *
+ * The `redirectToLogin` option is accepted for backwards compatibility but
+ * intentionally ignored — forcing a redirect on transient refresh failures
+ * was logging users out right after they signed in.
+ */
+export function ensureFreshSupabaseSession(_options: { redirectToLogin?: boolean } = {}) {
   if (!sessionCheck) {
-    sessionCheck = runSessionCheck(Boolean(options.redirectToLogin)).finally(() => {
+    sessionCheck = runSessionCheck().finally(() => {
       sessionCheck = null;
     });
   }
