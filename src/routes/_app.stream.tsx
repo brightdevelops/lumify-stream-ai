@@ -30,22 +30,13 @@ const buildPrompt = (
   preset: string | null,
   mode: "realistic" | "stylized",
   realism: number,
-  background?: string | null,
 ) => {
-  const bg = background?.trim();
-  // Lucy 2.1 is a holistic video-to-video model — it transforms the whole
-  // frame, not segmented regions. We can bias it toward background-only
-  // edits with explicit wording, but it cannot perfectly isolate the
-  // background from the subject.
-  const bgClause = bg
-    ? ` Replace ONLY the background environment behind the person with: ${bg}. Keep the person, their face, body, pose, and clothing exactly the same — do not alter the subject, only swap the scenery behind them.`
-    : "";
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgClause}`;
+    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
   }
-  return (preset
+  return preset
     ? `Transform into this character in ${preset} style.`
-    : "Transform into this character.") + bgClause;
+    : "Transform into this character.";
 };
 
 
@@ -109,8 +100,6 @@ function StreamPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
-  const [background, setBackground] = useState<string>("");
-  const backgroundRef = useRef<string>("");
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
@@ -400,7 +389,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(preset, mode, realism),
         image,
         enhance: true,
       } as never);
@@ -439,7 +428,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+            prompt: buildPrompt(selectedPreset, mode, realism),
           });
         })();
       }
@@ -461,8 +450,7 @@ function StreamPage() {
       return;
     }
 
-    // Sync the ref so prompt-building helpers see the current background.
-    backgroundRef.current = background.trim();
+
 
 
 
@@ -552,7 +540,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(selectedPreset, mode, realism),
         image: photo,
         enhance: true,
       } as never);
@@ -615,7 +603,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(selectedPreset, mode, realism),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -674,7 +662,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism, backgroundRef.current),
+          prompt: buildPrompt(next, mode, realism),
         });
       }
     }
@@ -690,30 +678,14 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(selectedPreset, mode, realism),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
 
-  // Live background updates: push the new prompt to Decart (and update the
-  // ref used by other callers) as the user edits the background mid-stream.
-  // Debounced so we don't spam the realtime API on every keystroke.
-  useEffect(() => {
-    if (!streaming) return;
-    const t = setTimeout(() => {
-      backgroundRef.current = background.trim();
-      // IMPORTANT: re-send the reference image with the prompt. Decart's
-      // realtime `set()` replaces state atomically — sending `{ prompt }`
-      // alone wipes the previously-set reference image and the model falls
-      // back to text-only generation. Routing through applyReference keeps
-      // the image attached on every live update.
-      if (!referenceImage) return;
-      void applyReference(selectedPreset, referenceImage);
-    }, 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [background, streaming]);
+
+
 
   const clearReference = () => {
     if (referenceUrl) URL.revokeObjectURL(referenceUrl);
@@ -992,20 +964,8 @@ function StreamPage() {
               </div>
             )}
 
-            <div className="mt-4 flex items-center gap-2">
-              <label htmlFor="background-input" className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
-                Background
-              </label>
-              <input
-                id="background-input"
-                type="text"
-                value={background}
-                onChange={(e) => setBackground(e.target.value)}
-                disabled={connecting}
-                placeholder="optional — e.g. neon city at night (updates live while streaming)"
-                className="flex-1 h-8 rounded-md border border-border bg-background/60 px-2.5 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
-              />
-            </div>
+
+
 
 
             {error && (
