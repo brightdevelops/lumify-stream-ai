@@ -188,7 +188,9 @@ function AvatarPage() {
               </a>
             </div>
           ) : activeJob.status === "failed" ? (
-            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">{activeJob.error || "Failed"}</div>
+            isNsfwError(activeJob.error) ? <NsfwTips message={activeJob.error} /> : (
+              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">{activeJob.error || "Failed"}</div>
+            )
           ) : (
             <div className="flex items-center gap-3 text-sm">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
