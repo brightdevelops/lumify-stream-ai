@@ -60,24 +60,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("storage", onStorage);
 
-    // 4. On tab refocus, proactively refresh the session. The browser
-    //    throttles refresh timers in backgrounded tabs, so the cached
-    //    access token may be expired by the time the user returns.
-    const onVisible = async () => {
-      if (document.visibilityState !== "visible") return;
-      const freshSession = await ensureFreshSupabaseSession({ redirectToLogin: true });
-      applySession(freshSession);
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
+    // NOTE: We intentionally do NOT force a refresh on visibilitychange/focus.
+    // Supabase's SDK already runs autoRefresh on focus and near expiry. Adding
+    // our own manual refreshSession() in parallel consumes the rotating
+    // refresh token twice — one call wins, the other comes back invalid and
+    // used to sign the user out immediately after login.
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
     };
+
   }, []);
 
   return <Ctx.Provider value={{ user: session?.user ?? null, session, loading }}>{children}</Ctx.Provider>;
