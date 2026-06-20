@@ -30,22 +30,13 @@ const buildPrompt = (
   preset: string | null,
   mode: "realistic" | "stylized",
   realism: number,
-  background?: string | null,
 ) => {
-  const bg = background?.trim();
-  // Lucy 2.1 is a holistic video-to-video model — it transforms the whole
-  // frame, not segmented regions. We can bias it toward background-only
-  // edits with explicit wording, but it cannot perfectly isolate the
-  // background from the subject.
-  const bgClause = bg
-    ? ` Replace ONLY the background environment behind the person with: ${bg}. Keep the person, their face, body, pose, and clothing exactly the same — do not alter the subject, only swap the scenery behind them.`
-    : "";
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.${bgClause}`;
+    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
   }
-  return (preset
+  return preset
     ? `Transform into this character in ${preset} style.`
-    : "Transform into this character.") + bgClause;
+    : "Transform into this character.";
 };
 
 
