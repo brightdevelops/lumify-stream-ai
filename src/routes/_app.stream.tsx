@@ -389,7 +389,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(preset, mode, realism),
         image,
         enhance: true,
       } as never);
@@ -428,7 +428,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+            prompt: buildPrompt(selectedPreset, mode, realism),
           });
         })();
       }
@@ -541,7 +541,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(selectedPreset, mode, realism),
         image: photo,
         enhance: true,
       } as never);
@@ -604,7 +604,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(selectedPreset, mode, realism),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -663,7 +663,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism, backgroundRef.current),
+          prompt: buildPrompt(next, mode, realism),
         });
       }
     }
@@ -679,7 +679,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism, backgroundRef.current),
+        prompt: buildPrompt(selectedPreset, mode, realism),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
