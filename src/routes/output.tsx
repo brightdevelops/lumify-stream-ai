@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { startViewer } from "@/lib/stream-broadcast";
-import { resolveStreamToken } from "@/lib/stream-token.functions";
 
 export const Route = createFileRoute("/output")({
   validateSearch: (search) =>
@@ -31,7 +30,9 @@ function OutputPage() {
     let cancelled = false;
     (async () => {
       try {
-        const { userId } = await resolveStreamToken({ data: { token } });
+        const res = await fetch(`/api/public/resolve-stream-token?token=${encodeURIComponent(token)}`);
+        if (!res.ok) throw new Error("Invalid stream token");
+        const { userId } = (await res.json()) as { userId: string };
         if (cancelled) return;
         stop = startViewer(userId, (stream) => {
           if (videoRef.current) {
