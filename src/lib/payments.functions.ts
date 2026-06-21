@@ -298,12 +298,39 @@ async function ensureCallerIsAdmin(userId: string) {
   if (!prof?.is_admin) throw new Error("Not authorized");
 }
 
+// NOWPayments JWT cache — tokens last ~5 min; refresh on demand.
+let _npJwt: { token: string; expiresAt: number } | null = null;
+async function getNowPaymentsJwt(): Promise<string> {
+  if (_npJwt && _npJwt.expiresAt > Date.now() + 10_000) return _npJwt.token;
+  const email = process.env.NOWPAYMENTS_EMAIL;
+  const password = process.env.NOWPAYMENTS_PASSWORD;
+  if (!email || !password) {
+    throw new Error("NOWPAYMENTS_EMAIL / NOWPAYMENTS_PASSWORD not configured");
+  }
+  const res = await fetch("https://api.nowpayments.io/v1/auth", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`NOWPayments auth failed (${res.status}): ${t.slice(0, 200)}`);
+  }
+  const payload = (await res.json()) as { token?: string };
+  if (!payload.token) throw new Error("NOWPayments auth returned no token");
+  _npJwt = { token: payload.token, expiresAt: Date.now() + 4 * 60_000 };
+  return payload.token;
+}
+
 async function fetchNowPaymentsByOrderId(orderId: string) {
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
   if (!apiKey) throw new Error("NOWPAYMENTS_API_KEY not configured");
-  // NOWPayments list-payments endpoint, filtered by our order id.
+  const jwt = await getNowPaymentsJwt();
+  // NOWPayments list-payments endpoint requires JWT Bearer auth (x-api-key alone returns 401).
   const url = `https://api.nowpayments.io/v1/payment/?limit=20&orderId=${encodeURIComponent(orderId)}`;
-  const res = await fetch(url, { headers: { "x-api-key": apiKey } });
+  const res = await fetch(url, {
+    headers: { "x-api-key": apiKey, Authorization: `Bearer ${jwt}` },
+  });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     throw new Error(`NOWPayments lookup failed (${res.status}): ${t.slice(0, 200)}`);
