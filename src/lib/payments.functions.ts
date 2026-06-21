@@ -271,3 +271,149 @@ export const reportPaymentIssue = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin reconcile — manually re-check a NOWPayments order and credit the user
+// if NOWPayments confirms the payment but our IPN was missed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type AdminReconcileResult = {
+  ok: boolean;
+  alreadyCredited: boolean;
+  orderId: string;
+  userEmail: string | null;
+  packId: string;
+  credits: number;
+  paymentStatus: string;
+  paidUsd: number;
+  message: string;
+};
+
+async function ensureCallerIsAdmin(userId: string) {
+  const { data: prof } = await supabaseAdmin
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!prof?.is_admin) throw new Error("Not authorized");
+}
+
+async function fetchNowPaymentsByOrderId(orderId: string) {
+  const apiKey = process.env.NOWPAYMENTS_API_KEY;
+  if (!apiKey) throw new Error("NOWPAYMENTS_API_KEY not configured");
+  // NOWPayments list-payments endpoint, filtered by our order id.
+  const url = `https://api.nowpayments.io/v1/payment/?limit=20&orderId=${encodeURIComponent(orderId)}`;
+  const res = await fetch(url, { headers: { "x-api-key": apiKey } });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`NOWPayments lookup failed (${res.status}): ${t.slice(0, 200)}`);
+  }
+  const payload = (await res.json()) as {
+    data?: Array<{
+      payment_id: number | string;
+      payment_status: string;
+      price_amount: number;
+      price_currency: string;
+      actually_paid?: number;
+      pay_amount?: number;
+      order_id: string;
+    }>;
+  };
+  return payload.data ?? [];
+};
+
+async function reconcileOrderInternal(orderId: string): Promise<AdminReconcileResult> {
+  const { data: invoice } = await supabaseAdmin
+    .from("crypto_invoices")
+    .select("user_id,pack_id,credits,price_usd,status,order_id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+
+  const payments = await fetchNowPaymentsByOrderId(orderId);
+  // Prefer a terminal-success payment if one exists
+  const success = payments.find((p) =>
+    ["finished", "confirmed", "sending"].includes(String(p.payment_status))
+  );
+  const latest = success ?? payments[0];
+
+  const userEmail = invoice
+    ? (await supabaseAdmin.from("profiles").select("email").eq("id", invoice.user_id).maybeSingle()).data?.email ?? null
+    : null;
+
+  if (!latest) {
+    return {
+      ok: false,
+      alreadyCredited: false,
+      orderId,
+      userEmail,
+      packId: invoice?.pack_id ?? "?",
+      credits: invoice?.credits ?? 0,
+      paymentStatus: "not_found",
+      paidUsd: 0,
+      message: "NOWPayments has no payment recorded for this order id.",
+    };
+  }
+
+  const paidUsd = Number(latest.price_amount ?? invoice?.price_usd ?? 0);
+
+  if (!success) {
+    return {
+      ok: false,
+      alreadyCredited: false,
+      orderId,
+      userEmail,
+      packId: invoice?.pack_id ?? "?",
+      credits: invoice?.credits ?? 0,
+      paymentStatus: latest.payment_status,
+      paidUsd,
+      message: `Payment is not yet in a success state (status: ${latest.payment_status}). Try again later.`,
+    };
+  }
+
+  const result = await creditNowPaymentsOrder({ orderId, paidUsd });
+  return {
+    ok: true,
+    alreadyCredited: result.alreadyCredited,
+    orderId,
+    userEmail,
+    packId: invoice?.pack_id ?? "?",
+    credits: invoice?.credits ?? 0,
+    paymentStatus: latest.payment_status,
+    paidUsd,
+    message: result.alreadyCredited
+      ? "Already credited previously — no change made."
+      : `Credited ${invoice?.credits ?? 0} credits to user.`,
+  };
+}
+
+export const adminReconcileCryptoByOrderId = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ orderId: z.string().min(6).max(200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureCallerIsAdmin(context.userId);
+    return reconcileOrderInternal(data.orderId.trim());
+  });
+
+export const adminListPendingCryptoForEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ email: z.string().email() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await ensureCallerIsAdmin(context.userId);
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("id,email")
+      .ilike("email", data.email.trim())
+      .maybeSingle();
+    if (!prof) return { user: null, invoices: [] as Array<{ order_id: string; pack_id: string; credits: number; price_usd: number; status: string; created_at: string }> };
+    const { data: invoices } = await supabaseAdmin
+      .from("crypto_invoices")
+      .select("order_id,pack_id,credits,price_usd,status,created_at")
+      .eq("user_id", prof.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return { user: { id: prof.id, email: prof.email }, invoices: invoices ?? [] };
+  });
