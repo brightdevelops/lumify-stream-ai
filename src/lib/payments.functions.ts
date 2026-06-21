@@ -326,8 +326,9 @@ async function fetchNowPaymentsByOrderId(orderId: string) {
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
   if (!apiKey) throw new Error("NOWPAYMENTS_API_KEY not configured");
   const jwt = await getNowPaymentsJwt();
-  // NOWPayments list-payments endpoint requires JWT Bearer auth (x-api-key alone returns 401).
-  const url = `https://api.nowpayments.io/v1/payment/?limit=20&orderId=${encodeURIComponent(orderId)}`;
+  // List endpoint doesn't support filtering by order_id — fetch a page of
+  // recent payments and filter locally. Widen the window to be safe.
+  const url = `https://api.nowpayments.io/v1/payment/?limit=500&page=0&sortBy=created_at&orderBy=desc`;
   const res = await fetch(url, {
     headers: { "x-api-key": apiKey, Authorization: `Bearer ${jwt}` },
   });
@@ -346,7 +347,7 @@ async function fetchNowPaymentsByOrderId(orderId: string) {
       order_id: string;
     }>;
   };
-  return payload.data ?? [];
+  return (payload.data ?? []).filter((p) => p.order_id === orderId);
 };
 
 async function reconcileOrderInternal(orderId: string): Promise<AdminReconcileResult> {
