@@ -26,6 +26,7 @@ import { Route as InventorReconcileRouteImport } from './routes/inventor.reconci
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
 import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
+import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppStreamRouteImport } from './routes/_app.stream'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -121,6 +122,11 @@ const InventorFinanceRoute = InventorFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => InventorRoute,
 } as any)
+const AppSupportRoute = AppSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppStreamRoute = AppStreamRouteImport.update({
   id: '/stream',
   path: '/stream',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
@@ -245,6 +253,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stream': typeof AppStreamRoute
+  '/_app/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/support'
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/support'
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/settings'
     | '/_app/stream'
+    | '/_app/support'
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
@@ -484,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventorFinanceRouteImport
       parentRoute: typeof InventorRoute
     }
+    '/_app/support': {
+      id: '/_app/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AppSupportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/stream': {
       id: '/_app/stream'
       path: '/stream'
@@ -563,6 +582,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStreamRoute: typeof AppStreamRoute
+  AppSupportRoute: typeof AppSupportRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -571,6 +591,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStreamRoute: AppStreamRoute,
+  AppSupportRoute: AppSupportRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
