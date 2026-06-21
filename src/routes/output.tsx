@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { startViewer } from "@/lib/stream-broadcast";
-import { resolveStreamToken } from "@/lib/stream-token.functions";
 
 export const Route = createFileRoute("/output")({
   validateSearch: (search) =>

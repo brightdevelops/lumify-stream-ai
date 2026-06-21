@@ -33,6 +33,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
+import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -157,6 +158,12 @@ const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
   path: '/api/public/track-visit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicResolveStreamTokenRoute =
+  ApiPublicResolveStreamTokenRouteImport.update({
+    id: '/api/public/resolve-stream-token',
+    path: '/api/public/resolve-stream-token',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
   id: '/api/public/nowpayments-ipn',
   path: '/api/public/nowpayments-ipn',
@@ -203,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -231,6 +239,7 @@ export interface FileRoutesByTo {
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -262,6 +271,7 @@ export interface FileRoutesById {
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/nowpayments-ipn'
+    | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/inventor/users'
     | '/inventor'
     | '/api/public/nowpayments-ipn'
+    | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/nowpayments-ipn'
+    | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -369,6 +382,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
+  ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -545,6 +559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTrackVisitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/resolve-stream-token': {
+      id: '/api/public/resolve-stream-token'
+      path: '/api/public/resolve-stream-token'
+      fullPath: '/api/public/resolve-stream-token'
+      preLoaderRoute: typeof ApiPublicResolveStreamTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/nowpayments-ipn': {
       id: '/api/public/nowpayments-ipn'
       path: '/api/public/nowpayments-ipn'
@@ -632,6 +653,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
+  ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
@@ -640,13 +662,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
