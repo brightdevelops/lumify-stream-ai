@@ -23,7 +23,6 @@ import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorUsersRouteImport } from './routes/inventor.users'
 import { Route as InventorSupportRouteImport } from './routes/inventor.support'
 import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
-import { Route as InventorReconcileRouteImport } from './routes/inventor.reconcile'
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
 import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
@@ -106,11 +105,6 @@ const InventorSupportRoute = InventorSupportRouteImport.update({
 const InventorRecordingsRoute = InventorRecordingsRouteImport.update({
   id: '/recordings',
   path: '/recordings',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorReconcileRoute = InventorReconcileRouteImport.update({
-  id: '/reconcile',
-  path: '/reconcile',
   getParentRoute: () => InventorRoute,
 } as any)
 const InventorMonitorRoute = InventorMonitorRouteImport.update({
@@ -204,7 +198,6 @@ export interface FileRoutesByFullPath {
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
-  '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
@@ -233,7 +226,6 @@ export interface FileRoutesByTo {
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
-  '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
@@ -265,7 +257,6 @@ export interface FileRoutesById {
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
-  '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
@@ -297,7 +288,6 @@ export interface FileRouteTypes {
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
-    | '/inventor/reconcile'
     | '/inventor/recordings'
     | '/inventor/support'
     | '/inventor/users'
@@ -326,7 +316,6 @@ export interface FileRouteTypes {
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
-    | '/inventor/reconcile'
     | '/inventor/recordings'
     | '/inventor/support'
     | '/inventor/users'
@@ -357,7 +346,6 @@ export interface FileRouteTypes {
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
-    | '/inventor/reconcile'
     | '/inventor/recordings'
     | '/inventor/support'
     | '/inventor/users'
@@ -487,13 +475,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventorRecordingsRouteImport
       parentRoute: typeof InventorRoute
     }
-    '/inventor/reconcile': {
-      id: '/inventor/reconcile'
-      path: '/reconcile'
-      fullPath: '/inventor/reconcile'
-      preLoaderRoute: typeof InventorReconcileRouteImport
-      parentRoute: typeof InventorRoute
-    }
     '/inventor/monitor': {
       id: '/inventor/monitor'
       path: '/monitor'
@@ -619,7 +600,6 @@ interface InventorRouteChildren {
   InventorFinanceRoute: typeof InventorFinanceRoute
   InventorLedgerRoute: typeof InventorLedgerRoute
   InventorMonitorRoute: typeof InventorMonitorRoute
-  InventorReconcileRoute: typeof InventorReconcileRoute
   InventorRecordingsRoute: typeof InventorRecordingsRoute
   InventorSupportRoute: typeof InventorSupportRoute
   InventorUsersRoute: typeof InventorUsersRoute
@@ -630,7 +610,6 @@ const InventorRouteChildren: InventorRouteChildren = {
   InventorFinanceRoute: InventorFinanceRoute,
   InventorLedgerRoute: InventorLedgerRoute,
   InventorMonitorRoute: InventorMonitorRoute,
-  InventorReconcileRoute: InventorReconcileRoute,
   InventorRecordingsRoute: InventorRecordingsRoute,
   InventorSupportRoute: InventorSupportRoute,
   InventorUsersRoute: InventorUsersRoute,
@@ -661,13 +640,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
