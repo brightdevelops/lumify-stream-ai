@@ -49,6 +49,7 @@ function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <SupportWidget />
     </div>
   );
 }
