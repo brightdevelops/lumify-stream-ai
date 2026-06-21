@@ -27,6 +27,7 @@ const TABS = [
   { to: "/inventor/recordings", label: "Recordings" },
   { to: "/inventor/finance", label: "Finance" },
   { to: "/inventor/reconcile", label: "Reconcile" },
+  { to: "/inventor/support", label: "Support" },
 ] as const;
 
 function InventorLayout() {

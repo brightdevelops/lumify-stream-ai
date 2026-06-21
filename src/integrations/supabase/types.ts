@@ -468,6 +468,95 @@ export type Database = {
         }
         Relationships: []
       }
+      support_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          subject: string | null
+          type: string
+          unread_for_admin: number
+          unread_for_user: number
+          updated_at: string
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          subject?: string | null
+          type: string
+          unread_for_admin?: number
+          unread_for_user?: number
+          updated_at?: string
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          subject?: string | null
+          type?: string
+          unread_for_admin?: number
+          unread_for_user?: number
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          sender: string
+          subject: string | null
+          type: string
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          sender: string
+          subject?: string | null
+          type: string
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          sender?: string
+          subject?: string | null
+          type?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -696,6 +785,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_list_support_conversations: {
+        Args: { p_limit?: number }
+        Returns: {
+          created_at: string
+          credit_balance: number
+          full_name: string
+          id: string
+          last_message_at: string
+          last_message_preview: string
+          subject: string
+          type: string
+          unread_for_admin: number
+          user_email: string
+          user_id: string
+        }[]
+      }
       admin_list_transactions: {
         Args: { p_limit?: number; p_type?: string }
         Returns: {
@@ -753,6 +858,10 @@ export type Database = {
           total_spent: number
           user_id: string
         }[]
+      }
+      admin_mark_conversation_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
       }
       admin_registration_analytics: {
         Args: { p_days?: number }
@@ -866,6 +975,10 @@ export type Database = {
       inventor_visit_stats: { Args: never; Returns: Json }
       log_usage_transaction: {
         Args: { p_amount: number; p_credits: number; p_description?: string }
+        Returns: undefined
+      }
+      mark_my_conversation_read: {
+        Args: { p_conversation_id: string }
         Returns: undefined
       }
       move_to_dlq: {

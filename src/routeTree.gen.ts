@@ -21,11 +21,13 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorUsersRouteImport } from './routes/inventor.users'
+import { Route as InventorSupportRouteImport } from './routes/inventor.support'
 import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
 import { Route as InventorReconcileRouteImport } from './routes/inventor.reconcile'
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
 import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
+import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppStreamRouteImport } from './routes/_app.stream'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -96,6 +98,11 @@ const InventorUsersRoute = InventorUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => InventorRoute,
 } as any)
+const InventorSupportRoute = InventorSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => InventorRoute,
+} as any)
 const InventorRecordingsRoute = InventorRecordingsRouteImport.update({
   id: '/recordings',
   path: '/recordings',
@@ -120,6 +127,11 @@ const InventorFinanceRoute = InventorFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
   getParentRoute: () => InventorRoute,
+} as any)
+const AppSupportRoute = AppSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppStreamRoute = AppStreamRouteImport.update({
   id: '/stream',
@@ -188,11 +200,13 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
+  '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -215,11 +229,13 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
+  '/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
+  '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -245,11 +261,13 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stream': typeof AppStreamRoute
+  '/_app/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
+  '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -275,11 +293,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/support'
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
     | '/inventor/reconcile'
     | '/inventor/recordings'
+    | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/nowpayments-ipn'
@@ -302,11 +322,13 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/stream'
+    | '/support'
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
     | '/inventor/reconcile'
     | '/inventor/recordings'
+    | '/inventor/support'
     | '/inventor/users'
     | '/inventor'
     | '/api/public/nowpayments-ipn'
@@ -331,11 +353,13 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/settings'
     | '/_app/stream'
+    | '/_app/support'
     | '/inventor/finance'
     | '/inventor/ledger'
     | '/inventor/monitor'
     | '/inventor/reconcile'
     | '/inventor/recordings'
+    | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/nowpayments-ipn'
@@ -449,6 +473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventorUsersRouteImport
       parentRoute: typeof InventorRoute
     }
+    '/inventor/support': {
+      id: '/inventor/support'
+      path: '/support'
+      fullPath: '/inventor/support'
+      preLoaderRoute: typeof InventorSupportRouteImport
+      parentRoute: typeof InventorRoute
+    }
     '/inventor/recordings': {
       id: '/inventor/recordings'
       path: '/recordings'
@@ -483,6 +514,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/inventor/finance'
       preLoaderRoute: typeof InventorFinanceRouteImport
       parentRoute: typeof InventorRoute
+    }
+    '/_app/support': {
+      id: '/_app/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AppSupportRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/stream': {
       id: '/_app/stream'
@@ -563,6 +601,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStreamRoute: typeof AppStreamRoute
+  AppSupportRoute: typeof AppSupportRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -571,6 +610,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStreamRoute: AppStreamRoute,
+  AppSupportRoute: AppSupportRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -581,6 +621,7 @@ interface InventorRouteChildren {
   InventorMonitorRoute: typeof InventorMonitorRoute
   InventorReconcileRoute: typeof InventorReconcileRoute
   InventorRecordingsRoute: typeof InventorRecordingsRoute
+  InventorSupportRoute: typeof InventorSupportRoute
   InventorUsersRoute: typeof InventorUsersRoute
   InventorIndexRoute: typeof InventorIndexRoute
 }
@@ -591,6 +632,7 @@ const InventorRouteChildren: InventorRouteChildren = {
   InventorMonitorRoute: InventorMonitorRoute,
   InventorReconcileRoute: InventorReconcileRoute,
   InventorRecordingsRoute: InventorRecordingsRoute,
+  InventorSupportRoute: InventorSupportRoute,
   InventorUsersRoute: InventorUsersRoute,
   InventorIndexRoute: InventorIndexRoute,
 }
