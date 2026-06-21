@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield, Wrench } from "lucide-react";
+import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield, Wrench, LifeBuoy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ const items = [
   { to: "/stream", label: "Start Stream", icon: Video },
   { to: "/credits", label: "Buy Credits", icon: Coins },
   { to: "/billing", label: "Billing", icon: Receipt },
+  { to: "/support", label: "Contact Support", icon: LifeBuoy },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
