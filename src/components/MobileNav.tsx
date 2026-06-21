@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield, Menu, Sparkles } from "lucide-react";
+import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks/use-auth";
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/stream", label: "Start Stream", icon: Video },
-  { to: "/avatar", label: "Talking Avatar", icon: Sparkles },
   { to: "/credits", label: "Buy Credits", icon: Coins },
   { to: "/billing", label: "Billing", icon: Receipt },
   { to: "/settings", label: "Settings", icon: Settings },
