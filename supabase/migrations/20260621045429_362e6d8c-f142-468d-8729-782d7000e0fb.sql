@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public.avatar_jobs CASCADE;
