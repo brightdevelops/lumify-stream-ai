@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
+import { SupportWidget } from "@/components/SupportWidget";
 import { supabase } from "@/integrations/supabase/client";
 
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
