@@ -262,27 +262,9 @@ function CreditsPage() {
           >
             {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave"}
           </button>
-          {(() => {
-            const CRYPTO_MIN_NGN = 16000; // ≈ $10 USD — NOWPayments invoice minimum
-            const belowMin = pack.price < CRYPTO_MIN_NGN;
-            return (
-              <>
-                <button
-                  onClick={handleCryptoPayment}
-                  disabled={processing || PURCHASES_PAUSED || belowMin}
-                  title={belowMin ? "Crypto payments require a minimum of about ₦16,000 (~$10). Pick Basic or larger." : undefined}
-                  className="mt-3 w-full rounded-md border border-primary/40 bg-secondary px-4 py-3 text-sm font-medium text-foreground hover:border-primary disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {processing ? "Opening crypto checkout…" : "Pay with Crypto (BTC, ETH, USDT…)"}
-                </button>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {belowMin
-                    ? "Crypto checkout requires a minimum of about ₦16,000 (~$10). Choose the Basic pack or larger to pay with crypto."
-                    : "Crypto payments are confirmed on-chain — credits typically appear within a few minutes after you send."}
-                </p>
-              </>
-            );
-          })()}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Crypto payments are temporarily unavailable. Please use card / bank transfer above.
+          </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
