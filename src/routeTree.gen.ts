@@ -21,6 +21,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorUsersRouteImport } from './routes/inventor.users'
+import { Route as InventorSupportRouteImport } from './routes/inventor.support'
 import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
 import { Route as InventorReconcileRouteImport } from './routes/inventor.reconcile'
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
@@ -95,6 +96,11 @@ const InventorIndexRoute = InventorIndexRouteImport.update({
 const InventorUsersRoute = InventorUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorSupportRoute = InventorSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => InventorRoute,
 } as any)
 const InventorRecordingsRoute = InventorRecordingsRouteImport.update({
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
+  '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
+  '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/reconcile': typeof InventorReconcileRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
+  '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/inventor/monitor'
     | '/inventor/reconcile'
     | '/inventor/recordings'
+    | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/nowpayments-ipn'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/inventor/monitor'
     | '/inventor/reconcile'
     | '/inventor/recordings'
+    | '/inventor/support'
     | '/inventor/users'
     | '/inventor'
     | '/api/public/nowpayments-ipn'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/inventor/monitor'
     | '/inventor/reconcile'
     | '/inventor/recordings'
+    | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/nowpayments-ipn'
@@ -459,6 +471,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/inventor/users'
       preLoaderRoute: typeof InventorUsersRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/support': {
+      id: '/inventor/support'
+      path: '/support'
+      fullPath: '/inventor/support'
+      preLoaderRoute: typeof InventorSupportRouteImport
       parentRoute: typeof InventorRoute
     }
     '/inventor/recordings': {
@@ -602,6 +621,7 @@ interface InventorRouteChildren {
   InventorMonitorRoute: typeof InventorMonitorRoute
   InventorReconcileRoute: typeof InventorReconcileRoute
   InventorRecordingsRoute: typeof InventorRecordingsRoute
+  InventorSupportRoute: typeof InventorSupportRoute
   InventorUsersRoute: typeof InventorUsersRoute
   InventorIndexRoute: typeof InventorIndexRoute
 }
@@ -612,6 +632,7 @@ const InventorRouteChildren: InventorRouteChildren = {
   InventorMonitorRoute: InventorMonitorRoute,
   InventorReconcileRoute: InventorReconcileRoute,
   InventorRecordingsRoute: InventorRecordingsRoute,
+  InventorSupportRoute: InventorSupportRoute,
   InventorUsersRoute: InventorUsersRoute,
   InventorIndexRoute: InventorIndexRoute,
 }
