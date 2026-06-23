@@ -120,6 +120,25 @@ function SupportInbox() {
     }
   }
 
+  async function closeConversation() {
+    if (!selected) return;
+    const ok = window.confirm(
+      `Close and wipe the conversation with ${selected.user_email ?? selected.user_id}? All messages will be permanently deleted.`
+    );
+    if (!ok) return;
+    try {
+      const { error } = await supabase.rpc("admin_close_support_conversation", {
+        p_conversation_id: selected.id,
+      });
+      if (error) throw error;
+      setConvs((prev) => prev.filter((c) => c.id !== selected.id));
+      setMessages([]);
+      setSelected(null);
+    } catch (e: any) {
+      setErr(e?.message ?? String(e));
+    }
+  }
+
   const totalUnread = convs.reduce((s, c) => s + (c.unread_for_admin || 0), 0);
 
   return (
