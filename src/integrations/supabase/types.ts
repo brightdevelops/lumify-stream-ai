@@ -651,6 +651,10 @@ export type Database = {
         Returns: number
       }
       admin_ban_user: { Args: { target_user_id: string }; Returns: undefined }
+      admin_close_support_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       admin_delete_user: {
         Args: { target_user_id: string }
         Returns: undefined

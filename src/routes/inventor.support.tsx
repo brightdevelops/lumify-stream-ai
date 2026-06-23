@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Inbox, MessageCircle, Mail, Send, User as UserIcon, Coins } from "lucide-react";
+import { Inbox, MessageCircle, Mail, Send, User as UserIcon, Coins, Trash2 } from "lucide-react";
 
 type Conv = {
   id: string;
@@ -78,6 +78,10 @@ function SupportInbox() {
         (payload) => {
           const m = payload.new as Msg;
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          // Keep unread cleared while admin is actively viewing this thread
+          if (m.sender === "user") {
+            supabase.rpc("admin_mark_conversation_read", { p_conversation_id: selected.id });
+          }
         }
       )
       .subscribe();
@@ -107,11 +111,31 @@ function SupportInbox() {
         sender: "admin",
       });
       if (error) throw error;
+      await supabase.rpc("admin_mark_conversation_read", { p_conversation_id: selected.id });
     } catch (e: any) {
       setErr(e?.message ?? String(e));
       setReply(body);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function closeConversation() {
+    if (!selected) return;
+    const ok = window.confirm(
+      `Close and wipe the conversation with ${selected.user_email ?? selected.user_id}? All messages will be permanently deleted.`
+    );
+    if (!ok) return;
+    try {
+      const { error } = await supabase.rpc("admin_close_support_conversation", {
+        p_conversation_id: selected.id,
+      });
+      if (error) throw error;
+      setConvs((prev) => prev.filter((c) => c.id !== selected.id));
+      setMessages([]);
+      setSelected(null);
+    } catch (e: any) {
+      setErr(e?.message ?? String(e));
     }
   }
 
@@ -207,6 +231,14 @@ function SupportInbox() {
                     {selected.subject}
                   </span>
                 )}
+                <button
+                  onClick={closeConversation}
+                  className={`inline-flex items-center gap-1.5 rounded-md border border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2.5 py-1 transition ${selected.subject ? "" : "ml-auto"}`}
+                  title="Close conversation and wipe all messages"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Close & wipe
+                </button>
               </div>
 
               <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-background min-h-[300px]">
