@@ -78,6 +78,10 @@ function SupportInbox() {
         (payload) => {
           const m = payload.new as Msg;
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          // Keep unread cleared while admin is actively viewing this thread
+          if (m.sender === "user") {
+            supabase.rpc("admin_mark_conversation_read", { p_conversation_id: selected.id });
+          }
         }
       )
       .subscribe();
