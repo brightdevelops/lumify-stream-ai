@@ -1080,7 +1080,7 @@ function StreamPage() {
               <li>Click <span className="font-mono text-primary">+</span> under Sources</li>
               <li>Select <span className="font-medium">Browser Source</span></li>
               <li>Paste the URL below</li>
-              <li>Set width <span className="font-mono">1280</span> height <span className="font-mono">720</span></li>
+              <li>Set width <span className="font-mono">{isPortrait ? 720 : 1280}</span> height <span className="font-mono">{isPortrait ? 1280 : 720}</span></li>
               <li>Click <span className="font-medium">OK</span> — your AI face is now in OBS</li>
             </ol>
             <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-background/60 p-2">
