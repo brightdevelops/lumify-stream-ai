@@ -100,20 +100,6 @@ function StreamPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
-  const [orientation, setOrientation] = useState<"landscape" | "portrait">(() => {
-    if (typeof window === "undefined") return "landscape";
-    return (window.localStorage.getItem("lumify_orientation") as "landscape" | "portrait") || "landscape";
-  });
-  useEffect(() => {
-    if (typeof window !== "undefined") window.localStorage.setItem("lumify_orientation", orientation);
-  }, [orientation]);
-  const isPortrait = orientation === "portrait";
-  // Build width/height constraints for the model. Lucy 2.1 supports portrait
-  // natively — for desktop browsers we swap width/height in getUserMedia so
-  // the model receives a 9:16 stream. Mobile OSes already map the front cam
-  // to vertical regardless, so the swap is a no-op for them.
-  const videoDims = (m: { width: number; height: number }) =>
-    isPortrait ? { width: m.height, height: m.width } : { width: m.width, height: m.height };
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
@@ -260,9 +246,8 @@ function StreamPage() {
 
     try {
       const model = models.realtime("lucy-2.1");
-      const dims = videoDims(model);
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: dims.width, height: dims.height },
+        video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: model.width, height: model.height },
         audio: false,
       });
       const newTrack = newStream.getVideoTracks()[0];
@@ -487,13 +472,12 @@ function StreamPage() {
     let stream: MediaStream;
     try {
       const model = models.realtime("lucy-2.1");
-      const dims = videoDims(model);
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
           ...(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {}),
           frameRate: model.fps,
-          width: dims.width,
-          height: dims.height,
+          width: model.width,
+          height: model.height,
         },
         audio: false,
       });
@@ -852,36 +836,6 @@ function StreamPage() {
         )}
       </div>
 
-      {/* Orientation toggle */}
-      <div className="mb-6 rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Orientation</div>
-          <div className="inline-flex rounded-md border border-border bg-background/60 p-1">
-            <button
-              type="button"
-              disabled={streaming || connecting}
-              onClick={() => setOrientation("landscape")}
-              className={`px-4 py-1.5 text-sm rounded ${orientation === "landscape" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              Landscape 16:9
-            </button>
-            <button
-              type="button"
-              disabled={streaming || connecting}
-              onClick={() => setOrientation("portrait")}
-              className={`px-4 py-1.5 text-sm rounded ${orientation === "portrait" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              Portrait 9:16
-            </button>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground max-w-md">
-            {isPortrait
-              ? "Vertical output (720×1280) — best for phone cameras and TikTok / Reels / Shorts."
-              : "Horizontal output (1280×720) — best for desktop webcams, OBS, YouTube and Twitch."}
-            {streaming || connecting ? " Stop the stream to change." : ""}
-          </p>
-        </div>
-      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
 
@@ -907,7 +861,7 @@ function StreamPage() {
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Panel label="Your Camera" portrait={isPortrait}>
+            <Panel label="Your Camera">
               <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
               {!streaming && <PanelEmpty hint="Camera off" />}
               {streaming && (
@@ -916,7 +870,7 @@ function StreamPage() {
                 </div>
               )}
             </Panel>
-            <Panel label="AI Output" accent portrait={isPortrait}>
+            <Panel label="AI Output" accent>
               <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
               {!streaming && <PanelEmpty hint="Waiting for stream" />}
               {connecting && (
@@ -1080,7 +1034,7 @@ function StreamPage() {
               <li>Click <span className="font-mono text-primary">+</span> under Sources</li>
               <li>Select <span className="font-medium">Browser Source</span></li>
               <li>Paste the URL below</li>
-              <li>Set width <span className="font-mono">{isPortrait ? 720 : 1280}</span> height <span className="font-mono">{isPortrait ? 1280 : 720}</span></li>
+              <li>Set width <span className="font-mono">1280</span> height <span className="font-mono">720</span></li>
               <li>Click <span className="font-medium">OK</span> — your AI face is now in OBS</li>
             </ol>
             <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-background/60 p-2">
@@ -1148,9 +1102,9 @@ function StreamPage() {
   );
 }
 
-function Panel({ label, accent, portrait, children }: { label: string; accent?: boolean; portrait?: boolean; children: React.ReactNode }) {
+function Panel({ label, accent, children }: { label: string; accent?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`relative rounded-xl border ${accent ? "border-primary/40" : "border-border"} bg-card overflow-hidden ${portrait ? "aspect-[9/16] max-h-[70vh] mx-auto w-auto" : "aspect-video"}`}>
+    <div className={`relative rounded-xl border ${accent ? "border-primary/40" : "border-border"} bg-card overflow-hidden aspect-video`}>
       <div className="absolute top-3 left-3 z-10 rounded-md bg-background/70 backdrop-blur px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
       {children}
     </div>
