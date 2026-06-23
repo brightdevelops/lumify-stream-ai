@@ -870,7 +870,7 @@ function StreamPage() {
                 </div>
               )}
             </Panel>
-            <Panel label="AI Output" accent portrait={isPortrait}>
+            <Panel label="AI Output" accent>
               <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
               {!streaming && <PanelEmpty hint="Waiting for stream" />}
               {connecting && (
