@@ -1148,9 +1148,9 @@ function StreamPage() {
   );
 }
 
-function Panel({ label, accent, children }: { label: string; accent?: boolean; children: React.ReactNode }) {
+function Panel({ label, accent, portrait, children }: { label: string; accent?: boolean; portrait?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`relative rounded-xl border ${accent ? "border-primary/40" : "border-border"} bg-card overflow-hidden aspect-video`}>
+    <div className={`relative rounded-xl border ${accent ? "border-primary/40" : "border-border"} bg-card overflow-hidden ${portrait ? "aspect-[9/16] max-h-[70vh] mx-auto w-auto" : "aspect-video"}`}>
       <div className="absolute top-3 left-3 z-10 rounded-md bg-background/70 backdrop-blur px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
       {children}
     </div>
