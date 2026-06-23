@@ -883,8 +883,10 @@ function StreamPage() {
         </div>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
 
         <div className="space-y-5">
+
           {cameras.length > 1 && (
             <div>
               <label htmlFor="camera-select" className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">
