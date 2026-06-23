@@ -852,7 +852,37 @@ function StreamPage() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      {/* Orientation toggle */}
+      <div className="mb-6 rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Orientation</div>
+          <div className="inline-flex rounded-md border border-border bg-background/60 p-1">
+            <button
+              type="button"
+              disabled={streaming || connecting}
+              onClick={() => setOrientation("landscape")}
+              className={`px-4 py-1.5 text-sm rounded ${orientation === "landscape" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              Landscape 16:9
+            </button>
+            <button
+              type="button"
+              disabled={streaming || connecting}
+              onClick={() => setOrientation("portrait")}
+              className={`px-4 py-1.5 text-sm rounded ${orientation === "portrait" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              Portrait 9:16
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground max-w-md">
+            {isPortrait
+              ? "Vertical output (720×1280) — best for phone cameras and TikTok / Reels / Shorts."
+              : "Horizontal output (1280×720) — best for desktop webcams, OBS, YouTube and Twitch."}
+            {streaming || connecting ? " Stop the stream to change." : ""}
+          </p>
+        </div>
+      </div>
+
 
         <div className="space-y-5">
           {cameras.length > 1 && (
