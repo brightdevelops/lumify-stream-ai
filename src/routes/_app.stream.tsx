@@ -260,8 +260,9 @@ function StreamPage() {
 
     try {
       const model = models.realtime("lucy-2.1");
+      const dims = videoDims(model);
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: model.width, height: model.height },
+        video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: dims.width, height: dims.height },
         audio: false,
       });
       const newTrack = newStream.getVideoTracks()[0];
