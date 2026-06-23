@@ -100,20 +100,6 @@ function StreamPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
-  const [orientation, setOrientation] = useState<"landscape" | "portrait">(() => {
-    if (typeof window === "undefined") return "landscape";
-    return (window.localStorage.getItem("lumify_orientation") as "landscape" | "portrait") || "landscape";
-  });
-  useEffect(() => {
-    if (typeof window !== "undefined") window.localStorage.setItem("lumify_orientation", orientation);
-  }, [orientation]);
-  const isPortrait = orientation === "portrait";
-  // Build width/height constraints for the model. Lucy 2.1 supports portrait
-  // natively — for desktop browsers we swap width/height in getUserMedia so
-  // the model receives a 9:16 stream. Mobile OSes already map the front cam
-  // to vertical regardless, so the swap is a no-op for them.
-  const videoDims = (m: { width: number; height: number }) =>
-    isPortrait ? { width: m.height, height: m.width } : { width: m.width, height: m.height };
 
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
