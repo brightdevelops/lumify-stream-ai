@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Inbox, MessageCircle, Mail, Send, User as UserIcon, Coins } from "lucide-react";
+import { Inbox, MessageCircle, Mail, Send, User as UserIcon, Coins, Trash2 } from "lucide-react";
 
 type Conv = {
   id: string;
