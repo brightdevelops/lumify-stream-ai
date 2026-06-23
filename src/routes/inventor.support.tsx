@@ -111,6 +111,7 @@ function SupportInbox() {
         sender: "admin",
       });
       if (error) throw error;
+      await supabase.rpc("admin_mark_conversation_read", { p_conversation_id: selected.id });
     } catch (e: any) {
       setErr(e?.message ?? String(e));
       setReply(body);
