@@ -907,7 +907,7 @@ function StreamPage() {
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Panel label="Your Camera">
+            <Panel label="Your Camera" portrait={isPortrait}>
               <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
               {!streaming && <PanelEmpty hint="Camera off" />}
               {streaming && (
