@@ -28,6 +28,8 @@ export const Route = createFileRoute("/inventor/support")({
   component: SupportInbox,
 });
 
+export { SupportInbox };
+
 function SupportInbox() {
   const [convs, setConvs] = useState<Conv[]>([]);
   const [selected, setSelected] = useState<Conv | null>(null);
