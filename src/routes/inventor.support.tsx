@@ -231,6 +231,14 @@ function SupportInbox() {
                     {selected.subject}
                   </span>
                 )}
+                <button
+                  onClick={closeConversation}
+                  className={`inline-flex items-center gap-1.5 rounded-md border border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground text-xs px-2.5 py-1 transition ${selected.subject ? "" : "ml-auto"}`}
+                  title="Close conversation and wipe all messages"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Close & wipe
+                </button>
               </div>
 
               <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-background min-h-[300px]">
