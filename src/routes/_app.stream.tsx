@@ -487,12 +487,13 @@ function StreamPage() {
     let stream: MediaStream;
     try {
       const model = models.realtime("lucy-2.1");
+      const dims = videoDims(model);
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
           ...(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {}),
           frameRate: model.fps,
-          width: model.width,
-          height: model.height,
+          width: dims.width,
+          height: dims.height,
         },
         audio: false,
       });
