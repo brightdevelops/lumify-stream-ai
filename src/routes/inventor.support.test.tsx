@@ -31,7 +31,7 @@ function makeMessagesSelectChain(rows: any[]) {
   return chain;
 }
 
-const insertMock = vi.fn(() => Promise.resolve({ error: null }));
+const insertMock = vi.fn((_args?: any) => Promise.resolve({ error: null }));
 
 vi.mock("@/integrations/supabase/client", () => {
   return {
