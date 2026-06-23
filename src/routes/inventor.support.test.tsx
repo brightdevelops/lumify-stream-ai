@@ -48,7 +48,7 @@ vi.mock("@/integrations/supabase/client", () => {
                 order: () => Promise.resolve({ data: [], error: null }),
               }),
             }),
-            insert: (...args: any[]) => insertMock(...args),
+            insert: (args: any) => insertMock(args),
           };
         }
         return makeMessagesSelectChain([]);
