@@ -23,7 +23,7 @@ function AppLayout() {
     if (!loading && !user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
-  // Heartbeat last_seen every 1 second while signed in and tab is visible
+  // Heartbeat last_seen every 60s while signed in and tab is visible
   useEffect(() => {
     if (!user) return;
     const tick = () => {
@@ -31,7 +31,7 @@ function AppLayout() {
       void supabase.rpc("record_login");
     };
     tick();
-    const id = window.setInterval(tick, 1000);
+    const id = window.setInterval(tick, 60_000);
     return () => window.clearInterval(id);
   }, [user]);
 

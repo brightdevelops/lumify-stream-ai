@@ -10,27 +10,15 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
     let session = data.session
     const nowSec = Math.floor(Date.now() / 1000)
     const expiresAt = session?.expires_at ?? 0
-    // Refresh if we have a session that's expired or expiring within 60s.
-    if (session && expiresAt - nowSec < 60) {
-      const { data: refreshed, error } = await supabase.auth.refreshSession()
-      if (!error && refreshed.session) {
-        session = refreshed.session
-      } else {
-        // Refresh token is dead — clear local session and redirect to login
-        // rather than calling the server with a known-expired bearer.
-        await supabase.auth.signOut().catch(() => {})
-        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-          window.location.assign('/login')
-        }
-        throw new Error('Session expired. Please sign in again.')
-      }
+    // Only refresh if the token is actually expired. Do NOT race the SDK's
+    // built-in autoRefresh on a near-expiry token — rotating refresh tokens
+    // can only be consumed once, and the loser of that race comes back
+    // "invalid" and used to sign freshly-signed-in users out.
+    if (session && expiresAt > 0 && expiresAt - nowSec <= 0) {
+      const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } }))
+      if (refreshed?.session) session = refreshed.session
     }
-    // Re-check freshness after potential refresh.
-    const finalExp = session?.expires_at ?? 0
-    if (!session || finalExp - Math.floor(Date.now() / 1000) <= 0) {
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.assign('/login')
-      }
+    if (!session) {
       throw new Error('Not authenticated.')
     }
     return next({
