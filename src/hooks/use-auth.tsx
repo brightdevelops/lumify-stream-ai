@@ -64,9 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 2. Let the SDK emit INITIAL_SESSION from storage. Calling getSession()
     // here can also start a proactive refresh and race the SDK's own startup
     // refresh path on Windows/Edge/Chrome, causing refresh-token revocation.
-    const loadingFallback = window.setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 8000);
 
     // 3. Cross-tab sync: when another tab signs in/out, Supabase writes to
     //    localStorage. Parse the stored value directly instead of calling
@@ -86,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      window.clearTimeout(loadingFallback);
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
     };
