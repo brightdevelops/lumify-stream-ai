@@ -9,6 +9,7 @@ import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 import { startSessionRecorder, logStreamEvent, uploadSwapImage, type RecorderHandle } from "@/lib/stream-recorder";
+import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -563,8 +564,7 @@ function StreamPage() {
     // Capture the access token so the pagehide beacon can finalize the
     // session row even after supabase-js shuts down on unload.
     try {
-      const { data: sessData } = await supabase.auth.getSession();
-      accessTokenRef.current = sessData.session?.access_token ?? null;
+      accessTokenRef.current = getStoredSupabaseAccessToken();
     } catch {
       accessTokenRef.current = null;
     }
