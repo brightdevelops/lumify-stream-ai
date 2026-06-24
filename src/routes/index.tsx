@@ -36,24 +36,24 @@ function Landing() {
 
   useEffect(() => {
     let cancelled = false;
-    // Check existing session restored from localStorage
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      if (data.session) {
-        setHasSession(true);
-        navigate({ to: "/dashboard", replace: true });
-      } else {
-        setAuthChecked(true);
-      }
-    });
-    // React to future sign-in events
+    const finishCheck = () => {
+      if (!cancelled) setAuthChecked(true);
+    };
+
+    // Let Supabase emit INITIAL_SESSION instead of calling getSession() here.
+    // getSession() can proactively refresh near-expiry tokens and compete with
+    // the SDK startup refresh, which was revoking refresh tokens for some users.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (cancelled) return;
       if (session) {
         setHasSession(true);
         navigate({ to: "/dashboard", replace: true });
+      } else {
+        finishCheck();
       }
     });
-    return () => { cancelled = true; subscription.unsubscribe(); };
+    const fallback = window.setTimeout(finishCheck, 5000);
+    return () => { cancelled = true; window.clearTimeout(fallback); subscription.unsubscribe(); };
   }, [navigate]);
 
   useEffect(() => {

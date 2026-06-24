@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureFreshSupabaseSession } from "@/lib/auth-session";
 
 type AuthCtx = {
   user: User | null;
@@ -28,29 +27,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
     };
 
+    const finishLoading = () => {
+      if (mounted) setLoading(false);
+    };
+
     // 1. Subscribe FIRST so we don't miss the initial INITIAL_SESSION event.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       // Explicit sign-out — always honour.
       if (event === "SIGNED_OUT") {
         hadSessionRef.current = false;
         applySession(null);
+        finishLoading();
         return;
       }
       // For any other event with a session, apply it (covers SIGNED_IN,
       // TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION).
       if (s) {
         applySession(s);
+        finishLoading();
         return;
       }
-      hadSessionRef.current = false;
+
+      // During token recovery/refresh Supabase can briefly emit a null
+      // session before a TOKEN_REFRESHED / INITIAL_SESSION event. Treat that
+      // as transient once this tab has seen a real session; only SIGNED_OUT
+      // above is allowed to clear an authenticated user.
+      if (hadSessionRef.current) {
+        finishLoading();
+        return;
+      }
       applySession(null);
+      finishLoading();
     });
 
-    // 2. Then read the persisted session from storage.
-    ensureFreshSupabaseSession().then((freshSession) => {
-      applySession(freshSession);
+    // 2. Let the SDK emit INITIAL_SESSION from storage. Calling getSession()
+    // here can also start a proactive refresh and race the SDK's own startup
+    // refresh path on Windows/Edge/Chrome, causing refresh-token revocation.
+    const loadingFallback = window.setTimeout(() => {
       if (mounted) setLoading(false);
-    });
+    }, 8000);
 
     // 3. Cross-tab sync: when another tab signs in/out, Supabase writes to
     //    localStorage. Re-read the session so this tab stays in sync.
@@ -68,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      window.clearTimeout(loadingFallback);
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
     };
