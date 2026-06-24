@@ -20,7 +20,9 @@ function AppLayout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login" });
+    if (!loading && !user) {
+      window.setTimeout(() => navigate({ to: "/login" }), 0);
+    }
   }, [loading, user, navigate]);
 
   // Heartbeat last_seen every 60s while signed in and tab is visible

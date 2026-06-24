@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { parseStoredSupabaseSession } from "@/lib/supabase-session-storage";
 
 type AuthCtx = {
   user: User | null;
@@ -63,15 +64,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 2. Let the SDK emit INITIAL_SESSION from storage. Calling getSession()
     // here can also start a proactive refresh and race the SDK's own startup
     // refresh path on Windows/Edge/Chrome, causing refresh-token revocation.
-    const loadingFallback = window.setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 8000);
 
     // 3. Cross-tab sync: when another tab signs in/out, Supabase writes to
-    //    localStorage. Re-read the session so this tab stays in sync.
+    //    localStorage. Parse the stored value directly instead of calling
+    //    getSession(), because getSession() may trigger a refresh during
+    //    login startup and compete for the same rotating refresh token.
     const onStorage = (e: StorageEvent) => {
-      if (!e.key || !e.key.startsWith("sb-")) return;
-      supabase.auth.getSession().then(({ data }) => applySession(data.session ?? null));
+      if (!e.key?.startsWith("sb-") || !e.key.endsWith("-auth-token")) return;
+      applySession(parseStoredSupabaseSession(e.newValue));
     };
     window.addEventListener("storage", onStorage);
 
@@ -83,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      window.clearTimeout(loadingFallback);
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
     };

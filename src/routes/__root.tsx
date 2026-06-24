@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
 
 import appCss from "../styles.css?url";
 
@@ -108,8 +109,7 @@ function VisitTracker() {
     lastPath.current = pathname;
     (async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token;
+        const token = getStoredSupabaseAccessToken();
         await fetch("/api/public/track-visit", {
           method: "POST",
           headers: {
