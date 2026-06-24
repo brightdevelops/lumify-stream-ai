@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { parseStoredSupabaseSession } from "@/lib/supabase-session-storage";
 
 type AuthCtx = {
   user: User | null;
@@ -68,10 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, 8000);
 
     // 3. Cross-tab sync: when another tab signs in/out, Supabase writes to
-    //    localStorage. Re-read the session so this tab stays in sync.
+    //    localStorage. Parse the stored value directly instead of calling
+    //    getSession(), because getSession() may trigger a refresh during
+    //    login startup and compete for the same rotating refresh token.
     const onStorage = (e: StorageEvent) => {
-      if (!e.key || !e.key.startsWith("sb-")) return;
-      supabase.auth.getSession().then(({ data }) => applySession(data.session ?? null));
+      if (!e.key?.startsWith("sb-") || !e.key.endsWith("-auth-token")) return;
+      applySession(parseStoredSupabaseSession(e.newValue));
     };
     window.addEventListener("storage", onStorage);
 
