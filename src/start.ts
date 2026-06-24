@@ -2,7 +2,6 @@ import { createStart, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
 import { attachStoredSupabaseAuth } from "@/lib/safe-auth-attacher";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 // NOTE: Do NOT import or re-add `attachSupabaseAuth` from
 // `@/integrations/supabase/auth-attacher` here. It calls
 // supabase.auth.refreshSession() on near-expiry tokens and races the SDK's
@@ -33,5 +32,5 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware],
-  functionMiddleware: [attachSupabaseAuth, attachStoredSupabaseAuth],
+  functionMiddleware: [attachStoredSupabaseAuth],
 }));
