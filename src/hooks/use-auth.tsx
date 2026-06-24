@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureFreshSupabaseSession } from "@/lib/auth-session";
 
 type AuthCtx = {
   user: User | null;
@@ -42,13 +41,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         applySession(s);
         return;
       }
-      hadSessionRef.current = false;
+
+      // During token recovery/refresh Supabase can briefly emit a null
+      // session before a TOKEN_REFRESHED / INITIAL_SESSION event. Treat that
+      // as transient once this tab has seen a real session; only SIGNED_OUT
+      // above is allowed to clear an authenticated user.
+      if (hadSessionRef.current) return;
       applySession(null);
     });
 
     // 2. Then read the persisted session from storage.
-    ensureFreshSupabaseSession().then((freshSession) => {
-      applySession(freshSession);
+    // Do not call refreshSession() here: the SDK already auto-refreshes, and
+    // an extra manual refresh can consume rotating refresh tokens twice.
+    supabase.auth.getSession().then(({ data }) => {
+      applySession(data.session ?? null);
       if (mounted) setLoading(false);
     });
 
