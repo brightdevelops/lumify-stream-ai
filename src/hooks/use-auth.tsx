@@ -27,18 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
     };
 
+    const finishLoading = () => {
+      if (mounted) setLoading(false);
+    };
+
     // 1. Subscribe FIRST so we don't miss the initial INITIAL_SESSION event.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       // Explicit sign-out — always honour.
       if (event === "SIGNED_OUT") {
         hadSessionRef.current = false;
         applySession(null);
+        finishLoading();
         return;
       }
       // For any other event with a session, apply it (covers SIGNED_IN,
       // TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION).
       if (s) {
         applySession(s);
+        finishLoading();
         return;
       }
 
@@ -46,8 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // session before a TOKEN_REFRESHED / INITIAL_SESSION event. Treat that
       // as transient once this tab has seen a real session; only SIGNED_OUT
       // above is allowed to clear an authenticated user.
-      if (hadSessionRef.current) return;
+      if (hadSessionRef.current) {
+        finishLoading();
+        return;
+      }
       applySession(null);
+      finishLoading();
     });
 
     // 2. Let the SDK emit INITIAL_SESSION from storage. Calling getSession()
