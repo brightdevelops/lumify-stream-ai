@@ -50,13 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       applySession(null);
     });
 
-    // 2. Then read the persisted session from storage.
-    // Do not call refreshSession() here: the SDK already auto-refreshes, and
-    // an extra manual refresh can consume rotating refresh tokens twice.
-    supabase.auth.getSession().then(({ data }) => {
-      applySession(data.session ?? null);
+    // 2. Let the SDK emit INITIAL_SESSION from storage. Calling getSession()
+    // here can also start a proactive refresh and race the SDK's own startup
+    // refresh path on Windows/Edge/Chrome, causing refresh-token revocation.
+    const loadingFallback = window.setTimeout(() => {
       if (mounted) setLoading(false);
-    });
+    }, 1500);
 
     // 3. Cross-tab sync: when another tab signs in/out, Supabase writes to
     //    localStorage. Re-read the session so this tab stays in sync.
@@ -74,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      window.clearTimeout(loadingFallback);
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
     };
