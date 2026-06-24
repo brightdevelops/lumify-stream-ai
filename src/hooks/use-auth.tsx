@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // refresh path on Windows/Edge/Chrome, causing refresh-token revocation.
     const loadingFallback = window.setTimeout(() => {
       if (mounted) setLoading(false);
-    }, 1500);
+    }, 8000);
 
     // 3. Cross-tab sync: when another tab signs in/out, Supabase writes to
     //    localStorage. Re-read the session so this tab stays in sync.
