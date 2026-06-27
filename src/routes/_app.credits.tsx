@@ -275,16 +275,24 @@ function CreditsPage() {
             </a>
           )}
           <button
-            onClick={handlePayment}
+            onClick={handleStripePayment}
             disabled={processing || PURCHASES_PAUSED}
             title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
             className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave"}
+            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with card (Stripe)"}
+          </button>
+          <button
+            onClick={handlePayment}
+            disabled={processing || PURCHASES_PAUSED}
+            className="mt-2 w-full rounded-md border border-border bg-secondary px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Or pay with Flutterwave (NGN)
           </button>
           <p className="mt-3 text-xs text-muted-foreground">
-            Crypto payments are temporarily unavailable. Please use card / bank transfer above.
+            Card payments are charged in USD at the current rate. Crypto payments are temporarily unavailable.
           </p>
+
 
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
