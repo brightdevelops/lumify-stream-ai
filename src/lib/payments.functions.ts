@@ -25,6 +25,7 @@ const PACKS: Record<string, { name: string; credits: number; amountNgn: number }
 export const getFlutterwavePublicKey = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
+    await assertNotInMaintenance("purchase");
     const key = process.env.FLUTTERWAVE_PUBLIC_KEY;
     if (!key) throw new Error("Payment provider not configured (missing FLUTTERWAVE_PUBLIC_KEY)");
     return { publicKey: key };
