@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertNotInMaintenance } from "@/lib/site-settings.functions";
 
 // NGN → USD conversion used when invoicing crypto (NOWPayments prices in USD).
 // Tunable via env so we can react to FX moves without a code change.
