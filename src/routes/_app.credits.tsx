@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createNowPaymentsInvoice, reportPaymentIssue } from "@/lib/payments.functions";
+import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
@@ -68,6 +69,9 @@ function loadFlutterwave(): Promise<void> {
 function CreditsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { enabled: maintenanceOn } = useMaintenanceMode();
+  const purchasesPaused = PURCHASES_PAUSED || maintenanceOn;
+  const purchasesPausedMessage = maintenanceOn ? MAINTENANCE_PURCHASE_MESSAGE : PURCHASES_PAUSED_MESSAGE;
   const [selected, setSelected] = useState("basic");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
