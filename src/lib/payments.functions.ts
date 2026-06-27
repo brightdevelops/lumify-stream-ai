@@ -122,6 +122,7 @@ export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await assertNotInMaintenance("purchase");
     const { userId } = context;
     const pack = PACKS[data.packId];
     const apiKey = process.env.NOWPAYMENTS_API_KEY;
