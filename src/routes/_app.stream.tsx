@@ -58,6 +58,9 @@ const formatTimeLeft = (totalSec: number) => {
 function StreamPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { enabled: maintenanceOn } = useMaintenanceMode();
+  const streamingPaused = STREAMING_PAUSED || maintenanceOn;
+  const streamingPausedMessage = maintenanceOn ? MAINTENANCE_STREAMING_MESSAGE : STREAMING_PAUSED_MESSAGE;
   const inputVideoRef = useRef<HTMLVideoElement>(null);
   const outputVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
