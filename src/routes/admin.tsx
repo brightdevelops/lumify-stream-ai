@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, Bitcoin, LifeBuoy, CreditCard } from "lucide-react";
+import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, Bitcoin, LifeBuoy, CreditCard, Wrench } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
+import { getMaintenanceMode, setMaintenanceMode } from "@/lib/site-settings.functions";
 import {
   amIAdmin,
   adminGetCreditStats,
@@ -243,6 +245,8 @@ function AdminPage() {
             Refresh failed — showing last known values. ({error})
           </div>
         )}
+
+        <MaintenanceToggleCard />
 
         {/* Overview */}
         <section>
