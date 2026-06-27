@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createNowPaymentsInvoice, reportPaymentIssue, createStripeCheckout } from "@/lib/payments.functions";
+import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createNowPaymentsInvoice, reportPaymentIssue } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
