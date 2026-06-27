@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, Bitcoin, LifeBuoy, CreditCard } from "lucide-react";
+import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, Bitcoin, LifeBuoy, CreditCard, Wrench } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
+import { getMaintenanceMode, setMaintenanceMode } from "@/lib/site-settings.functions";
 import {
   amIAdmin,
   adminGetCreditStats,
@@ -243,6 +245,8 @@ function AdminPage() {
             Refresh failed — showing last known values. ({error})
           </div>
         )}
+
+        <MaintenanceToggleCard />
 
         {/* Overview */}
         <section>
@@ -684,6 +688,74 @@ function AdminPage() {
     </div>
   );
 }
+
+function MaintenanceToggleCard() {
+  const getFn = useServerFn(getMaintenanceMode);
+  const setFn = useServerFn(setMaintenanceMode);
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getFn().then((r) => { if (!cancelled) setEnabled(r.enabled); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [getFn]);
+
+  const toggle = async (next: boolean) => {
+    if (saving) return;
+    const confirmMsg = next
+      ? "Turn Maintenance Mode ON?\n\nThis will immediately disable streaming and credit purchases for ALL users. Existing balances and the dashboard remain accessible."
+      : "Turn Maintenance Mode OFF?\n\nStreaming and credit purchases will be re-enabled for all users.";
+    if (!window.confirm(confirmMsg)) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await setFn({ data: { enabled: next } });
+      setEnabled(r.enabled);
+    } catch (e: any) {
+      setError(e?.message ?? "Could not update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className={`rounded-xl border p-5 ${enabled ? "border-amber-500/50 bg-amber-500/5" : "border-border bg-card"}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className={`shrink-0 grid place-items-center h-10 w-10 rounded-md ${enabled ? "bg-amber-500/20 text-amber-500" : "bg-primary/10 text-primary"}`}>
+            <Wrench className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-medium">Maintenance Mode</h2>
+              <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full ${enabled ? "bg-amber-500/20 text-amber-500" : "bg-secondary text-muted-foreground"}`}>
+                {enabled == null ? "…" : enabled ? "ON" : "OFF"}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground max-w-xl">
+              When ON, streaming and credit purchases are disabled site-wide. Login, dashboard,
+              settings and balance viewing remain available. Server-side guards block the Decart
+              session and payment initialization in addition to the UI lockout.
+            </p>
+            {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
+          <Switch
+            checked={!!enabled}
+            disabled={enabled == null || saving}
+            onCheckedChange={toggle}
+            aria-label="Toggle maintenance mode"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 function Stat({ label, value, sub, icon: Icon, highlight }: { label: string; value: string; sub?: string; icon?: typeof Users; highlight?: boolean }) {
   return (

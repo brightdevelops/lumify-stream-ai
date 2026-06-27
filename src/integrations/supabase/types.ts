@@ -323,6 +323,27 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: boolean
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: boolean
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: boolean
+        }
+        Relationships: []
+      }
       site_visits: {
         Row: {
           created_at: string
@@ -977,6 +998,7 @@ export type Database = {
         Returns: boolean
       }
       inventor_visit_stats: { Args: never; Returns: Json }
+      is_maintenance_mode: { Args: never; Returns: boolean }
       log_usage_transaction: {
         Args: { p_amount: number; p_credits: number; p_description?: string }
         Returns: undefined
@@ -1018,6 +1040,10 @@ export type Database = {
       record_login: { Args: never; Returns: undefined }
       regenerate_stream_token: { Args: never; Returns: string }
       resolve_stream_token: { Args: { p_token: string }; Returns: string }
+      set_site_setting: {
+        Args: { p_key: string; p_value: boolean }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user"

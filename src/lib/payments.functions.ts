@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertNotInMaintenance } from "@/lib/site-settings.functions";
 
 // NGN → USD conversion used when invoicing crypto (NOWPayments prices in USD).
 // Tunable via env so we can react to FX moves without a code change.
@@ -24,6 +25,7 @@ const PACKS: Record<string, { name: string; credits: number; amountNgn: number }
 export const getFlutterwavePublicKey = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
+    await assertNotInMaintenance("purchase");
     const key = process.env.FLUTTERWAVE_PUBLIC_KEY;
     if (!key) throw new Error("Payment provider not configured (missing FLUTTERWAVE_PUBLIC_KEY)");
     return { publicKey: key };
@@ -120,6 +122,7 @@ export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await assertNotInMaintenance("purchase");
     const { userId } = context;
     const pack = PACKS[data.packId];
     const apiKey = process.env.NOWPAYMENTS_API_KEY;
@@ -290,6 +293,7 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await assertNotInMaintenance("purchase");
     const { userId } = context;
     const pack = PACKS[data.packId];
     const secret = process.env.STRIPE_SECRET_KEY;
