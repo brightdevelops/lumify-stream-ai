@@ -293,6 +293,7 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await assertNotInMaintenance("purchase");
     const { userId } = context;
     const pack = PACKS[data.packId];
     const secret = process.env.STRIPE_SECRET_KEY;
