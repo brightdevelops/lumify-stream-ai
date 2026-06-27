@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
+import { assertNotInMaintenance } from "@/lib/site-settings.functions";
 
 /**
  * Returns the Decart API key to authenticated users only.
