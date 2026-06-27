@@ -271,6 +271,122 @@ export const reportPaymentIssue = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Stripe (card) — primary payment method.
+// Stripe doesn't process NGN on standard accounts, so we charge the USD
+// equivalent of each pack and credit the user's NGN-priced pack on success.
+// Flow: createStripeCheckout → user redirected to hosted Checkout →
+// Stripe fires webhook to /api/public/stripe-webhook → we credit the user.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const createStripeCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        packId: z.enum(["starter", "basic", "pro", "enterprise"]),
+        returnOrigin: z.string().url(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const pack = PACKS[data.packId];
+    const secret = process.env.STRIPE_SECRET_KEY;
+    if (!secret) throw new Error("Card payments not configured");
+
+    // NGN → USD, charged in cents. Floor to nearest cent, min $1.
+    const priceUsd = Math.max(1, Math.round((pack.amountNgn / NGN_PER_USD) * 100) / 100);
+    const unitAmount = Math.round(priceUsd * 100);
+
+    const origin = data.returnOrigin.replace(/\/$/, "");
+
+    // Resolve the user's email for the Stripe receipt.
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const body = new URLSearchParams();
+    body.set("mode", "payment");
+    body.set("payment_method_types[0]", "card");
+    body.set("line_items[0][quantity]", "1");
+    body.set("line_items[0][price_data][currency]", "usd");
+    body.set("line_items[0][price_data][unit_amount]", String(unitAmount));
+    body.set("line_items[0][price_data][product_data][name]", `Lumify Credits — ${pack.name} pack`);
+    body.set("line_items[0][price_data][product_data][description]", `${pack.credits} credits`);
+    body.set("success_url", `${origin}/credits?stripe=success&session_id={CHECKOUT_SESSION_ID}`);
+    body.set("cancel_url", `${origin}/credits?stripe=cancel`);
+    body.set("client_reference_id", userId);
+    body.set("metadata[user_id]", userId);
+    body.set("metadata[pack_id]", data.packId);
+    body.set("metadata[credits]", String(pack.credits));
+    body.set("metadata[amount_ngn]", String(pack.amountNgn));
+    if (profile?.email) body.set("customer_email", profile.email);
+
+    const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Stripe checkout failed (${res.status}) ${text.slice(0, 200)}`);
+    }
+
+    const payload = (await res.json()) as { id: string; url: string };
+    if (!payload?.url) throw new Error("Stripe returned no checkout URL");
+    return { checkoutUrl: payload.url, sessionId: payload.id, priceUsd };
+  });
+
+/**
+ * Helper used by the Stripe webhook (NOT exported as a server fn).
+ * Idempotent: keyed on the Stripe checkout session id.
+ */
+export async function creditStripeSession(opts: {
+  sessionId: string;
+  userId: string;
+  packId: string;
+  amountPaidUsd: number;
+}) {
+  const { sessionId, userId, amountPaidUsd } = opts;
+  const packId = opts.packId as keyof typeof PACKS;
+  const pack = PACKS[packId];
+  if (!pack) throw new Error(`Unknown pack: ${packId}`);
+
+  // Validate amount paid covers the pack (2% slack for FX drift / rounding).
+  const expectedUsd = pack.amountNgn / NGN_PER_USD;
+  if (amountPaidUsd + 0.01 < expectedUsd * 0.98) {
+    throw new Error(`Underpaid: got $${amountPaidUsd}, expected ~$${expectedUsd.toFixed(2)}`);
+  }
+
+  const marker = `Stripe:${sessionId}`;
+  const { data: existing } = await supabaseAdmin
+    .from("transactions")
+    .select("id")
+    .eq("user_id", userId)
+    .like("description", `%${marker}%`)
+    .maybeSingle();
+  if (existing) return { alreadyCredited: true };
+
+  const { error: rpcErr } = await supabaseAdmin.rpc("purchase_credits_for_user", {
+    p_user_id: userId,
+    p_credits: pack.credits,
+    p_amount: pack.amountNgn,
+    p_description: `Credit purchase — ${pack.name} pack (${marker})`,
+  });
+  if (rpcErr) throw new Error(rpcErr.message);
+
+  return { alreadyCredited: false };
+}
+
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin reconcile — manually re-check a NOWPayments order and credit the user
