@@ -26,6 +26,7 @@ import { Route as InventorSupportRouteImport } from './routes/inventor.support'
 import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
 import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
+import { Route as InventorIpSearchRouteImport } from './routes/inventor.ip-search'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
 import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppStreamRouteImport } from './routes/_app.stream'
@@ -125,6 +126,11 @@ const InventorLedgerRoute = InventorLedgerRouteImport.update({
   path: '/ledger',
   getParentRoute: () => InventorRoute,
 } as any)
+const InventorIpSearchRoute = InventorIpSearchRouteImport.update({
+  id: '/ip-search',
+  path: '/ip-search',
+  getParentRoute: () => InventorRoute,
+} as any)
 const InventorFinanceRoute = InventorFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/stream': typeof AppStreamRoute
   '/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/stream': typeof AppStreamRoute
   '/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
@@ -281,6 +289,7 @@ export interface FileRoutesById {
   '/_app/stream': typeof AppStreamRoute
   '/_app/support': typeof AppSupportRoute
   '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
@@ -315,6 +324,7 @@ export interface FileRouteTypes {
     | '/stream'
     | '/support'
     | '/inventor/finance'
+    | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
     | '/inventor/recordings'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/stream'
     | '/support'
     | '/inventor/finance'
+    | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
     | '/inventor/recordings'
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/_app/stream'
     | '/_app/support'
     | '/inventor/finance'
+    | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
     | '/inventor/recordings'
@@ -536,6 +548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventorLedgerRouteImport
       parentRoute: typeof InventorRoute
     }
+    '/inventor/ip-search': {
+      id: '/inventor/ip-search'
+      path: '/ip-search'
+      fullPath: '/inventor/ip-search'
+      preLoaderRoute: typeof InventorIpSearchRouteImport
+      parentRoute: typeof InventorRoute
+    }
     '/inventor/finance': {
       id: '/inventor/finance'
       path: '/finance'
@@ -659,6 +678,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface InventorRouteChildren {
   InventorFinanceRoute: typeof InventorFinanceRoute
+  InventorIpSearchRoute: typeof InventorIpSearchRoute
   InventorLedgerRoute: typeof InventorLedgerRoute
   InventorMonitorRoute: typeof InventorMonitorRoute
   InventorRecordingsRoute: typeof InventorRecordingsRoute
@@ -669,6 +689,7 @@ interface InventorRouteChildren {
 
 const InventorRouteChildren: InventorRouteChildren = {
   InventorFinanceRoute: InventorFinanceRoute,
+  InventorIpSearchRoute: InventorIpSearchRoute,
   InventorLedgerRoute: InventorLedgerRoute,
   InventorMonitorRoute: InventorMonitorRoute,
   InventorRecordingsRoute: InventorRecordingsRoute,
