@@ -54,5 +54,23 @@ export const getDecartKey = createServerFn({ method: "GET" })
       );
     }
 
+    // Per-user rate limit on key issuance. The Decart SDK runs in the
+    // browser, so the key must reach the client to start a session — we
+    // cap how often any one account can request it to limit the blast
+    // radius if a user tries to scrape the key and call Decart directly.
+    const hourAgo = new Date(Date.now() - 60 * 60_000).toISOString();
+    const { count: recentCount, error: rateErr } = await context.supabase
+      .from("stream_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", context.userId)
+      .gt("started_at", hourAgo);
+    if (rateErr) throw new Error(rateErr.message);
+    if ((recentCount ?? 0) >= 20) {
+      throw new Error(
+        "You've started too many streams in the last hour. Please wait a bit before starting another.",
+      );
+    }
+
     return { apiKey: key };
   });
+
