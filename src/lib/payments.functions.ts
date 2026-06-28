@@ -59,16 +59,34 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
     const secret = process.env.FLUTTERWAVE_SECRET_KEY;
     if (!secret) throw new Error("Payment provider not configured");
 
-    // Idempotency check first
+    // Bind the txRef to the calling user. Our client builds txRefs as
+    // `lumify_<packId>_<userIdPrefix8>_<ts>` — reject any verify call where
+    // the embedded prefix doesn't match the caller. This prevents User B
+    // from submitting User A's (transactionId, txRef) to credit themselves.
+    const expectedPrefix = userId.slice(0, 8).toLowerCase();
+    const refMatch = /^lumify_(?:starter|basic|pro|enterprise)_([a-f0-9]{8})_\d+$/.exec(
+      data.txRef.toLowerCase(),
+    );
+    if (!refMatch || refMatch[1] !== expectedPrefix) {
+      throw new Error("Transaction reference does not belong to this account");
+    }
+
+    // GLOBAL idempotency — a Flutterwave txRef can only ever be credited
+    // once across the whole system. Previously this was scoped to the
+    // calling user, which let a second user replay another user's
+    // (transactionId, txRef) and get the same payment credited again.
     const marker = `Flutterwave:${data.txRef}`;
     const { data: existing, error: existingErr } = await supabaseAdmin
       .from("transactions")
-      .select("id")
-      .eq("user_id", userId)
+      .select("id, user_id")
       .like("description", `%${marker}%`)
+      .limit(1)
       .maybeSingle();
     if (existingErr) throw new Error(existingErr.message);
-    if (existing) return { ok: true, alreadyCredited: true };
+    if (existing) {
+      if (existing.user_id === userId) return { ok: true, alreadyCredited: true };
+      throw new Error("This payment reference has already been credited to another account");
+    }
 
     const verifyUrl = `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(data.transactionId)}/verify`;
     const res = await fetch(verifyUrl, {
