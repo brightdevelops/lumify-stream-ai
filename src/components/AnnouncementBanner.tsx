@@ -11,9 +11,6 @@ const ANNOUNCEMENT: {
   message: string;
   showOnPaths?: string[];
 } | null = null;
-  message:
-    "⚠️ Scheduled Maintenance: Sunday, June 28 at 3:00 PM (WAT) through Monday, June 29 at 9:00 AM (WAT). Streaming and credit purchases will be temporarily disabled during this window. We apologize for the inconvenience and appreciate your patience.",
-};
 // ────────────────────────────────────────────────────────────────────────────
 
 export function AnnouncementBanner() {
