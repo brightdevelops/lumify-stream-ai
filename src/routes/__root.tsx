@@ -56,6 +56,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "cryptomus", content: "bf918d64" },
       { title: "Lumify — Real-time AI video transformation" },
       { name: "description", content: "Lumify transforms your live stream with intelligent light. Real-time AI video, pay as you stream." },
       { property: "og:title", content: "Lumify — Real-time AI video transformation" },
