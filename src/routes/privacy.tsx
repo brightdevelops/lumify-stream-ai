@@ -104,7 +104,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">9. Changes</h2>
+            <h2 className="text-xl text-foreground">8. Changes</h2>
             <p className="mt-3">
               We may update this policy from time to time. Material changes will be announced on
               this page with a new "Last updated" date.
