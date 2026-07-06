@@ -95,10 +95,9 @@ function TrustPage() {
 
           <Section icon={Lock} title="Payments">
             <p>
-              Card and crypto payments are processed by Flutterwave and NOWPayments.
-              Lumify never sees full card numbers. Every successful payment is
-              verified server-side against the provider before credits are issued, and
-              webhook callbacks are signature-checked.
+              Card and bank payments are processed by Flutterwave. Lumify never sees full card
+              numbers. Every successful payment is verified server-side against Flutterwave before
+              credits are issued, and webhook callbacks are signature-checked.
             </p>
           </Section>
 
