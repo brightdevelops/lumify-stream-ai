@@ -142,9 +142,23 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Logo />
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Lumify. All rights reserved.</p>
+        <div className="mx-auto max-w-6xl px-6 py-10 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <Logo />
+            <p className="text-xs text-muted-foreground">
+              Support:{" "}
+              <a href="mailto:support@lumifylive.com" className="hover:text-foreground">
+                support@lumifylive.com
+              </a>
+            </p>
+            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Lumify. All rights reserved.</p>
+          </div>
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <Link to="/terms" className="hover:text-foreground">Terms</Link>
+            <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+            <Link to="/refunds" className="hover:text-foreground">Refunds</Link>
+            <Link to="/trust" className="hover:text-foreground">Trust &amp; Security</Link>
+          </nav>
         </div>
       </footer>
     </div>
