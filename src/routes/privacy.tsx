@@ -63,20 +63,8 @@ function PrivacyPage() {
             </p>
           </section>
 
-          <section>
-            <h2 className="text-xl text-foreground">4. Service providers</h2>
-            <p className="mt-3">We rely on a small number of third parties to run the Service:</p>
-            <ul className="mt-3 list-disc pl-6 space-y-1">
-              <li><span className="text-foreground">Flutterwave</span> — payment processing (card and bank).</li>
-              <li><span className="text-foreground">Lovable Cloud</span> — hosting, database, authentication, and storage.</li>
-              <li><span className="text-foreground">Google</span> — optional Google sign-in.</li>
-              <li><span className="text-foreground">AI model providers</span> — real-time video transformation compute.</li>
-            </ul>
-            <p className="mt-3">
-              Each provider only receives the information required to perform its function and is
-              bound by its own privacy terms.
-            </p>
-          </section>
+
+
 
           <section>
             <h2 className="text-xl text-foreground">5. Retention</h2>
