@@ -86,9 +86,6 @@ function Landing() {
       </header>
 
       <section className="mx-auto max-w-5xl px-6 pt-24 pb-28 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Now in public beta
-        </span>
         <h1 className="mt-6 text-5xl md:text-7xl leading-[1.05] tracking-tight">
           Transform your stream <br /> with <span className="text-primary">intelligent light</span>
         </h1>
