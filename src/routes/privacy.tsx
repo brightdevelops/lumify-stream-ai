@@ -59,7 +59,7 @@ function PrivacyPage() {
               <li>Improving reliability and performance of the Service.</li>
             </ul>
             <p className="mt-3">
-              We do not sell your personal information. We do not use your prompts, stream input.
+              We do not sell your personal information. We do not use your prompts or stream input to train AI models.
             </p>
           </section>
           <section>
@@ -88,8 +88,8 @@ function PrivacyPage() {
             <p className="mt-3">
               You may request access to, correction of, or deletion of your personal information
               by emailing <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
-              We will respond within a reasonable time. Deleting your account removes your profile,
-              stream sessions, anonymised transaction records may be retained for
+              We will respond within a reasonable time. Deleting your account removes your profile
+              and stream sessions; anonymised transaction records may be retained for
               accounting purposes.
             </p>
           </section>
