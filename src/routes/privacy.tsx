@@ -95,7 +95,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">8. Children</h2>
+            <h2 className="text-xl text-foreground">7. Children</h2>
             <p className="mt-3">
               Lumify is not intended for anyone under 18. We do not knowingly collect information
               from children. If you believe a child has created an account, contact us and we will
