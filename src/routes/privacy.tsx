@@ -84,7 +84,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">7. Your rights</h2>
+            <h2 className="text-xl text-foreground">6. Your rights</h2>
             <p className="mt-3">
               You may request access to, correction of, or deletion of your personal information
               by emailing <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
