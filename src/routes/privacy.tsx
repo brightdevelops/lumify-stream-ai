@@ -62,12 +62,8 @@ function PrivacyPage() {
               We do not sell your personal information. We do not use your prompts, stream input.
             </p>
           </section>
-
-
-
-
           <section>
-            <h2 className="text-xl text-foreground">5. Retention</h2>
+            <h2 className="text-xl text-foreground">4. Retention</h2>
             <p className="mt-3">
               Account and billing records are retained while your account is active and for a
               reasonable period afterwards to meet legal and accounting obligations. You can delete
