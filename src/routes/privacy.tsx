@@ -112,7 +112,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">10. Contact</h2>
+            <h2 className="text-xl text-foreground">9. Contact</h2>
             <p className="mt-3">
               Questions about this policy? Email{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
