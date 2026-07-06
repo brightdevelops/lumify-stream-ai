@@ -78,8 +78,7 @@ function PrivacyPage() {
             <h2 className="text-xl text-foreground">5. Retention</h2>
             <p className="mt-3">
               Account and billing records are retained while your account is active and for a
-              reasonable period afterwards to meet legal and accounting obligations. Stream
-              recordings are retained until you delete them from your account. You can delete
+              reasonable period afterwards to meet legal and accounting obligations. You can delete
               your account at any time from Settings; residual backup copies are purged on our
               normal backup rotation.
             </p>
