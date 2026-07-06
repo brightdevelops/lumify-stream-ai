@@ -69,16 +69,11 @@ function TrustPage() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
           <Section icon={ShieldCheck} title="Account & access">
             <p>
-              Accounts are protected by email + password authentication, with optional
-              Google sign-in. Sessions are stored in your browser and refreshed
-              automatically; you can sign out from Settings at any time.
-            </p>
-            <p>
-              Administrative actions are gated by a server-side role check. Holding an
-              admin role in the database is the only way to reach admin dashboards or
-              admin-only APIs.
+              Accounts are protected by email + password authentication. Sessions are stored in
+              your browser and refreshed automatically; you can sign out from Settings at any time.
             </p>
           </Section>
+
 
           <Section icon={Database} title="Your data">
             <p>
