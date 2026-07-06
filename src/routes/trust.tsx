@@ -10,7 +10,7 @@ export const Route = createFileRoute("/trust")({
       {
         name: "description",
         content:
-          "How Lumify protects your account, data, payments, and stream recordings. Maintained by the Lumify team.",
+          "How Lumify protects your account, data, and payments. Maintained by the Lumify team.",
       },
       { property: "og:title", content: "Trust & Security — Lumify" },
       {
