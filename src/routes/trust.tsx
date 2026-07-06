@@ -128,12 +128,6 @@ function TrustPage() {
           <Link to="/terms" className="hover:text-foreground underline">
             Terms of Service
           </Link>
-          <span>·</span>
-          <span>
-            Lumify runs on Lovable Cloud infrastructure. Platform-level controls are
-            provided by Lovable; the practices above are the responsibility of the
-            Lumify team.
-          </span>
         </div>
       </main>
     </div>
