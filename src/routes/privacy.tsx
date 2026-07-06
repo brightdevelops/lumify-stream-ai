@@ -59,7 +59,7 @@ function PrivacyPage() {
               <li>Improving reliability and performance of the Service.</li>
             </ul>
             <p className="mt-3">
-              We do not sell your personal information. We do not use your prompts, stream input.
+              We do not sell your personal information. We do not use your prompts or stream input to train AI models.
             </p>
           </section>
           <section>
