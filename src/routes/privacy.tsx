@@ -62,12 +62,8 @@ function PrivacyPage() {
               We do not sell your personal information. We do not use your prompts, stream input.
             </p>
           </section>
-
-
-
-
           <section>
-            <h2 className="text-xl text-foreground">5. Retention</h2>
+            <h2 className="text-xl text-foreground">4. Retention</h2>
             <p className="mt-3">
               Account and billing records are retained while your account is active and for a
               reasonable period afterwards to meet legal and accounting obligations. You can delete
@@ -77,7 +73,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">6. Security</h2>
+            <h2 className="text-xl text-foreground">5. Security</h2>
             <p className="mt-3">
               We use row-level access controls in the database, server-side role checks for
               administrative actions, private storage buckets for recordings, and signed webhooks
@@ -88,7 +84,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">7. Your rights</h2>
+            <h2 className="text-xl text-foreground">6. Your rights</h2>
             <p className="mt-3">
               You may request access to, correction of, or deletion of your personal information
               by emailing <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
@@ -99,7 +95,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">8. Children</h2>
+            <h2 className="text-xl text-foreground">7. Children</h2>
             <p className="mt-3">
               Lumify is not intended for anyone under 18. We do not knowingly collect information
               from children. If you believe a child has created an account, contact us and we will
@@ -108,7 +104,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">9. Changes</h2>
+            <h2 className="text-xl text-foreground">8. Changes</h2>
             <p className="mt-3">
               We may update this policy from time to time. Material changes will be announced on
               this page with a new "Last updated" date.
@@ -116,7 +112,7 @@ function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl text-foreground">10. Contact</h2>
+            <h2 className="text-xl text-foreground">9. Contact</h2>
             <p className="mt-3">
               Questions about this policy? Email{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
