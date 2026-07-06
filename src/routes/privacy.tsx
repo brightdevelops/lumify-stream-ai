@@ -88,7 +88,7 @@ function PrivacyPage() {
             <h2 className="text-xl text-foreground">6. Security</h2>
             <p className="mt-3">
               We use row-level access controls in the database, server-side role checks for
-              administrative actions, private storage buckets for recordings, and signed webhooks
+              administrative actions, and signed webhooks
               for payment callbacks. See our <Link to="/trust" className="text-primary hover:underline">Trust &amp; Security</Link> page
               for more detail. No system is perfectly secure; you are responsible for keeping your
               password and OBS stream token private.
