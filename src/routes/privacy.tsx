@@ -88,8 +88,8 @@ function PrivacyPage() {
             <p className="mt-3">
               You may request access to, correction of, or deletion of your personal information
               by emailing <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
-              We will respond within a reasonable time. Deleting your account removes your profile,
-              stream sessions, anonymised transaction records may be retained for
+              We will respond within a reasonable time. Deleting your account removes your profile
+              and stream sessions; anonymised transaction records may be retained for
               accounting purposes.
             </p>
           </section>
