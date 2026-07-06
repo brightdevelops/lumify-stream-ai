@@ -81,12 +81,8 @@ function TrustPage() {
               transactions, support messages, and stream sessions. These rules are
               enforced in the database, not just the UI.
             </p>
-            <p>
-              Stream recordings are stored in a private bucket. You can delete your own
-              recordings; admins may review recordings for safety, fraud, and abuse
-              consistent with our Terms.
-            </p>
           </Section>
+
 
           <Section icon={Lock} title="Payments">
             <p>
