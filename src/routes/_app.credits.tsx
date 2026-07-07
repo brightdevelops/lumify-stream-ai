@@ -180,7 +180,7 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      const { invoiceUrl } = await createNowPaymentsInvoice({
+      const { invoiceUrl } = await createCryptomusInvoice({
         data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise", returnOrigin: window.location.origin },
       });
 
