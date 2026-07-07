@@ -166,7 +166,7 @@ export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
         price_currency: "usd",
         order_id: orderId,
         order_description: `Lumify Credits — ${pack.name} pack (${pack.credits} credits)`,
-        ipn_callback_url: `${origin}/api/public/nowpayments-ipn`,
+        ipn_callback_url: `${(process.env.PUBLIC_APP_URL ?? origin).replace(/\/$/, "")}/api/public/nowpayments-ipn`,
         success_url: `${origin}/credits?crypto=success&order=${encodeURIComponent(orderId)}`,
         cancel_url: `${origin}/credits?crypto=cancel`,
       }),
@@ -444,7 +444,7 @@ export const createCryptomusInvoice = createServerFn({ method: "POST" })
       order_id: orderId,
       url_return: `${origin}/credits?crypto=cancel`,
       url_success: `${origin}/credits?crypto=success&order=${encodeURIComponent(orderId)}`,
-      url_callback: `${origin}/api/public/cryptomus-ipn`,
+      url_callback: `${(process.env.PUBLIC_APP_URL ?? origin).replace(/\/$/, "")}/api/public/cryptomus-ipn`,
       lifetime: 3600,
     };
 
