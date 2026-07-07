@@ -847,8 +847,17 @@ function StreamPage() {
 
           {cameras.length > 1 && (
             <div>
-              <label htmlFor="camera-select" className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              <label htmlFor="camera-select" className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground mb-2">
                 Select Camera
+                <span
+                  tabIndex={0}
+                  role="img"
+                  aria-label="Any 1080p camera works great. Lighting matters most — face a window or lamp."
+                  title="Any 1080p camera works great. Lighting matters most — face a window or lamp."
+                  className="inline-flex items-center text-muted-foreground/70 hover:text-foreground cursor-help"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </span>
               </label>
               <select
                 id="camera-select"
@@ -867,7 +876,7 @@ function StreamPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Panel label="Your Camera">
               <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
-              {!streaming && <PanelEmpty hint="Camera off" />}
+              {!streaming && <PanelEmpty hint="Camera off" tip="Tip: face a window or lamp for the best AI output" />}
               {streaming && (
                 <div className="absolute top-3 right-3 z-10 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-mono text-primary">
                   {mmss(duration)}
@@ -887,6 +896,8 @@ function StreamPage() {
               )}
             </Panel>
           </div>
+
+          <CameraTips />
 
           <div className="rounded-xl border border-border bg-card p-5">
             <label className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">Reference Image</label>
