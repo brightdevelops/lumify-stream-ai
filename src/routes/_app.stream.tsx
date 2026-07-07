@@ -1114,8 +1114,57 @@ function Panel({ label, accent, children }: { label: string; accent?: boolean; c
     </div>
   );
 }
-function PanelEmpty({ hint }: { hint: string }) {
-  return <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">{hint}</div>;
+function PanelEmpty({ hint, tip }: { hint: string; tip?: string }) {
+  return (
+    <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground p-4">
+      <div className="text-center space-y-2 max-w-[240px]">
+        <div>{hint}</div>
+        {tip && <div className="text-[11px] text-muted-foreground/80 leading-relaxed">{tip}</div>}
+      </div>
+    </div>
+  );
+}
+
+function CameraTips() {
+  const STORAGE_KEY = "lumify_tips_collapsed";
+  const [collapsed, setCollapsed] = useState<boolean>(false);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY);
+      if (v === "1") setCollapsed(true);
+      else if (v === null && typeof window !== "undefined" && window.innerWidth < 640) setCollapsed(true);
+    } catch {}
+  }, []);
+  const toggle = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      try { localStorage.setItem(STORAGE_KEY, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  };
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={!collapsed}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium">
+          <CameraIcon className="h-4 w-4 text-primary" />
+          Best quality tips
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? "" : "rotate-180"}`} />
+      </button>
+      {!collapsed && (
+        <ul className="px-4 pb-4 space-y-2 text-xs text-muted-foreground list-disc pl-8">
+          <li>Face a light source — good lighting improves AI output more than an expensive camera.</li>
+          <li>Any 1080p webcam or phone camera works great. 4K adds nothing — Lumify processes video at an optimized resolution.</li>
+          <li>Keep some distance between you and your background for cleaner transformations.</li>
+        </ul>
+      )}
+    </div>
+  );
 }
 function SidePanel({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
