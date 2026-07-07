@@ -40,6 +40,7 @@ import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/tra
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
+import { Route as ApiPublicCryptomusIpnRouteImport } from './routes/api/public/cryptomus-ipn'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -199,6 +200,11 @@ const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
   path: '/api/public/nowpayments-ipn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCryptomusIpnRoute = ApiPublicCryptomusIpnRouteImport.update({
+  id: '/api/public/cryptomus-ipn',
+  path: '/api/public/cryptomus-ipn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
+  '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByTo {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
+  '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
+  '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
+    | '/api/public/cryptomus-ipn'
     | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
     | '/api/public/stripe-webhook'
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/users'
     | '/inventor'
+    | '/api/public/cryptomus-ipn'
     | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
     | '/api/public/stripe-webhook'
@@ -421,6 +432,7 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
+    | '/api/public/cryptomus-ipn'
     | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
     | '/api/public/stripe-webhook'
@@ -444,6 +456,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   TrustRoute: typeof TrustRoute
+  ApiPublicCryptomusIpnRoute: typeof ApiPublicCryptomusIpnRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
@@ -672,6 +685,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cryptomus-ipn': {
+      id: '/api/public/cryptomus-ipn'
+      path: '/api/public/cryptomus-ipn'
+      fullPath: '/api/public/cryptomus-ipn'
+      preLoaderRoute: typeof ApiPublicCryptomusIpnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -756,6 +776,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   TrustRoute: TrustRoute,
+  ApiPublicCryptomusIpnRoute: ApiPublicCryptomusIpnRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
@@ -767,13 +788,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
