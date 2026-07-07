@@ -268,9 +268,18 @@ function CreditsPage() {
           >
             {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
           </button>
+          <button
+            onClick={handleCryptoPayment}
+            disabled={processing || PURCHASES_PAUSED}
+            title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
+            className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {processing ? "Processing…" : "Pay with Crypto (Cryptomus)"}
+          </button>
           <p className="mt-3 text-xs text-muted-foreground">
-            Payments are processed securely via Flutterwave. Crypto payments are temporarily unavailable.
+            Card, bank & mobile payments via Flutterwave. Crypto payments (BTC, ETH, USDT and more) via Cryptomus.
           </p>
+
 
 
           <div className="mt-4 flex flex-wrap gap-2">
