@@ -76,7 +76,7 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
 
         const userId = session.metadata?.user_id ?? session.client_reference_id ?? "";
         const packId = session.metadata?.pack_id ?? "";
-        const amountPaidUsd = (session.amount_total ?? 0) / 100;
+        const amountPaidNgn = (session.amount_total ?? 0) / 100;
 
         if (!userId || !packId) {
           console.error("Stripe webhook missing metadata", { sessionId: session.id });
@@ -88,7 +88,7 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
             sessionId: session.id,
             userId,
             packId,
-            amountPaidUsd,
+            amountPaidNgn,
           });
           return new Response(JSON.stringify({ ok: true, ...result }), {
             status: 200,

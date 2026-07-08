@@ -293,9 +293,8 @@ export const reportPaymentIssue = createServerFn({ method: "POST" })
   });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stripe (card) — primary payment method.
-// Stripe doesn't process NGN on standard accounts, so we charge the USD
-// equivalent of each pack and credit the user's NGN-priced pack on success.
+// Stripe (card) — secondary payment method for select users.
+// Charged in NGN using the same pack pricing as Flutterwave.
 // Flow: createStripeCheckout → user redirected to hosted Checkout →
 // Stripe fires webhook to /api/public/stripe-webhook → we credit the user.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -306,7 +305,6 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     z
       .object({
         packId: z.enum(["starter", "basic", "pro", "enterprise"]),
-        returnOrigin: z.string().url(),
       })
       .parse(input),
   )
@@ -317,11 +315,10 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     const secret = process.env.STRIPE_SECRET_KEY;
     if (!secret) throw new Error("Card payments not configured");
 
-    // NGN → USD, charged in cents. Floor to nearest cent, min $1.
-    const priceUsd = Math.max(1, Math.round((pack.amountNgn / NGN_PER_USD) * 100) / 100);
-    const unitAmount = Math.round(priceUsd * 100);
+    // NGN, in kobo (Stripe smallest currency unit).
+    const unitAmount = pack.amountNgn * 100;
 
-    const origin = data.returnOrigin.replace(/\/$/, "");
+    const appUrl = (process.env.PUBLIC_APP_URL || "https://lumifylive.com").replace(/\/$/, "");
 
     // Resolve the user's email for the Stripe receipt.
     const { data: profile } = await supabaseAdmin
@@ -334,12 +331,12 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     body.set("mode", "payment");
     body.set("payment_method_types[0]", "card");
     body.set("line_items[0][quantity]", "1");
-    body.set("line_items[0][price_data][currency]", "usd");
+    body.set("line_items[0][price_data][currency]", "ngn");
     body.set("line_items[0][price_data][unit_amount]", String(unitAmount));
     body.set("line_items[0][price_data][product_data][name]", `Lumify Credits — ${pack.name} pack`);
     body.set("line_items[0][price_data][product_data][description]", `${pack.credits} credits`);
-    body.set("success_url", `${origin}/credits?stripe=success&session_id={CHECKOUT_SESSION_ID}`);
-    body.set("cancel_url", `${origin}/credits?stripe=cancel`);
+    body.set("success_url", `${appUrl}/credits?stripe=success&session_id={CHECKOUT_SESSION_ID}`);
+    body.set("cancel_url", `${appUrl}/credits?stripe=cancel`);
     body.set("client_reference_id", userId);
     body.set("metadata[user_id]", userId);
     body.set("metadata[pack_id]", data.packId);
@@ -363,7 +360,7 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
 
     const payload = (await res.json()) as { id: string; url: string };
     if (!payload?.url) throw new Error("Stripe returned no checkout URL");
-    return { checkoutUrl: payload.url, sessionId: payload.id, priceUsd };
+    return { checkoutUrl: payload.url, sessionId: payload.id, amountNgn: pack.amountNgn };
   });
 
 /**
@@ -374,17 +371,16 @@ export async function creditStripeSession(opts: {
   sessionId: string;
   userId: string;
   packId: string;
-  amountPaidUsd: number;
+  amountPaidNgn: number;
 }) {
-  const { sessionId, userId, amountPaidUsd } = opts;
+  const { sessionId, userId, amountPaidNgn } = opts;
   const packId = opts.packId as keyof typeof PACKS;
   const pack = PACKS[packId];
   if (!pack) throw new Error(`Unknown pack: ${packId}`);
 
-  // Validate amount paid covers the pack (2% slack for FX drift / rounding).
-  const expectedUsd = pack.amountNgn / NGN_PER_USD;
-  if (amountPaidUsd + 0.01 < expectedUsd * 0.98) {
-    throw new Error(`Underpaid: got $${amountPaidUsd}, expected ~$${expectedUsd.toFixed(2)}`);
+  // Validate amount paid covers the pack (2% slack for rounding).
+  if (amountPaidNgn < pack.amountNgn * 0.98) {
+    throw new Error(`Underpaid: got ₦${amountPaidNgn}, expected ₦${pack.amountNgn}`);
   }
 
   const marker = `Stripe:${sessionId}`;
@@ -406,6 +402,7 @@ export async function creditStripeSession(opts: {
 
   return { alreadyCredited: false };
 }
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────

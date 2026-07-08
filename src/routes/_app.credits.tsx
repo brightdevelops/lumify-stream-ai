@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createCryptomusInvoice, reportPaymentIssue } from "@/lib/payments.functions";
+import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createCryptomusInvoice, createStripeCheckout, reportPaymentIssue } from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 
 export const Route = createFileRoute("/_app/credits")({
@@ -198,6 +198,25 @@ function CreditsPage() {
     }
   };
 
+  const handleStripePayment = async () => {
+    if (PURCHASES_PAUSED) return;
+    if (!user) {
+      setError("You must be logged in.");
+      return;
+    }
+    setError(null);
+    setProcessing(true);
+    try {
+      const { checkoutUrl } = await createStripeCheckout({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
+      });
+      window.location.href = checkoutUrl;
+    } catch (e: any) {
+      setProcessing(false);
+      setError(e?.message ?? "Could not start card checkout");
+    }
+  };
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <h1 className="text-3xl">Buy Credits</h1>
@@ -271,6 +290,14 @@ function CreditsPage() {
           {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com" && (
             <>
               <button
+                onClick={handleStripePayment}
+                disabled={processing || PURCHASES_PAUSED}
+                title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
+                className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {processing ? "Processing…" : "Pay with Card (Stripe)"}
+              </button>
+              <button
                 onClick={handleCryptoPayment}
                 disabled={processing || PURCHASES_PAUSED}
                 title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
@@ -279,7 +306,7 @@ function CreditsPage() {
                 {processing ? "Processing…" : "Pay with Crypto (Cryptomus)"}
               </button>
               <p className="mt-3 text-xs text-muted-foreground">
-                Card, bank & mobile payments via Flutterwave. Crypto payments (BTC, ETH, USDT and more) via Cryptomus.
+                Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe. Crypto payments (BTC, ETH, USDT and more) via Cryptomus.
               </p>
             </>
           )}
