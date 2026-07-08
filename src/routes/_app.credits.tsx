@@ -307,8 +307,8 @@ function CreditsPage() {
           )}
           <p className="mt-3 text-xs text-muted-foreground">
             {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com"
-              ? "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe. Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
-              : "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe."}
+              ? "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
+              : "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee)."}
           </p>
 
 
