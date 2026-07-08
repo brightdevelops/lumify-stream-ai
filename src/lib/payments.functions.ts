@@ -347,6 +347,8 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     body.set("metadata[pack_id]", data.packId);
     body.set("metadata[credits]", String(pack.credits));
     body.set("metadata[amount_ngn]", String(pack.amountNgn));
+    body.set("metadata[stripe_surcharge_ngn]", String(stripeSurchargeNgn));
+    body.set("metadata[total_charged_ngn]", String(totalNgn));
     if (profile?.email) body.set("customer_email", profile.email);
 
     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
