@@ -312,7 +312,7 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     await assertNotInMaintenance("purchase");
     const { userId } = context;
     const pack = PACKS[data.packId];
-    const secret = process.env.STRIPE_SECRET_KEY;
+    const secret = process.env.STRIPE_LIVE_API_KEY || process.env.STRIPE_SECRET_KEY;
     if (!secret) throw new Error("Card payments not configured");
 
     // NGN, in kobo (Stripe smallest currency unit).
