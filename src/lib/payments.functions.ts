@@ -315,8 +315,13 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     const secret = process.env.STRIPE_LIVE_API_KEY || process.env.STRIPE_SECRET_KEY;
     if (!secret) throw new Error("Card payments not configured");
 
+    // Stripe charges higher processing fees than Flutterwave, so we add a
+    // flat $1 (converted to NGN at the current FX rate) surcharge on every
+    // Stripe checkout to offset the extra cost.
+    const stripeSurchargeNgn = Math.round(1 * NGN_PER_USD);
+    const totalNgn = pack.amountNgn + stripeSurchargeNgn;
     // NGN, in kobo (Stripe smallest currency unit).
-    const unitAmount = pack.amountNgn * 100;
+    const unitAmount = totalNgn * 100;
 
     const appUrl = (process.env.PUBLIC_APP_URL || "https://lumifylive.com").replace(/\/$/, "");
 
@@ -342,6 +347,8 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
     body.set("metadata[pack_id]", data.packId);
     body.set("metadata[credits]", String(pack.credits));
     body.set("metadata[amount_ngn]", String(pack.amountNgn));
+    body.set("metadata[stripe_surcharge_ngn]", String(stripeSurchargeNgn));
+    body.set("metadata[total_charged_ngn]", String(totalNgn));
     if (profile?.email) body.set("customer_email", profile.email);
 
     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
