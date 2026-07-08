@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createCryptomusInvoice, reportPaymentIssue } from "@/lib/payments.functions";
+import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createCryptomusInvoice, createStripeCheckout, reportPaymentIssue } from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 
 export const Route = createFileRoute("/_app/credits")({
