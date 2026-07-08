@@ -198,6 +198,25 @@ function CreditsPage() {
     }
   };
 
+  const handleStripePayment = async () => {
+    if (PURCHASES_PAUSED) return;
+    if (!user) {
+      setError("You must be logged in.");
+      return;
+    }
+    setError(null);
+    setProcessing(true);
+    try {
+      const { checkoutUrl } = await createStripeCheckout({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
+      });
+      window.location.href = checkoutUrl;
+    } catch (e: any) {
+      setProcessing(false);
+      setError(e?.message ?? "Could not start card checkout");
+    }
+  };
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <h1 className="text-3xl">Buy Credits</h1>
