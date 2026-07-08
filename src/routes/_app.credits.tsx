@@ -265,9 +265,12 @@ function CreditsPage() {
             <Row k="Package" v={pack.name} />
             <Row k="Credits" v={<span className="text-primary font-medium">{pack.credits.toLocaleString()}</span>} />
             <Row k="Stream time" v={`≈ ${streamMins} minutes`} />
+            <Row k="Stripe fee (card only)" v={<span className="text-muted-foreground">+$1</span>} />
             <div className="h-px bg-border my-3" />
             <Row k={<span className="text-foreground">Total</span>} v={<span className="text-foreground font-display text-xl">₦{pack.price.toLocaleString()}</span>} />
+            <p className="text-xs text-muted-foreground">Paying with Stripe? A flat +$1 processing fee is added at checkout.</p>
           </div>
+
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
           {cryptoUrl && (
             <a
