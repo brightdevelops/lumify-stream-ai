@@ -287,34 +287,29 @@ function CreditsPage() {
           >
             {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
           </button>
+          <button
+            onClick={handleStripePayment}
+            disabled={processing || PURCHASES_PAUSED}
+            title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
+            className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {processing ? "Processing…" : "Pay with Card (Stripe)"}
+          </button>
           {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com" && (
-            <>
-              <button
-                onClick={handleStripePayment}
-                disabled={processing || PURCHASES_PAUSED}
-                title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
-                className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {processing ? "Processing…" : "Pay with Card (Stripe)"}
-              </button>
-              <button
-                onClick={handleCryptoPayment}
-                disabled={processing || PURCHASES_PAUSED}
-                title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
-                className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {processing ? "Processing…" : "Pay with Crypto (Cryptomus)"}
-              </button>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe. Crypto payments (BTC, ETH, USDT and more) via Cryptomus.
-              </p>
-            </>
+            <button
+              onClick={handleCryptoPayment}
+              disabled={processing || PURCHASES_PAUSED}
+              title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
+              className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {processing ? "Processing…" : "Pay with Crypto (Cryptomus)"}
+            </button>
           )}
-          {user?.email?.toLowerCase() !== "brightsolutionslab@gmail.com" && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Card, bank & mobile payments via Flutterwave.
-            </p>
-          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com"
+              ? "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe. Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
+              : "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe."}
+          </p>
 
 
 
