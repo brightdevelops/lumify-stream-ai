@@ -315,11 +315,6 @@ function CreditsPage() {
               Card, bank & mobile payments via Flutterwave.
             </p>
           )}
-          {user?.email?.toLowerCase() !== "brightsolutionslab@gmail.com" && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Card, bank & mobile payments via Flutterwave.
-            </p>
-          )}
 
 
 
