@@ -23,49 +23,6 @@ const PACKS = [
 ];
 const METHODS = ["Card", "Bank Transfer", "USSD", "Mobile Money"];
 
-type FlutterwaveResponse = {
-  status: string;
-  transaction_id: number | string;
-  tx_ref: string;
-};
-
-declare global {
-  interface Window {
-    FlutterwaveCheckout?: (opts: {
-      public_key: string;
-      tx_ref: string;
-      amount: number;
-      currency: string;
-      payment_options?: string;
-      customer: { email: string; name?: string };
-      meta?: Record<string, unknown>;
-      customizations?: { title?: string; description?: string; logo?: string };
-      callback: (response: FlutterwaveResponse) => void;
-      onclose: () => void;
-    }) => void;
-  }
-}
-
-function loadFlutterwave(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") return reject(new Error("no window"));
-    if (window.FlutterwaveCheckout) return resolve();
-    const existing = document.getElementById("flutterwave-inline-js") as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Failed to load Flutterwave")));
-      return;
-    }
-    const s = document.createElement("script");
-    s.id = "flutterwave-inline-js";
-    s.src = "https://checkout.flutterwave.com/v3.js";
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Failed to load Flutterwave"));
-    document.body.appendChild(s);
-  });
-}
-
 function CreditsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -84,6 +41,27 @@ function CreditsPage() {
   const [issueSent, setIssueSent] = useState(false);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
+
+  // Handle Paystack redirect callback: /credits?paystack=1&reference=...
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("paystack") !== "1") return;
+    const reference = params.get("reference") || params.get("trxref");
+    if (!reference || !user) return;
+    setProcessing(true);
+    (async () => {
+      try {
+        await verifyPaystackAndCredit({ data: { reference } });
+        // Strip query and go to dashboard
+        window.history.replaceState({}, "", "/credits");
+        navigate({ to: "/dashboard" });
+      } catch (e: any) {
+        setProcessing(false);
+        setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+      }
+    })();
+  }, [user, navigate]);
 
   const submitIssue = async () => {
     if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
@@ -108,7 +86,6 @@ function CreditsPage() {
     }
   };
 
-
   const handlePayment = async () => {
     if (PURCHASES_PAUSED) return;
     if (!user?.email) {
@@ -118,57 +95,59 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      const [{ publicKey }] = await Promise.all([getFlutterwavePublicKey(), loadFlutterwave()]);
-      if (!window.FlutterwaveCheckout) throw new Error("Flutterwave not available");
-
-      const txRef = `lumify_${pack.id}_${user.id.slice(0, 8)}_${Date.now()}`;
-      let settled = false;
-
-      window.FlutterwaveCheckout({
-        public_key: publicKey,
-        tx_ref: txRef,
-        amount: pack.price,
-        currency: "NGN",
-        payment_options: "card,banktransfer,ussd,mobilemoneyghana,account",
-        customer: { email: user.email, name: user.email },
-        meta: { packId: pack.id, userId: user.id },
-        customizations: { title: "Lumify Credits", description: `${pack.name} pack` },
-        callback: (response) => {
-          settled = true;
-          void finalizePayment(response.transaction_id, txRef);
-        },
-        onclose: () => {
-          if (!settled) {
-            setProcessing(false);
-            setError("Payment was cancelled.");
-          }
-        },
+      const { checkoutUrl } = await createPaystackCheckout({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
       });
+      window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Could not start payment");
     }
   };
 
-  const finalizePayment = async (transactionId: number | string, txRef: string) => {
+  const handleCryptoPayment = async () => {
+    if (PURCHASES_PAUSED) return;
+    if (!user) {
+      setError("You must be logged in.");
+      return;
+    }
+    setError(null);
+    setProcessing(true);
     try {
-      if (!user) throw new Error("Not authenticated");
-      await verifyFlutterwaveAndCredit({
-        data: {
-          transactionId: String(transactionId),
-          txRef,
-          packId: pack.id as "starter" | "basic" | "pro" | "enterprise",
-        },
+      const { invoiceUrl } = await createCryptomusInvoice({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise", returnOrigin: window.location.origin },
       });
-      navigate({ to: "/dashboard" });
+      const win = window.open(invoiceUrl, "_blank", "noopener,noreferrer");
+      if (!win) {
+        setError("Your browser blocked the popup. Please allow popups for this site, or click the link below to open the crypto checkout.");
+        setCryptoUrl(invoiceUrl);
+      }
+      setProcessing(false);
     } catch (e: any) {
       setProcessing(false);
-      setError(
-        e?.message ??
-          "Payment could not be verified. If you were charged, contact support with your reference.",
-      );
+      setError(e?.message ?? "Could not start crypto checkout");
     }
   };
+
+  const handleStripePayment = async () => {
+    if (PURCHASES_PAUSED) return;
+    if (!user) {
+      setError("You must be logged in.");
+      return;
+    }
+    setError(null);
+    setProcessing(true);
+    try {
+      const { checkoutUrl } = await createStripeCheckout({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
+      });
+      window.location.href = checkoutUrl;
+    } catch (e: any) {
+      setProcessing(false);
+      setError(e?.message ?? "Could not start card checkout");
+    }
+  };
+
 
 
   const handleCryptoPayment = async () => {
