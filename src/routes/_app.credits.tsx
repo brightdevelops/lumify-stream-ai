@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { verifyFlutterwaveAndCredit, getFlutterwavePublicKey, createCryptomusInvoice, createStripeCheckout, reportPaymentIssue } from "@/lib/payments.functions";
+import { createCryptomusInvoice, createStripeCheckout, reportPaymentIssue, createPaystackCheckout, verifyPaystackAndCredit } from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 
 export const Route = createFileRoute("/_app/credits")({
@@ -23,49 +23,6 @@ const PACKS = [
 ];
 const METHODS = ["Card", "Bank Transfer", "USSD", "Mobile Money"];
 
-type FlutterwaveResponse = {
-  status: string;
-  transaction_id: number | string;
-  tx_ref: string;
-};
-
-declare global {
-  interface Window {
-    FlutterwaveCheckout?: (opts: {
-      public_key: string;
-      tx_ref: string;
-      amount: number;
-      currency: string;
-      payment_options?: string;
-      customer: { email: string; name?: string };
-      meta?: Record<string, unknown>;
-      customizations?: { title?: string; description?: string; logo?: string };
-      callback: (response: FlutterwaveResponse) => void;
-      onclose: () => void;
-    }) => void;
-  }
-}
-
-function loadFlutterwave(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") return reject(new Error("no window"));
-    if (window.FlutterwaveCheckout) return resolve();
-    const existing = document.getElementById("flutterwave-inline-js") as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Failed to load Flutterwave")));
-      return;
-    }
-    const s = document.createElement("script");
-    s.id = "flutterwave-inline-js";
-    s.src = "https://checkout.flutterwave.com/v3.js";
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Failed to load Flutterwave"));
-    document.body.appendChild(s);
-  });
-}
-
 function CreditsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -84,6 +41,27 @@ function CreditsPage() {
   const [issueSent, setIssueSent] = useState(false);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
+
+  // Handle Paystack redirect callback: /credits?paystack=1&reference=...
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("paystack") !== "1") return;
+    const reference = params.get("reference") || params.get("trxref");
+    if (!reference || !user) return;
+    setProcessing(true);
+    (async () => {
+      try {
+        await verifyPaystackAndCredit({ data: { reference } });
+        // Strip query and go to dashboard
+        window.history.replaceState({}, "", "/credits");
+        navigate({ to: "/dashboard" });
+      } catch (e: any) {
+        setProcessing(false);
+        setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+      }
+    })();
+  }, [user, navigate]);
 
   const submitIssue = async () => {
     if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
@@ -108,7 +86,6 @@ function CreditsPage() {
     }
   };
 
-
   const handlePayment = async () => {
     if (PURCHASES_PAUSED) return;
     if (!user?.email) {
@@ -118,58 +95,15 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      const [{ publicKey }] = await Promise.all([getFlutterwavePublicKey(), loadFlutterwave()]);
-      if (!window.FlutterwaveCheckout) throw new Error("Flutterwave not available");
-
-      const txRef = `lumify_${pack.id}_${user.id.slice(0, 8)}_${Date.now()}`;
-      let settled = false;
-
-      window.FlutterwaveCheckout({
-        public_key: publicKey,
-        tx_ref: txRef,
-        amount: pack.price,
-        currency: "NGN",
-        payment_options: "card,banktransfer,ussd,mobilemoneyghana,account",
-        customer: { email: user.email, name: user.email },
-        meta: { packId: pack.id, userId: user.id },
-        customizations: { title: "Lumify Credits", description: `${pack.name} pack` },
-        callback: (response) => {
-          settled = true;
-          void finalizePayment(response.transaction_id, txRef);
-        },
-        onclose: () => {
-          if (!settled) {
-            setProcessing(false);
-            setError("Payment was cancelled.");
-          }
-        },
+      const { checkoutUrl } = await createPaystackCheckout({
+        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
       });
+      window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Could not start payment");
     }
   };
-
-  const finalizePayment = async (transactionId: number | string, txRef: string) => {
-    try {
-      if (!user) throw new Error("Not authenticated");
-      await verifyFlutterwaveAndCredit({
-        data: {
-          transactionId: String(transactionId),
-          txRef,
-          packId: pack.id as "starter" | "basic" | "pro" | "enterprise",
-        },
-      });
-      navigate({ to: "/dashboard" });
-    } catch (e: any) {
-      setProcessing(false);
-      setError(
-        e?.message ??
-          "Payment could not be verified. If you were charged, contact support with your reference.",
-      );
-    }
-  };
-
 
   const handleCryptoPayment = async () => {
     if (PURCHASES_PAUSED) return;
@@ -183,9 +117,6 @@ function CreditsPage() {
       const { invoiceUrl } = await createCryptomusInvoice({
         data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise", returnOrigin: window.location.origin },
       });
-
-      // Open in a new tab — NOWPayments blocks iframing, so top-level navigation
-      // from inside the Lovable preview iframe appears as "nothing happens".
       const win = window.open(invoiceUrl, "_blank", "noopener,noreferrer");
       if (!win) {
         setError("Your browser blocked the popup. Please allow popups for this site, or click the link below to open the crypto checkout.");
@@ -216,6 +147,8 @@ function CreditsPage() {
       setError(e?.message ?? "Could not start card checkout");
     }
   };
+
+
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -288,7 +221,7 @@ function CreditsPage() {
             title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
             className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
+            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Paystack (NGN)"}
           </button>
           <button
             onClick={handleStripePayment}
@@ -310,8 +243,8 @@ function CreditsPage() {
           )}
           <p className="mt-3 text-xs text-muted-foreground">
             {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com"
-              ? "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
-              : "Card, bank & mobile payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee)."}
+              ? "Card, bank, USSD & transfer payments via Paystack. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
+              : "Card, bank, USSD & transfer payments via Paystack. Card payments in NGN via Stripe (+$1 processing fee)."}
           </p>
 
 
