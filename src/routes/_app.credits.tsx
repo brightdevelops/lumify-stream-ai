@@ -221,7 +221,7 @@ function CreditsPage() {
             title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
             className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
+            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Paystack (NGN)"}
           </button>
           <button
             onClick={handleStripePayment}
