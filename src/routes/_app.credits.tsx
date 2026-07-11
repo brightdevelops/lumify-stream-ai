@@ -104,7 +104,7 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      const { checkoutUrl } = await createPaystackCheckout({
+      const { checkoutUrl } = await createFlutterwaveCheckout({
         data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
       });
       window.location.href = checkoutUrl;
