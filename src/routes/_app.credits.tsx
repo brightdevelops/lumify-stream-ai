@@ -230,7 +230,7 @@ function CreditsPage() {
             title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
             className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Paystack (NGN)"}
+            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
           </button>
           <button
             onClick={handleStripePayment}
@@ -252,8 +252,8 @@ function CreditsPage() {
           )}
           <p className="mt-3 text-xs text-muted-foreground">
             {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com"
-              ? "Card, bank, USSD & transfer payments via Paystack. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
-              : "Card, bank, USSD & transfer payments via Paystack. Card payments in NGN via Stripe (+$1 processing fee)."}
+              ? "Card, bank, USSD & transfer payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
+              : "Card, bank, USSD & transfer payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee)."}
           </p>
 
 
