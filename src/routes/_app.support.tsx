@@ -45,6 +45,37 @@ function SupportPage() {
       });
       if (mErr) throw mErr;
 
+      // Fire-and-forget notification email to support inbox.
+      // Failure here should NOT block the user from getting a success confirmation —
+      // the message is already saved to the database and visible in the admin panel.
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (token) {
+          await fetch("/lovable/email/transactional/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              templateName: "support-notification",
+              idempotencyKey: `support-${conv.id}`,
+              templateData: {
+                userEmail: user.email,
+                subject: subject.trim(),
+                message: message.trim(),
+                submittedAt: new Date().toLocaleString(),
+              },
+            }),
+          });
+        }
+      } catch (notifyErr) {
+        console.warn("Support notification email failed to enqueue", notifyErr);
+      }
+
+
+
       setDone(true);
       setSubject("");
       setMessage("");
