@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { createCryptomusInvoice, createStripeCheckout, reportPaymentIssue, createPaystackCheckout, verifyPaystackAndCredit } from "@/lib/payments.functions";
+import { createCryptomusInvoice, createStripeCheckout, reportPaymentIssue, createFlutterwaveCheckout, verifyFlutterwaveAndCredit } from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 
 export const Route = createFileRoute("/_app/credits")({
@@ -42,19 +42,27 @@ function CreditsPage() {
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
 
-  // Handle Paystack redirect callback: /credits?paystack=1&reference=...
+  // Handle Flutterwave redirect callback: /credits?flutterwave=1&status=&tx_ref=&transaction_id=
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("paystack") !== "1") return;
-    const reference = params.get("reference") || params.get("trxref");
-    if (!reference || !user) return;
+    if (params.get("flutterwave") !== "1") return;
+    const txRef = params.get("tx_ref");
+    const transactionId = params.get("transaction_id");
+    const status = params.get("status");
+    if (!user) return;
+    // Strip query early so a refresh doesn't retrigger verification.
+    window.history.replaceState({}, "", "/credits");
+    if (status === "cancelled" || !txRef || !transactionId) {
+      if (status && status !== "successful" && status !== "completed") {
+        setError("Payment was cancelled or did not complete.");
+      }
+      return;
+    }
     setProcessing(true);
     (async () => {
       try {
-        await verifyPaystackAndCredit({ data: { reference } });
-        // Strip query and go to dashboard
-        window.history.replaceState({}, "", "/credits");
+        await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
         navigate({ to: "/dashboard" });
       } catch (e: any) {
         setProcessing(false);
@@ -62,6 +70,7 @@ function CreditsPage() {
       }
     })();
   }, [user, navigate]);
+
 
   const submitIssue = async () => {
     if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
@@ -95,7 +104,7 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      const { checkoutUrl } = await createPaystackCheckout({
+      const { checkoutUrl } = await createFlutterwaveCheckout({
         data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
       });
       window.location.href = checkoutUrl;
@@ -221,7 +230,7 @@ function CreditsPage() {
             title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
             className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Paystack (NGN)"}
+            {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
           </button>
           <button
             onClick={handleStripePayment}
@@ -243,8 +252,8 @@ function CreditsPage() {
           )}
           <p className="mt-3 text-xs text-muted-foreground">
             {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com"
-              ? "Card, bank, USSD & transfer payments via Paystack. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
-              : "Card, bank, USSD & transfer payments via Paystack. Card payments in NGN via Stripe (+$1 processing fee)."}
+              ? "Card, bank, USSD & transfer payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
+              : "Card, bank, USSD & transfer payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee)."}
           </p>
 
 

@@ -49,32 +49,27 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
       .object({
         transactionId: z.union([z.string(), z.number()]).transform((v) => String(v)),
         txRef: z.string().min(6).max(128).regex(/^[a-zA-Z0-9_\-\.]+$/),
-        packId: z.enum(["starter", "basic", "pro", "enterprise"]),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const pack = PACKS[data.packId];
     const secret = process.env.FLUTTERWAVE_SECRET_KEY;
     if (!secret) throw new Error("Payment provider not configured");
 
-    // Bind the txRef to the calling user. Our client builds txRefs as
-    // `lumify_<packId>_<userIdPrefix8>_<ts>` — reject any verify call where
-    // the embedded prefix doesn't match the caller. This prevents User B
-    // from submitting User A's (transactionId, txRef) to credit themselves.
+    // Bind the txRef to the calling user AND derive packId from it.
+    // Refs are built as `lumify_<packId>_<userIdPrefix8>_<ts>`.
     const expectedPrefix = userId.slice(0, 8).toLowerCase();
-    const refMatch = /^lumify_(?:starter|basic|pro|enterprise)_([a-f0-9]{8})_\d+$/.exec(
+    const refMatch = /^lumify_(starter|basic|pro|enterprise)_([a-f0-9]{8})_\d+$/.exec(
       data.txRef.toLowerCase(),
     );
-    if (!refMatch || refMatch[1] !== expectedPrefix) {
+    if (!refMatch || refMatch[2] !== expectedPrefix) {
       throw new Error("Transaction reference does not belong to this account");
     }
+    const packId = refMatch[1] as keyof typeof PACKS;
+    const pack = PACKS[packId];
 
-    // GLOBAL idempotency — a Flutterwave txRef can only ever be credited
-    // once across the whole system. Previously this was scoped to the
-    // calling user, which let a second user replay another user's
-    // (transactionId, txRef) and get the same payment credited again.
+    // GLOBAL idempotency — a Flutterwave txRef can only ever be credited once.
     const marker = `Flutterwave:${data.txRef}`;
     const { data: existing, error: existingErr } = await supabaseAdmin
       .from("transactions")
@@ -84,7 +79,7 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existingErr) throw new Error(existingErr.message);
     if (existing) {
-      if (existing.user_id === userId) return { ok: true, alreadyCredited: true };
+      if (existing.user_id === userId) return { ok: true, alreadyCredited: true, packId };
       throw new Error("This payment reference has already been credited to another account");
     }
 
@@ -98,7 +93,7 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
       status: string;
       data?: {
         status: string;
-        amount: number; // in major units (NGN)
+        amount: number;
         currency: string;
         tx_ref: string;
       };
@@ -120,8 +115,84 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
     });
     if (rpcErr) throw new Error(rpcErr.message);
 
-    return { ok: true, alreadyCredited: false };
+    return { ok: true, alreadyCredited: false, packId };
   });
+
+/**
+ * Initialize a Flutterwave hosted checkout and return the redirect URL.
+ * Flow: user is redirected to `link` → pays → Flutterwave redirects back to
+ * `/credits?flutterwave=1&status=&tx_ref=&transaction_id=` → we verify.
+ */
+export const createFlutterwaveCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        packId: z.enum(["starter", "basic", "pro", "enterprise"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertNotInMaintenance("purchase");
+    const { userId } = context;
+    const pack = PACKS[data.packId];
+    const secret = process.env.FLUTTERWAVE_SECRET_KEY;
+    if (!secret) throw new Error("Payment provider not configured (missing FLUTTERWAVE_SECRET_KEY)");
+
+    const appUrl = (process.env.PUBLIC_APP_URL || "https://lumifylive.com").replace(/\/$/, "");
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .maybeSingle();
+    const email = profile?.email;
+    if (!email) throw new Error("Missing account email");
+
+    // Bind reference to the caller (verify enforces the same rule).
+    const txRef = `lumify_${data.packId}_${userId.slice(0, 8)}_${Date.now()}`;
+
+    const res = await fetch("https://api.flutterwave.com/v3/payments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tx_ref: txRef,
+        amount: pack.amountNgn,
+        currency: "NGN",
+        redirect_url: `${appUrl}/credits?flutterwave=1`,
+        customer: { email },
+        customizations: {
+          title: "Lumify Credits",
+          description: `${pack.name} pack — ${pack.credits} credits`,
+        },
+        meta: {
+          user_id: userId,
+          pack_id: data.packId,
+          credits: pack.credits,
+          amount_ngn: pack.amountNgn,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Flutterwave init failed (${res.status}) ${text.slice(0, 200)}`);
+    }
+
+    const payload = (await res.json()) as {
+      status: string;
+      message: string;
+      data?: { link: string };
+    };
+    if (payload.status !== "success" || !payload.data?.link) {
+      throw new Error(payload.message || "Flutterwave returned no checkout URL");
+    }
+    return { checkoutUrl: payload.data.link, reference: txRef };
+  });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NOWPayments (crypto) — runs alongside Flutterwave.
@@ -733,141 +804,4 @@ export const adminListPendingCryptoForEmail = createServerFn({ method: "POST" })
     return { user: { id: prof.id, email: prof.email }, invoices: invoices ?? [] };
   });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Paystack (card / bank / USSD / transfer) — primary NGN payment method.
-// Flow: createPaystackCheckout → user redirected to Paystack hosted checkout →
-// Paystack redirects back to /credits?paystack=1&reference=... → we verify.
-// ─────────────────────────────────────────────────────────────────────────────
 
-export const createPaystackCheckout = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z
-      .object({
-        packId: z.enum(["starter", "basic", "pro", "enterprise"]),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    await assertNotInMaintenance("purchase");
-    const { userId } = context;
-    const pack = PACKS[data.packId];
-    const secret = process.env.PAYSTACK_SECRET_KEY;
-    if (!secret) throw new Error("Payment provider not configured (missing PAYSTACK_SECRET_KEY)");
-
-    const appUrl = (process.env.PUBLIC_APP_URL || "https://lumifylive.com").replace(/\/$/, "");
-
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email")
-      .eq("id", userId)
-      .maybeSingle();
-    const email = profile?.email;
-    if (!email) throw new Error("Missing account email");
-
-    // Bind reference to the caller (verify enforces the same rule).
-    const reference = `lumify_${data.packId}_${userId.slice(0, 8)}_${Date.now()}`;
-
-    const res = await fetch("https://api.paystack.co/transaction/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secret}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email,
-        amount: pack.amountNgn * 100, // kobo
-        currency: "NGN",
-        reference,
-        callback_url: `${appUrl}/credits?paystack=1`,
-        metadata: {
-          user_id: userId,
-          pack_id: data.packId,
-          credits: pack.credits,
-          amount_ngn: pack.amountNgn,
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Paystack init failed (${res.status}) ${text.slice(0, 200)}`);
-    }
-
-    const payload = (await res.json()) as {
-      status: boolean;
-      message: string;
-      data?: { authorization_url: string; reference: string; access_code: string };
-    };
-    if (!payload.status || !payload.data?.authorization_url) {
-      throw new Error(payload.message || "Paystack returned no checkout URL");
-    }
-    return { checkoutUrl: payload.data.authorization_url, reference: payload.data.reference };
-  });
-
-export const verifyPaystackAndCredit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z
-      .object({
-        reference: z.string().min(6).max(200).regex(/^[a-zA-Z0-9_\-\.]+$/),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    const { userId } = context;
-    const secret = process.env.PAYSTACK_SECRET_KEY;
-    if (!secret) throw new Error("Payment provider not configured");
-
-    const expectedPrefix = userId.slice(0, 8).toLowerCase();
-    const refMatch = /^lumify_(starter|basic|pro|enterprise)_([a-f0-9]{8})_\d+$/.exec(
-      data.reference.toLowerCase(),
-    );
-    if (!refMatch || refMatch[2] !== expectedPrefix) {
-      throw new Error("Transaction reference does not belong to this account");
-    }
-    const packId = refMatch[1] as keyof typeof PACKS;
-    const pack = PACKS[packId];
-
-    const marker = `Paystack:${data.reference}`;
-    const { data: existing, error: existingErr } = await supabaseAdmin
-      .from("transactions")
-      .select("id, user_id")
-      .like("description", `%${marker}%`)
-      .limit(1)
-      .maybeSingle();
-    if (existingErr) throw new Error(existingErr.message);
-    if (existing) {
-      if (existing.user_id === userId) return { ok: true, alreadyCredited: true, packId };
-      throw new Error("This payment reference has already been credited to another account");
-    }
-
-    const res = await fetch(
-      `https://api.paystack.co/transaction/verify/${encodeURIComponent(data.reference)}`,
-      { headers: { Authorization: `Bearer ${secret}` } },
-    );
-    if (!res.ok) throw new Error(`Paystack verification failed (${res.status})`);
-
-    const payload = (await res.json()) as {
-      status: boolean;
-      data?: { status: string; reference: string; amount: number; currency: string };
-    };
-    const tx = payload?.data;
-    if (!payload.status || !tx) throw new Error("Payment could not be verified");
-    if (tx.status !== "success") throw new Error("Payment was not successful");
-    if (tx.currency !== "NGN") throw new Error("Unexpected currency");
-    if (tx.reference !== data.reference) throw new Error("Reference mismatch");
-    if (Number(tx.amount) < pack.amountNgn * 100) {
-      throw new Error("Payment amount does not match selected pack");
-    }
-
-    const { error: rpcErr } = await supabaseAdmin.rpc("purchase_credits_for_user", {
-      p_user_id: userId,
-      p_credits: pack.credits,
-      p_amount: pack.amountNgn,
-      p_description: `Credit purchase — ${pack.name} pack (${marker})`,
-    });
-    if (rpcErr) throw new Error(rpcErr.message);
-
-    return { ok: true, alreadyCredited: false, packId };
-  });
