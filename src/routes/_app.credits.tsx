@@ -42,19 +42,27 @@ function CreditsPage() {
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
 
-  // Handle Paystack redirect callback: /credits?paystack=1&reference=...
+  // Handle Flutterwave redirect callback: /credits?flutterwave=1&status=&tx_ref=&transaction_id=
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("paystack") !== "1") return;
-    const reference = params.get("reference") || params.get("trxref");
-    if (!reference || !user) return;
+    if (params.get("flutterwave") !== "1") return;
+    const txRef = params.get("tx_ref");
+    const transactionId = params.get("transaction_id");
+    const status = params.get("status");
+    if (!user) return;
+    // Strip query early so a refresh doesn't retrigger verification.
+    window.history.replaceState({}, "", "/credits");
+    if (status === "cancelled" || !txRef || !transactionId) {
+      if (status && status !== "successful" && status !== "completed") {
+        setError("Payment was cancelled or did not complete.");
+      }
+      return;
+    }
     setProcessing(true);
     (async () => {
       try {
-        await verifyPaystackAndCredit({ data: { reference } });
-        // Strip query and go to dashboard
-        window.history.replaceState({}, "", "/credits");
+        await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
         navigate({ to: "/dashboard" });
       } catch (e: any) {
         setProcessing(false);
@@ -62,6 +70,7 @@ function CreditsPage() {
       }
     })();
   }, [user, navigate]);
+
 
   const submitIssue = async () => {
     if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
