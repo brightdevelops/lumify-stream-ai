@@ -194,7 +194,6 @@ function CreditsPage() {
             <Row k="Stripe fee (card only)" v={<span className="text-muted-foreground">+$1</span>} />
             <div className="h-px bg-border my-3" />
             <Row k={<span className="text-foreground">Total</span>} v={<span className="text-foreground font-display text-xl">₦{pack.price.toLocaleString()}</span>} />
-            <p className="text-xs text-muted-foreground">Paying with Stripe? A flat +$1 processing fee is added at checkout.</p>
           </div>
 
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
@@ -216,14 +215,6 @@ function CreditsPage() {
           >
             {PURCHASES_PAUSED ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
           </button>
-          <button
-            onClick={handleStripePayment}
-            disabled={processing || PURCHASES_PAUSED}
-            title={PURCHASES_PAUSED ? "Purchases are temporarily paused for maintenance" : undefined}
-            className="mt-3 w-full rounded-md border border-primary/40 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {processing ? "Processing…" : "Pay with Card (Stripe)"}
-          </button>
           {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com" && (
             <button
               onClick={handleCryptoPayment}
@@ -236,9 +227,10 @@ function CreditsPage() {
           )}
           <p className="mt-3 text-xs text-muted-foreground">
             {user?.email?.toLowerCase() === "brightsolutionslab@gmail.com"
-              ? "Card, bank, USSD & transfer payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee). Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
-              : "Card, bank, USSD & transfer payments via Flutterwave. Card payments in NGN via Stripe (+$1 processing fee)."}
+              ? "Card, bank, USSD & transfer payments via Flutterwave. Crypto payments (BTC, ETH, USDT and more) via Cryptomus."
+              : "Card, bank, USSD & transfer payments via Flutterwave."}
           </p>
+
 
 
 
