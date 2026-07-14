@@ -40,7 +40,6 @@ import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
-import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as ApiPublicCryptomusIpnRouteImport } from './routes/api/public/cryptomus-ipn'
@@ -204,11 +203,6 @@ const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
   path: '/api/public/track-visit',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
-  id: '/api/public/stripe-webhook',
-  path: '/api/public/stripe-webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicResolveStreamTokenRoute =
   ApiPublicResolveStreamTokenRouteImport.update({
     id: '/api/public/resolve-stream-token',
@@ -286,7 +280,6 @@ export interface FileRoutesByFullPath {
   '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
-  '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -326,7 +319,6 @@ export interface FileRoutesByTo {
   '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
-  '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -369,7 +361,6 @@ export interface FileRoutesById {
   '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
-  '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -412,7 +403,6 @@ export interface FileRouteTypes {
     | '/api/public/cryptomus-ipn'
     | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
-    | '/api/public/stripe-webhook'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
     | '/lovable/email/auth/preview'
@@ -452,7 +442,6 @@ export interface FileRouteTypes {
     | '/api/public/cryptomus-ipn'
     | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
-    | '/api/public/stripe-webhook'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
     | '/lovable/email/auth/preview'
@@ -494,7 +483,6 @@ export interface FileRouteTypes {
     | '/api/public/cryptomus-ipn'
     | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
-    | '/api/public/stripe-webhook'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
     | '/lovable/email/auth/preview'
@@ -523,7 +511,6 @@ export interface RootRouteChildren {
   ApiPublicCryptomusIpnRoute: typeof ApiPublicCryptomusIpnRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
-  ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -752,13 +739,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTrackVisitRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/stripe-webhook': {
-      id: '/api/public/stripe-webhook'
-      path: '/api/public/stripe-webhook'
-      fullPath: '/api/public/stripe-webhook'
-      preLoaderRoute: typeof ApiPublicStripeWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/resolve-stream-token': {
       id: '/api/public/resolve-stream-token'
       path: '/api/public/resolve-stream-token'
@@ -883,7 +863,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCryptomusIpnRoute: ApiPublicCryptomusIpnRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
-  ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
@@ -895,13 +874,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
