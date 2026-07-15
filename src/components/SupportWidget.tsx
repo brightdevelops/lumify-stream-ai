@@ -3,12 +3,16 @@ import { MessageCircle, X, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
+import { tryAutoReply } from "@/lib/support-autoreply.functions";
+
 type Msg = {
   id: string;
   message: string;
   sender: "user" | "admin";
+  is_auto_reply?: boolean;
   created_at: string;
 };
+
 
 export function SupportWidget() {
   const { user } = useAuth();
@@ -50,7 +54,7 @@ export function SupportWidget() {
     let cancelled = false;
     supabase
       .from("support_messages")
-      .select("id, message, sender, created_at")
+      .select("id, message, sender, is_auto_reply, created_at")
       .eq("conversation_id", convId)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
@@ -145,6 +149,22 @@ export function SupportWidget() {
       } catch (notifyErr) {
         console.warn("Chat notification email failed to enqueue", notifyErr);
       }
+
+      // Auto-reply attempt (rules first, then AI). Fire-and-forget — realtime
+      // will surface the assistant message when it arrives.
+      try {
+        await tryAutoReply({
+          data: {
+            conversationId: cid!,
+            userId: user.id,
+            userEmail: user.email ?? null,
+            latestMessage: body,
+          },
+        });
+      } catch (autoErr) {
+        console.warn("Auto-reply failed", autoErr);
+      }
+
     } catch (e) {
       console.error(e);
       setText(body);
@@ -192,17 +212,26 @@ export function SupportWidget() {
               Hi! How can we help? We usually reply within a few hours.
             </div>
             {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                  m.sender === "user"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "mr-auto bg-secondary text-secondary-foreground"
-                }`}
-              >
-                {m.message}
+              <div key={m.id} className={m.sender === "user" ? "ml-auto max-w-[80%]" : "mr-auto max-w-[80%]"}>
+                {m.sender === "admin" && m.is_auto_reply && (
+                  <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
+                    <span>🤖</span> Auto-reply · a human will follow up if needed
+                  </div>
+                )}
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    m.sender === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : m.is_auto_reply
+                      ? "bg-accent/30 text-foreground border border-accent/40"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  {m.message}
+                </div>
               </div>
             ))}
+
           </div>
 
           <form
