@@ -2,6 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  getAutoReplyConfig,
+  setAutoReplyEnabled,
+  upsertAutoReplyRule,
+  deleteAutoReplyRule,
+} from "@/lib/support-autoreply.functions";
+import {
   Inbox,
   MessageCircle,
   Mail,
@@ -14,7 +20,10 @@ import {
   Pencil,
   Plus,
   X,
+  Bot,
+  Settings,
 } from "lucide-react";
+
 
 type Conv = {
   id: string;
