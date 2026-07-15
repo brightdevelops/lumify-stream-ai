@@ -100,6 +100,63 @@ function SupportInbox() {
   const [newQR, setNewQR] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
 
+  // Auto-reply admin config
+  const [autoEnabled, setAutoEnabled] = useState<boolean>(true);
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [showAutoPanel, setShowAutoPanel] = useState(false);
+  const [ruleDraft, setRuleDraft] = useState<{ id?: string; triggers: string; response: string } | null>(null);
+
+  const loadAutoConfig = async () => {
+    try {
+      const cfg = await getAutoReplyConfig();
+      setAutoEnabled(cfg.enabled);
+      setRules(cfg.rules);
+    } catch (e: any) {
+      // non-admin will hit forbidden; ignore
+      console.warn("autoreply config load", e?.message ?? e);
+    }
+  };
+  useEffect(() => {
+    loadAutoConfig();
+  }, []);
+
+  async function toggleAuto() {
+    const next = !autoEnabled;
+    setAutoEnabled(next);
+    try {
+      await setAutoReplyEnabled({ data: { enabled: next } });
+    } catch (e: any) {
+      setAutoEnabled(!next);
+      setErr(e?.message ?? String(e));
+    }
+  }
+
+  async function saveRule() {
+    if (!ruleDraft) return;
+    const triggers = ruleDraft.triggers.split(",").map((s) => s.trim()).filter(Boolean);
+    if (!triggers.length || !ruleDraft.response.trim()) return;
+    try {
+      await upsertAutoReplyRule({
+        data: { id: ruleDraft.id, triggers, response: ruleDraft.response.trim() },
+      });
+      setRuleDraft(null);
+      await loadAutoConfig();
+    } catch (e: any) {
+      setErr(e?.message ?? String(e));
+    }
+  }
+
+  async function removeRule(id: string) {
+    if (!window.confirm("Delete this auto-reply rule?")) return;
+    try {
+      await deleteAutoReplyRule({ data: { id } });
+      await loadAutoConfig();
+    } catch (e: any) {
+      setErr(e?.message ?? String(e));
+    }
+  }
+
+
   const loadConvs = async () => {
     const { data, error } = await supabase.rpc("admin_list_support_conversations", { p_limit: 300 });
     if (error) setErr(error.message);
