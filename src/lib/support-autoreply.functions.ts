@@ -156,7 +156,7 @@ export const tryAutoReply = createServerFn({ method: "POST" })
         return { skipped: "handoff" };
       }
       await post(text);
-      return { replied: "ai" };
+      return { replied: "ai", reply: text };
     } catch (err) {
       console.warn("autoreply exception", err);
       return { skipped: "exception" };
