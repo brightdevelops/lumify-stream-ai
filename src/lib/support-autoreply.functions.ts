@@ -16,7 +16,7 @@ const Input = z.object({
   latestMessage: z.string().min(1),
 });
 
-const AUTO_REPLY_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
+const AUTO_REPLY_COOLDOWN_MS = 3 * 1000; // 3 seconds (dedupe rapid duplicates only)
 const ADMIN_HANDOFF_PAUSE_MS = 30 * 60 * 1000; // 30 minutes
 
 type Rule = { triggers: string[]; response: string };
