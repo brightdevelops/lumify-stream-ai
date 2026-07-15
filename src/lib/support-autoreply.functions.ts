@@ -179,13 +179,10 @@ export const getAutoReplyConfig = createServerFn({ method: "GET" }).handler(asyn
 const SetEnabledInput = z.object({ enabled: z.boolean() });
 
 export const setAutoReplyEnabled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => SetEnabledInput.parse(v))
-  .handler(async ({ data }) => {
-    const { requireSupabaseAuth } = await import("@/integrations/supabase/auth-middleware");
-    // Use user's client to enforce admin RLS via set_site_setting
-    // But we don't have middleware here — do the admin check via service role after verifying caller
-    // Simpler: use middleware approach
-    void requireSupabaseAuth;
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin
       .from("site_settings")
@@ -201,8 +198,10 @@ const RuleInput = z.object({
 });
 
 export const upsertAutoReplyRule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => RuleInput.parse(v))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (data.id) {
       const { error } = await supabaseAdmin
@@ -227,10 +226,13 @@ export const upsertAutoReplyRule = createServerFn({ method: "POST" })
   });
 
 export const deleteAutoReplyRule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("support_autoreply_rules").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
