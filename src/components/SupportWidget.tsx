@@ -212,17 +212,26 @@ export function SupportWidget() {
               Hi! How can we help? We usually reply within a few hours.
             </div>
             {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                  m.sender === "user"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "mr-auto bg-secondary text-secondary-foreground"
-                }`}
-              >
-                {m.message}
+              <div key={m.id} className={m.sender === "user" ? "ml-auto max-w-[80%]" : "mr-auto max-w-[80%]"}>
+                {m.sender === "admin" && m.is_auto_reply && (
+                  <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
+                    <span>🤖</span> Auto-reply · a human will follow up if needed
+                  </div>
+                )}
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    m.sender === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : m.is_auto_reply
+                      ? "bg-accent/30 text-foreground border border-accent/40"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  {m.message}
+                </div>
               </div>
             ))}
+
           </div>
 
           <form
