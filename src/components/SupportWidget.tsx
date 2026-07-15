@@ -149,6 +149,22 @@ export function SupportWidget() {
       } catch (notifyErr) {
         console.warn("Chat notification email failed to enqueue", notifyErr);
       }
+
+      // Auto-reply attempt (rules first, then AI). Fire-and-forget — realtime
+      // will surface the assistant message when it arrives.
+      try {
+        await tryAutoReply({
+          data: {
+            conversationId: cid!,
+            userId: user.id,
+            userEmail: user.email ?? null,
+            latestMessage: body,
+          },
+        });
+      } catch (autoErr) {
+        console.warn("Auto-reply failed", autoErr);
+      }
+
     } catch (e) {
       console.error(e);
       setText(body);
