@@ -112,7 +112,7 @@ export const tryAutoReply = createServerFn({ method: "POST" })
     const hit = matchRule(data.latestMessage, rules);
     if (hit) {
       await post(hit.response);
-      return { replied: "rule" };
+      return { replied: "rule", reply: hit.response };
     }
 
     // Layer 2: Lovable AI fallback
