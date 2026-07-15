@@ -150,10 +150,10 @@ export function SupportWidget() {
         console.warn("Chat notification email failed to enqueue", notifyErr);
       }
 
-      // Auto-reply attempt (rules first, then AI). Fire-and-forget — realtime
-      // will surface the assistant message when it arrives.
+      // Auto-reply attempt (rules first, then AI). Await so we can notify
+      // admin by email when the bot actually answered.
       try {
-        await tryAutoReply({
+        const result: any = await tryAutoReply({
           data: {
             conversationId: cid!,
             userId: user.id,
@@ -161,6 +161,33 @@ export function SupportWidget() {
             latestMessage: body,
           },
         });
+        if (result?.replied && result?.reply) {
+          try {
+            const { data: sess2 } = await supabase.auth.getSession();
+            const token2 = sess2.session?.access_token;
+            if (token2) {
+              await fetch("/lovable/email/transactional/send", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token2}`,
+                },
+                body: JSON.stringify({
+                  templateName: "support-notification",
+                  idempotencyKey: `chat-autoreply-${cid}-${Date.now()}`,
+                  templateData: {
+                    userEmail: user.email,
+                    subject: "🤖 Auto-reply sent",
+                    message: `User asked: ${body}\n\nAuto-reply (${result.replied}): ${result.reply}`,
+                    submittedAt: new Date().toLocaleString(),
+                  },
+                }),
+              });
+            }
+          } catch (mailErr) {
+            console.warn("Auto-reply notification email failed", mailErr);
+          }
+        }
       } catch (autoErr) {
         console.warn("Auto-reply failed", autoErr);
       }

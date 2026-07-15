@@ -16,7 +16,7 @@ const Input = z.object({
   latestMessage: z.string().min(1),
 });
 
-const AUTO_REPLY_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes
+const AUTO_REPLY_COOLDOWN_MS = 3 * 1000; // 3 seconds (dedupe rapid duplicates only)
 const ADMIN_HANDOFF_PAUSE_MS = 30 * 60 * 1000; // 30 minutes
 
 type Rule = { triggers: string[]; response: string };
@@ -112,7 +112,7 @@ export const tryAutoReply = createServerFn({ method: "POST" })
     const hit = matchRule(data.latestMessage, rules);
     if (hit) {
       await post(hit.response);
-      return { replied: "rule" };
+      return { replied: "rule", reply: hit.response };
     }
 
     // Layer 2: Lovable AI fallback
@@ -156,7 +156,7 @@ export const tryAutoReply = createServerFn({ method: "POST" })
         return { skipped: "handoff" };
       }
       await post(text);
-      return { replied: "ai" };
+      return { replied: "ai", reply: text };
     } catch (err) {
       console.warn("autoreply exception", err);
       return { skipped: "exception" };
