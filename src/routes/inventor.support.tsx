@@ -281,8 +281,105 @@ function SupportInbox() {
             </span>
           )}
         </div>
-        <span className="text-xs text-muted-foreground">{convs.length} conversations</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleAuto}
+            className={`inline-flex items-center gap-1.5 rounded-md text-xs px-2.5 py-1.5 border transition ${
+              autoEnabled
+                ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-secondary border-border text-muted-foreground"
+            }`}
+            title="Toggle AI auto-reply"
+          >
+            <Bot className="h-3.5 w-3.5" />
+            Auto-reply: {autoEnabled ? "On" : "Off"}
+          </button>
+          <button
+            onClick={() => setShowAutoPanel((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-md text-xs px-2.5 py-1.5 border border-border text-muted-foreground hover:text-foreground"
+            title="Manage auto-reply rules"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Rules</span>
+          </button>
+          <span className="text-xs text-muted-foreground hidden sm:inline">{convs.length} conversations</span>
+        </div>
       </div>
+
+      {showAutoPanel && (
+        <div className={`rounded-lg border border-border bg-card p-4 space-y-3 ${selected ? "hidden lg:block" : ""}`}>
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <Bot className="h-4 w-4" /> Auto-reply rules
+            </div>
+            <button
+              onClick={() => setRuleDraft({ triggers: "", response: "" })}
+              className="text-xs inline-flex items-center gap-1 rounded-md bg-primary text-primary-foreground px-2.5 py-1.5"
+            >
+              <Plus className="h-3 w-3" /> New rule
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            When a visitor's message matches any trigger word/phrase, the bot instantly replies with the response.
+            Anything unmatched falls back to AI (Lovable AI). Type <code>HANDOFF</code>-worthy questions get no auto-reply and you get the email.
+          </p>
+          {ruleDraft && (
+            <div className="rounded-md border border-border p-3 space-y-2 bg-background">
+              <input
+                value={ruleDraft.triggers}
+                onChange={(e) => setRuleDraft({ ...ruleDraft, triggers: e.target.value })}
+                placeholder="Triggers (comma-separated): refund, money back"
+                className="w-full rounded-md bg-background border border-input px-2 py-1.5 text-sm"
+              />
+              <textarea
+                value={ruleDraft.response}
+                onChange={(e) => setRuleDraft({ ...ruleDraft, response: e.target.value })}
+                placeholder="Response message"
+                rows={3}
+                className="w-full rounded-md bg-background border border-input px-2 py-1.5 text-sm resize-none"
+              />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setRuleDraft(null)} className="text-xs px-3 py-1.5 rounded-md border border-border">Cancel</button>
+                <button onClick={saveRule} className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground">Save</button>
+              </div>
+            </div>
+          )}
+          <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+            {rules.length === 0 && <div className="text-xs text-muted-foreground">No rules yet.</div>}
+            {rules.map((r) => (
+              <div key={r.id} className="rounded-md border border-border p-2.5 text-xs flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {r.triggers.map((t, i) => (
+                      <span key={i} className="rounded-full bg-secondary text-secondary-foreground px-2 py-0.5 text-[10px]">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-foreground/90 whitespace-pre-wrap break-words">{r.response}</div>
+                </div>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button
+                    onClick={() => setRuleDraft({ id: r.id, triggers: r.triggers.join(", "), response: r.response })}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                    aria-label="Edit rule"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => removeRule(r.id)}
+                    className="p-1 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete rule"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {err && <p className="text-sm text-destructive">{err}</p>}
 
