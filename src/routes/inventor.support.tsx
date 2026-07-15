@@ -43,8 +43,12 @@ type Msg = {
   id: string;
   message: string;
   sender: "user" | "admin";
+  is_auto_reply?: boolean;
   created_at: string;
 };
+
+type Rule = { id: string; triggers: string[]; response: string; sort_order: number };
+
 
 export const Route = createFileRoute("/inventor/support")({
   component: SupportInbox,
