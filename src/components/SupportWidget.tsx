@@ -3,12 +3,16 @@ import { MessageCircle, X, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
+import { tryAutoReply } from "@/lib/support-autoreply.functions";
+
 type Msg = {
   id: string;
   message: string;
   sender: "user" | "admin";
+  is_auto_reply?: boolean;
   created_at: string;
 };
+
 
 export function SupportWidget() {
   const { user } = useAuth();
