@@ -161,20 +161,24 @@ export const tryAutoReply = createServerFn({ method: "POST" })
 
 // ---- Admin management ----
 
-export const getAutoReplyConfig = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const [{ data: setting }, { data: rules }] = await Promise.all([
-    supabaseAdmin.from("site_settings").select("value").eq("key", "autoreply_enabled").maybeSingle(),
-    supabaseAdmin
-      .from("support_autoreply_rules")
-      .select("id, triggers, response, sort_order")
-      .order("sort_order", { ascending: true }),
-  ]);
-  return {
-    enabled: Boolean(setting?.value),
-    rules: (rules ?? []) as { id: string; triggers: string[]; response: string; sort_order: number }[],
-  };
-});
+export const getAutoReplyConfig = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: setting }, { data: rules }] = await Promise.all([
+      supabaseAdmin.from("site_settings").select("value").eq("key", "autoreply_enabled").maybeSingle(),
+      supabaseAdmin
+        .from("support_autoreply_rules")
+        .select("id, triggers, response, sort_order")
+        .order("sort_order", { ascending: true }),
+    ]);
+    return {
+      enabled: Boolean(setting?.value),
+      rules: (rules ?? []) as { id: string; triggers: string[]; response: string; sort_order: number }[],
+    };
+  });
+
 
 const SetEnabledInput = z.object({ enabled: z.boolean() });
 
