@@ -121,13 +121,12 @@ export function SupportWidget() {
       });
       if (insErr) throw insErr;
 
-      // Fire-and-forget admin notification. Throttled: one email per
-      // conversation per hour so long back-and-forths don't spam the inbox.
+      // Fire-and-forget admin notification for EVERY user message so the
+      // admin sees follow-ups even after an AI auto-reply.
       try {
         const { data: sess } = await supabase.auth.getSession();
         const token = sess.session?.access_token;
         if (token) {
-          const hourBucket = Math.floor(Date.now() / (1000 * 60 * 60));
           await fetch("/lovable/email/transactional/send", {
             method: "POST",
             headers: {
