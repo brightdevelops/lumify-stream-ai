@@ -180,7 +180,7 @@ function SupportInbox() {
     let cancelled = false;
     supabase
       .from("support_messages")
-      .select("id, message, sender, created_at")
+      .select("id, message, sender, is_auto_reply, created_at")
       .eq("conversation_id", selected.id)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
