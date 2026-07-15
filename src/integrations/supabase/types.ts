@@ -489,6 +489,33 @@ export type Database = {
         }
         Relationships: []
       }
+      support_autoreply_rules: {
+        Row: {
+          created_at: string
+          id: string
+          response: string
+          sort_order: number
+          triggers: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          response: string
+          sort_order?: number
+          triggers: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          response?: string
+          sort_order?: number
+          triggers?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_conversations: {
         Row: {
           created_at: string
@@ -536,6 +563,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          is_auto_reply: boolean
           message: string
           read: boolean
           sender: string
@@ -548,6 +576,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          is_auto_reply?: boolean
           message: string
           read?: boolean
           sender: string
@@ -560,6 +589,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          is_auto_reply?: boolean
           message?: string
           read?: boolean
           sender?: string
