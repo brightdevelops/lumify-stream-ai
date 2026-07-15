@@ -116,6 +116,35 @@ export function SupportWidget() {
         sender: "user",
       });
       if (insErr) throw insErr;
+
+      // Fire-and-forget admin notification. Throttled: one email per
+      // conversation per hour so long back-and-forths don't spam the inbox.
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (token) {
+          const hourBucket = Math.floor(Date.now() / (1000 * 60 * 60));
+          await fetch("/lovable/email/transactional/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              templateName: "support-notification",
+              idempotencyKey: `chat-${cid}-${hourBucket}`,
+              templateData: {
+                userEmail: user.email,
+                subject: "Live chat message",
+                message: body,
+                submittedAt: new Date().toLocaleString(),
+              },
+            }),
+          });
+        }
+      } catch (notifyErr) {
+        console.warn("Chat notification email failed to enqueue", notifyErr);
+      }
     } catch (e) {
       console.error(e);
       setText(body);
