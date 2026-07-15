@@ -50,8 +50,12 @@ Rules:
 - Never invent policies, prices, or account details.`;
 
 export const tryAutoReply = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => Input.parse(v))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    // Caller must own the conversation
+    if (context.userId !== data.userId) return { skipped: "forbidden" };
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Global on/off
