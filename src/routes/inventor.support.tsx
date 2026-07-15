@@ -498,14 +498,21 @@ function SupportInbox() {
                     key={m.id}
                     className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-3.5 py-2.5 text-[15px] sm:text-sm leading-relaxed ${
                       m.sender === "admin"
-                        ? "ml-auto bg-primary text-primary-foreground rounded-br-md"
+                        ? m.is_auto_reply
+                          ? "ml-auto bg-accent/30 text-foreground border border-accent/40 rounded-br-md"
+                          : "ml-auto bg-primary text-primary-foreground rounded-br-md"
                         : "mr-auto bg-secondary text-secondary-foreground rounded-bl-md"
                     }`}
                   >
+                    {m.sender === "admin" && m.is_auto_reply && (
+                      <div className="text-[10px] mb-1 flex items-center gap-1 text-muted-foreground">
+                        <Bot className="h-3 w-3" /> Auto-reply
+                      </div>
+                    )}
                     <div className="whitespace-pre-wrap break-words">{m.message}</div>
                     <div
                       className={`text-[10px] mt-1 ${
-                        m.sender === "admin"
+                        m.sender === "admin" && !m.is_auto_reply
                           ? "text-primary-foreground/70"
                           : "text-muted-foreground"
                       }`}
@@ -514,6 +521,7 @@ function SupportInbox() {
                     </div>
                   </div>
                 ))}
+
               </div>
 
               {/* Quick replies */}
