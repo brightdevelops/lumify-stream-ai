@@ -135,7 +135,7 @@ export function SupportWidget() {
             },
             body: JSON.stringify({
               templateName: "support-notification",
-              idempotencyKey: `chat-${cid}-${hourBucket}`,
+              idempotencyKey: `chat-${cid}-${Date.now()}`,
               templateData: {
                 userEmail: user.email,
                 subject: "Live chat message",
