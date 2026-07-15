@@ -238,6 +238,9 @@ export function SupportWidget() {
             <div className="rounded-lg bg-secondary/60 text-secondary-foreground text-xs px-3 py-2">
               Hi! How can we help? We usually reply within a few hours.
             </div>
+            <div className="text-[10px] text-muted-foreground text-center px-2">
+              ⏳ Chats auto-clear after 42 hours
+            </div>
             {messages.map((m) => (
               <div key={m.id} className={m.sender === "user" ? "ml-auto max-w-[80%]" : "mr-auto max-w-[80%]"}>
                 {m.sender === "admin" && m.is_auto_reply && (
