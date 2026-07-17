@@ -10,7 +10,11 @@ const ANNOUNCEMENT: {
   id: string;
   message: string;
   showOnPaths?: string[];
-} | null = null;
+} | null = {
+  id: "nuvion-mfb-rename-2026-07",
+  message:
+    "⚠️ Bank name update: When paying with Flutterwave bank transfer, please search for \"Nuvion MFB\" in your bank app instead of \"Indulge MFB\" — the bank has been renamed. We apologise for the inconvenience.",
+};
 // ────────────────────────────────────────────────────────────────────────────
 
 export function AnnouncementBanner() {
