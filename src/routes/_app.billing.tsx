@@ -74,6 +74,26 @@ function BillingPage() {
     return { spent, purchased, count: txns.length };
   }, [txns]);
 
+  const qc = useQueryClient();
+  const clearFn = useServerFn(clearMyBillingHistory);
+  const [clearing, setClearing] = useState(false);
+  const [clearErr, setClearErr] = useState<string | null>(null);
+
+  async function handleClear() {
+    if (!user) return;
+    if (!window.confirm("Permanently delete your entire billing history? This cannot be undone.")) return;
+    setClearing(true);
+    setClearErr(null);
+    try {
+      await clearFn();
+      await qc.invalidateQueries({ queryKey: ["billing-transactions", user.id] });
+    } catch (e) {
+      setClearErr((e as Error).message);
+    } finally {
+      setClearing(false);
+    }
+  }
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <h1 className="text-3xl">Billing</h1>
@@ -86,8 +106,18 @@ function BillingPage() {
       </div>
 
       <div className="mt-8 rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg">Transaction history</h2>
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg">Transaction history</h2>
+            {clearErr && <p className="text-xs text-destructive mt-1">{clearErr}</p>}
+          </div>
+          <button
+            onClick={handleClear}
+            disabled={clearing || txns.length === 0}
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {clearing ? "Clearing…" : "Clear history"}
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
