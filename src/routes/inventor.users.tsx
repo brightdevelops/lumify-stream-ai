@@ -32,12 +32,15 @@ function UsersPage() {
 
   const reload = useCallback(async () => {
     try {
-      const r = await listFn();
+      const r = await listFn({ data: { search: search.trim() || null } });
       setUsers(r.users);
     } catch (e) { setBanner({ kind: "err", msg: String((e as Error)?.message ?? e) }); }
-  }, [listFn]);
+  }, [listFn, search]);
 
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    const t = setTimeout(() => { reload(); }, 250);
+    return () => clearTimeout(t);
+  }, [reload]);
   useEffect(() => {
     import("@/integrations/supabase/client").then(({ supabase }) =>
       supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null)),

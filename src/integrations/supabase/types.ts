@@ -869,22 +869,39 @@ export type Database = {
           user_id: string
         }[]
       }
-      admin_list_users: {
-        Args: never
-        Returns: {
-          banned: boolean
-          created_at: string
-          credits: number
-          email: string
-          has_streamed: boolean
-          id: string
-          is_admin: boolean
-          is_vpn: boolean
-          last_country: string
-          last_ip: string
-          last_sign_in_at: string
-        }[]
-      }
+      admin_list_users:
+        | {
+            Args: never
+            Returns: {
+              banned: boolean
+              created_at: string
+              credits: number
+              email: string
+              has_streamed: boolean
+              id: string
+              is_admin: boolean
+              is_vpn: boolean
+              last_country: string
+              last_ip: string
+              last_sign_in_at: string
+            }[]
+          }
+        | {
+            Args: { p_limit?: number; p_search?: string }
+            Returns: {
+              banned: boolean
+              created_at: string
+              credits: number
+              email: string
+              has_streamed: boolean
+              id: string
+              is_admin: boolean
+              is_vpn: boolean
+              last_country: string
+              last_ip: string
+              last_sign_in_at: string
+            }[]
+          }
       admin_list_users_full: {
         Args: never
         Returns: {
