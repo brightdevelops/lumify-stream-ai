@@ -90,12 +90,21 @@ export const inventorGetMetrics = createServerFn({ method: "GET" })
     return { metrics: data as unknown as InventorMetrics };
   });
 
-export const inventorListUsers = createServerFn({ method: "GET" })
+export const inventorListUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.rpc("admin_list_users");
+  .inputValidator((input: unknown) =>
+    z.object({
+      search: z.string().max(200).optional().nullable(),
+      limit: z.number().int().min(1).max(5000).optional(),
+    }).partial().parse(input ?? {}),
+  )
+  .handler(async ({ context, data }) => {
+    const { data: rows, error } = await context.supabase.rpc("admin_list_users", {
+      p_search: data.search ?? undefined,
+      p_limit: data.limit ?? 500,
+    });
     if (error) throw new Error(error.message);
-    return { users: (data ?? []) as InventorUser[] };
+    return { users: (rows ?? []) as InventorUser[] };
   });
 
 export const inventorAdjustCredits = createServerFn({ method: "POST" })
