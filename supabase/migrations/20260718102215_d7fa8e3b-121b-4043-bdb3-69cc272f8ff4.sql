@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.admin_list_users(text, integer) FROM PUBLIC, anon;
