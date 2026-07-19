@@ -1,6 +1,9 @@
 // Cross-device MediaStream sharing via Supabase Realtime signaling + WebRTC.
 // Broadcaster (logged-in user on /stream) publishes; viewer (OBS browser on
-// /output?token=...) connects. Signaling channel is keyed by the user's id.
+// /output?token=...) connects. The signaling channel is keyed by the user's
+// revocable stream_token — rotating the token immediately cuts off any
+// viewers still listening on the old channel, so a leaked user id alone is
+// not enough to rejoin the live feed.
 
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -12,7 +15,8 @@ const RTC_CONFIG: RTCConfiguration = {
   ],
 };
 
-const channelName = (userId: string) => `stream-output:${userId}`;
+const channelName = (streamToken: string) => `stream-output:${streamToken}`;
+
 
 type Payload =
   | { kind: "viewer-ready"; viewerId: string }
@@ -25,8 +29,10 @@ type Payload =
 const send = (ch: RealtimeChannel, payload: Payload) =>
   ch.send({ type: "broadcast", event: "signal", payload });
 
-export function startBroadcaster(userId: string, stream: MediaStream) {
-  const ch = supabase.channel(channelName(userId), {
+export function startBroadcaster(streamToken: string, stream: MediaStream) {
+  const ch = supabase.channel(channelName(streamToken), {
+
+
     config: { broadcast: { self: false, ack: false } },
   });
   const peers = new Map<string, RTCPeerConnection>();
@@ -90,8 +96,9 @@ export function startBroadcaster(userId: string, stream: MediaStream) {
   };
 }
 
-export function startViewer(userId: string, onStream: (stream: MediaStream) => void) {
-  const ch = supabase.channel(channelName(userId), {
+export function startViewer(streamToken: string, onStream: (stream: MediaStream) => void) {
+  const ch = supabase.channel(channelName(streamToken), {
+
     config: { broadcast: { self: false, ack: false } },
   });
   const viewerId = Math.random().toString(36).slice(2);

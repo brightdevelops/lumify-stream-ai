@@ -512,9 +512,10 @@ function StreamPage() {
           }
           try {
             broadcasterStopRef.current?.();
-            if (user) {
-              broadcasterStopRef.current = startBroadcaster(user.id, transformedStream);
+            if (user && streamToken) {
+              broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
             }
+
           } catch (e) {
             console.error("Broadcaster start failed", e);
           }
