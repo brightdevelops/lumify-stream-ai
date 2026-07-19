@@ -21,7 +21,7 @@ export const getDecartKey = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     if (STREAMING_PAUSED) throw new Error(STREAMING_PAUSED_MESSAGE);
-    await assertNotInMaintenance("streaming");
+    await assertNotInMaintenance("streaming", { userId: context.userId });
 
     const key = process.env.DECART_API_KEY;
     if (!key) throw new Error("Decart not configured");
