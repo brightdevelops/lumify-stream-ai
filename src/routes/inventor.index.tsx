@@ -66,6 +66,40 @@ function OverviewPage() {
         ))}
       </div>
 
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-medium">Lucy model (silent switch)</h2>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Users always see "Lucy 2.5" in the UI. Turn this off to quietly run
+              Lucy 2.0 instead (useful if 2.5 misbehaves). Takes effect on the next stream start.
+            </p>
+            <p className="mt-2 text-xs">
+              Currently running:{" "}
+              <span className={"font-semibold " + (use25 ? "text-emerald-400" : "text-amber-400")}>
+                {use25 === null ? "…" : use25 ? "lucy-latest (2.5)" : "lucy-2.0"}
+              </span>
+            </p>
+          </div>
+          <button
+            onClick={toggleModel}
+            disabled={use25 === null || savingModel}
+            className={
+              "shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition " +
+              (use25
+                ? "border border-border bg-muted/40 text-foreground hover:bg-muted/70"
+                : "bg-primary text-primary-foreground hover:opacity-90") +
+              " disabled:opacity-50"
+            }
+          >
+            {savingModel ? "Saving…" : use25 ? "Switch to 2.0" : "Switch to 2.5"}
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-lg border border-border bg-card">
         <div className="border-b border-border px-4 py-3">
           <h2 className="text-sm font-medium">Recent purchases (last 20)</h2>
