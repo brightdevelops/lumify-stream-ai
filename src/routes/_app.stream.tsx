@@ -250,7 +250,7 @@ function StreamPage() {
     if (!mediaStreamRef.current) return;
 
     try {
-      const model = models.realtime("lucy-2.5");
+      const model = models.realtime("lucy-2.5" as any);
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: model.width, height: model.height },
         audio: false,
@@ -476,7 +476,7 @@ function StreamPage() {
 
     let stream: MediaStream;
     try {
-      const model = models.realtime("lucy-2.5");
+      const model = models.realtime("lucy-2.5" as any);
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
           ...(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {}),
@@ -501,7 +501,7 @@ function StreamPage() {
 
     try {
       const { apiKey } = await getDecartKey();
-      const model = models.realtime("lucy-2.5");
+      const model = models.realtime("lucy-2.5" as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
