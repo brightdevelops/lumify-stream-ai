@@ -525,7 +525,7 @@ function StreamPage() {
 
     try {
       const { apiKey } = await getDecartKey();
-      const model = models.realtime("lucy-latest" as any);
+      const model = models.realtime("lucy-2.0" as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
