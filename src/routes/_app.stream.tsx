@@ -477,11 +477,14 @@ function StreamPage() {
     let stream: MediaStream;
     try {
       const model = models.realtime("lucy-latest" as any);
+      const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
+      const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
+      const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
       const baseVideo: MediaTrackConstraints = {
         ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
-        frameRate: { ideal: model.fps as unknown as number },
-        width: { ideal: model.width as unknown as number },
-        height: { ideal: model.height as unknown as number },
+        frameRate: { ideal: fps },
+        width: { ideal: width },
+        height: { ideal: height },
       };
 
       try {
