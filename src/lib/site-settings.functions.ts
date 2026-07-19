@@ -38,6 +38,40 @@ export const setMaintenanceMode = createServerFn({ method: "POST" })
   });
 
 /**
+ * Public read of the Lucy model flag. Returns the Decart model id to use.
+ * When `lucy_use_25` is true (default) we run "lucy-latest" (currently 2.5),
+ * otherwise "lucy-2.0". The client UI always shows "Lucy 2.5" regardless.
+ */
+export const getLucyModel = createServerFn({ method: "GET" }).handler(async () => {
+  const { createClient } = await import("@supabase/supabase-js");
+  const supa = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+  );
+  const { data } = await supa
+    .from("site_settings")
+    .select("value")
+    .eq("key", "lucy_use_25")
+    .maybeSingle();
+  const use25 = data?.value !== false; // default true
+  return { modelId: use25 ? "lucy-latest" : "lucy-2.0", use25 };
+});
+
+/** Admin-only toggle for the Lucy model version. */
+export const setLucyModel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ use25: z.boolean() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("set_site_setting", {
+      p_key: "lucy_use_25",
+      p_value: data.use25,
+    });
+    if (error) throw new Error(error.message);
+    return { use25: data.use25 };
+  });
+
+/**
  * Emails that bypass maintenance mode (owner/admin accounts that need to
  * keep working while the site is paused for users).
  */

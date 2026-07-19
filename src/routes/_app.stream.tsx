@@ -11,6 +11,7 @@ import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 import { startSessionRecorder, logStreamEvent, uploadSwapImage, type RecorderHandle } from "@/lib/stream-recorder";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
+import { getLucyModel } from "@/lib/site-settings.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -115,6 +116,11 @@ function StreamPage() {
   const fractionalSecRef = useRef(0); // carries sub-second remainder between ticks
   const accessTokenRef = useRef<string | null>(null); // for keepalive end-session beacon
   const streamingRef = useRef(false);
+  const lucyModelIdRef = useRef<string>("lucy-latest");
+
+  useEffect(() => {
+    getLucyModel().then((r) => { lucyModelIdRef.current = r.modelId; }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -250,7 +256,7 @@ function StreamPage() {
     if (!mediaStreamRef.current) return;
 
     try {
-      const model = models.realtime("lucy-latest" as any);
+      const model = models.realtime(lucyModelIdRef.current as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -479,7 +485,7 @@ function StreamPage() {
 
     let stream: MediaStream;
     try {
-      const model = models.realtime("lucy-latest" as any);
+      const model = models.realtime(lucyModelIdRef.current as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -525,7 +531,7 @@ function StreamPage() {
 
     try {
       const { apiKey } = await getDecartKey();
-      const model = models.realtime("lucy-latest" as any);
+      const model = models.realtime(lucyModelIdRef.current as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
