@@ -29,8 +29,9 @@ type Payload =
 const send = (ch: RealtimeChannel, payload: Payload) =>
   ch.send({ type: "broadcast", event: "signal", payload });
 
-export function startBroadcaster(userId: string, stream: MediaStream) {
-  const ch = supabase.channel(channelName(userId), {
+export function startBroadcaster(streamToken: string, stream: MediaStream) {
+  const ch = supabase.channel(channelName(streamToken), {
+
     config: { broadcast: { self: false, ack: false } },
   });
   const peers = new Map<string, RTCPeerConnection>();
