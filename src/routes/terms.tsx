@@ -26,6 +26,14 @@ function TermsPage() {
         <h1 className="text-4xl font-display">Terms of Service</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated: {updated}</p>
 
+        <div className="mt-8 text-sm leading-relaxed text-muted-foreground">
+          <p>
+            Lumifylive.com is owned and operated by Bright Solutionslab, a registered business
+            name in Nigeria (BN 9689076), based in Lagos, Nigeria. All references to "Lumify",
+            "we", "us", or "our" in these Terms refer to Bright Solutionslab.
+          </p>
+        </div>
+
         <div className="mt-10 space-y-10 text-sm leading-relaxed text-muted-foreground">
           <section>
             <h2 className="text-xl text-foreground">1. Acceptance</h2>
