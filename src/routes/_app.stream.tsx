@@ -1044,7 +1044,7 @@ function StreamPage() {
           </SidePanel>
 
           <SidePanel title="Session Info">
-            <Row k="Model" v="Lucy 2.5" />
+            <Row k="Model" v="Lucy 2.0" />
             <Row k="Rate" v={`${RATE} credits/sec`} />
             <Row k="Quality" v="720p" />
             <Row k="Status" v={
