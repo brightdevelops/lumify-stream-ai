@@ -65,7 +65,7 @@ export const getDecartKey = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .gt("started_at", hourAgo);
     if (rateErr) throw new Error(rateErr.message);
-    if ((recentCount ?? 0) >= 20) {
+    if ((recentCount ?? 0) >= 60) {
       throw new Error(
         "You've started too many streams in the last hour. Please wait a bit before starting another.",
       );
