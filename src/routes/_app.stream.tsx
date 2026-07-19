@@ -915,7 +915,7 @@ function StreamPage() {
                 <div className="absolute inset-0 grid place-items-center bg-black/60">
                   <div className="text-center">
                     <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
-                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy 2.1…</div>
+                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy 2.5…</div>
                   </div>
                 </div>
               )}
@@ -1044,7 +1044,7 @@ function StreamPage() {
           </SidePanel>
 
           <SidePanel title="Session Info">
-            <Row k="Model" v="Lucy 2.1" />
+            <Row k="Model" v="Lucy 2.5" />
             <Row k="Rate" v={`${RATE} credits/sec`} />
             <Row k="Quality" v="720p" />
             <Row k="Status" v={
