@@ -11,9 +11,9 @@ const ANNOUNCEMENT: {
   message: string;
   showOnPaths?: string[];
 } | null = {
-  id: "nuvion-mfb-rename-2026-07",
+  id: "maintenance-2026-07-19-2pm",
   message:
-    "⚠️ Bank name update: When paying with Flutterwave bank transfer, please search for \"Nuvion MFB\" in your bank app instead of \"Indulge MFB\" — the bank has been renamed. We apologise for the inconvenience.",
+    "🛠️ Scheduled maintenance in progress. Streaming and credit purchases are temporarily disabled. We'll be back by 2:00 PM WAT today. Your credits and balance are safe.",
 };
 // ────────────────────────────────────────────────────────────────────────────
 
