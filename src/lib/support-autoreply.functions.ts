@@ -132,9 +132,9 @@ export const tryAutoReply = createServerFn({ method: "POST" })
     if (!key) return { skipped: "no_ai_key" };
 
     // Build short conversation history (chronological)
+    // Build full conversation history (chronological) so the bot has full context
     const history = [...msgs]
       .reverse()
-      .slice(-6)
       .map((m) => ({
         role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
         content: m.message,
