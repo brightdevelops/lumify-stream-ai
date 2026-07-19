@@ -1,0 +1,1 @@
+INSERT INTO public.site_settings (key, value) VALUES ('lucy_use_25', true) ON CONFLICT (key) DO NOTHING;
