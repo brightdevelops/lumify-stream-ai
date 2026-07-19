@@ -1,0 +1,1 @@
+INSERT INTO public.site_settings (key, value) VALUES ('maintenance_mode', true) ON CONFLICT (key) DO UPDATE SET value = true;
