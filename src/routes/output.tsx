@@ -30,11 +30,13 @@ function OutputPage() {
     let cancelled = false;
     (async () => {
       try {
+        // Validate the token server-side (revocable secret check), then use
+        // the token itself as the Realtime channel key so rotating the
+        // token immediately locks out old viewers.
         const res = await fetch(`/api/public/resolve-stream-token?token=${encodeURIComponent(token)}`);
         if (!res.ok) throw new Error("Invalid stream token");
-        const { userId } = (await res.json()) as { userId: string };
         if (cancelled) return;
-        stop = startViewer(userId, (stream) => {
+        stop = startViewer(token, (stream) => {
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
             videoRef.current.play().catch(() => {});
@@ -49,6 +51,7 @@ function OutputPage() {
       cancelled = true;
       stop?.();
     };
+
   }, [token]);
 
   return (
