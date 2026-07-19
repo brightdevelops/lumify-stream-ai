@@ -915,7 +915,7 @@ function StreamPage() {
                 <div className="absolute inset-0 grid place-items-center bg-black/60">
                   <div className="text-center">
                     <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
-                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy 2.5…</div>
+                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy 2.0…</div>
                   </div>
                 </div>
               )}
