@@ -55,7 +55,10 @@ export const getLucyModel = createServerFn({ method: "GET" }).handler(async () =
     .eq("key", "lucy_use_25")
     .maybeSingle();
   const use25 = data?.value !== false; // default true
-  return { modelId: use25 ? "lucy-latest" : "lucy-2.0", use25 };
+  // Decart's current model registry uses "lucy-2.5" and the "lucy-latest" alias.
+  // The older 2.0 model is exposed as "lucy-2" (dash, no ".0"). Using "lucy-2.0"
+  // throws MODEL_NOT_FOUND at session start.
+  return { modelId: use25 ? "lucy-latest" : "lucy-2", use25 };
 });
 
 /** Admin-only toggle for the Lucy model version. */
