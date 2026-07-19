@@ -96,8 +96,9 @@ export function startBroadcaster(streamToken: string, stream: MediaStream) {
   };
 }
 
-export function startViewer(userId: string, onStream: (stream: MediaStream) => void) {
-  const ch = supabase.channel(channelName(userId), {
+export function startViewer(streamToken: string, onStream: (stream: MediaStream) => void) {
+  const ch = supabase.channel(channelName(streamToken), {
+
     config: { broadcast: { self: false, ack: false } },
   });
   const viewerId = Math.random().toString(36).slice(2);
