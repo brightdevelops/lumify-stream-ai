@@ -24,8 +24,8 @@ const PACKS: Record<string, { name: string; credits: number; amountNgn: number }
  */
 export const getFlutterwavePublicKey = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
-    await assertNotInMaintenance("purchase");
+  .handler(async ({ context }) => {
+    await assertNotInMaintenance("purchase", { userId: context.userId });
     const key = process.env.FLUTTERWAVE_PUBLIC_KEY;
     if (!key) throw new Error("Payment provider not configured (missing FLUTTERWAVE_PUBLIC_KEY)");
     return { publicKey: key };
@@ -133,7 +133,7 @@ export const createFlutterwaveCheckout = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertNotInMaintenance("purchase");
+    await assertNotInMaintenance("purchase", { userId: context.userId });
     const { userId } = context;
     const pack = PACKS[data.packId];
     const secret = process.env.FLUTTERWAVE_SECRET_KEY;
@@ -211,7 +211,7 @@ export const createNowPaymentsInvoice = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertNotInMaintenance("purchase");
+    await assertNotInMaintenance("purchase", { userId: context.userId });
     const { userId } = context;
     const pack = PACKS[data.packId];
     const apiKey = process.env.NOWPAYMENTS_API_KEY;
@@ -383,7 +383,7 @@ export const createCryptomusInvoice = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertNotInMaintenance("purchase");
+    await assertNotInMaintenance("purchase", { userId: context.userId });
     const { userId } = context;
     const pack = PACKS[data.packId];
     const merchant = process.env.CRYPTOMUS_MERCHANT_ID;

@@ -38,11 +38,22 @@ export const setMaintenanceMode = createServerFn({ method: "POST" })
   });
 
 /**
+ * Emails that bypass maintenance mode (owner/admin accounts that need to
+ * keep working while the site is paused for users).
+ */
+export const MAINTENANCE_BYPASS_EMAILS = ["brightsolutionslab@gmail.com"];
+
+/**
  * Server-side guard used by streaming + payment server functions. Throws a
  * clean error when maintenance mode is on so the client sees a 503-style
  * message instead of opening a checkout/stream.
+ *
+ * Pass the caller's userId to allow bypass emails to keep working.
  */
-export async function assertNotInMaintenance(reason: "streaming" | "purchase") {
+export async function assertNotInMaintenance(
+  reason: "streaming" | "purchase",
+  opts?: { userId?: string },
+) {
   const { createClient } = await import("@supabase/supabase-js");
   const supa = createClient(
     process.env.SUPABASE_URL!,
@@ -54,11 +65,24 @@ export async function assertNotInMaintenance(reason: "streaming" | "purchase") {
     .select("value")
     .eq("key", "maintenance_mode")
     .maybeSingle();
-  if (data?.value) {
-    throw new Error(
-      reason === "streaming"
-        ? "Streaming is temporarily disabled for scheduled maintenance. We'll be back Monday at 9:00 AM WAT."
-        : "Credit purchases are temporarily disabled for scheduled maintenance. We'll be back Monday at 9:00 AM WAT.",
-    );
+  if (!data?.value) return;
+
+  // Maintenance is on — check bypass allowlist by email.
+  if (opts?.userId) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", opts.userId)
+      .maybeSingle();
+    if (prof?.email && MAINTENANCE_BYPASS_EMAILS.includes(prof.email.toLowerCase())) {
+      return;
+    }
   }
+
+  throw new Error(
+    reason === "streaming"
+      ? "Streaming is temporarily disabled for scheduled maintenance. We'll be back Monday at 9:00 AM WAT."
+      : "Credit purchases are temporarily disabled for scheduled maintenance. We'll be back Monday at 9:00 AM WAT.",
+  );
 }
