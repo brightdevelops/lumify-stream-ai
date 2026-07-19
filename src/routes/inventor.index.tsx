@@ -80,7 +80,7 @@ function OverviewPage() {
             <p className="mt-2 text-xs">
               Currently running:{" "}
               <span className={"font-semibold " + (use25 ? "text-emerald-400" : "text-amber-400")}>
-                {use25 === null ? "…" : use25 ? "lucy-latest (2.5)" : "lucy-2.0"}
+                {use25 === null ? "…" : use25 ? "lucy-latest (2.5)" : "lucy-2"}
               </span>
             </p>
           </div>
