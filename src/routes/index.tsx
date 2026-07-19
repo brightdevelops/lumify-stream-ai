@@ -148,7 +148,7 @@ function Landing() {
                 support@lumifylive.com
               </a>
             </p>
-            <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Lumify. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground">© 2026 Bright Solutionslab (BN 9689076). Lumify is a product of Bright Solutionslab.</p>
           </div>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
             <Link to="/terms" className="hover:text-foreground">Terms</Link>

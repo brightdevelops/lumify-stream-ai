@@ -92,6 +92,7 @@ function RefundsPage() {
           <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
           <Link to="/trust" className="text-primary hover:underline">Trust &amp; Security</Link>
         </div>
+        <p className="mt-6 text-xs text-muted-foreground">© 2026 Bright Solutionslab (BN 9689076). Lumify is a product of Bright Solutionslab. Support: <a href="mailto:support@lumifylive.com" className="hover:text-foreground">support@lumifylive.com</a></p>
       </main>
     </div>
   );

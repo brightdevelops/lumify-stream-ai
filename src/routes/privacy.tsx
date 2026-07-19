@@ -30,6 +30,14 @@ function PrivacyPage() {
         <h1 className="text-4xl font-display">Privacy Policy</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated: {updated}</p>
 
+        <div className="mt-8 text-sm leading-relaxed text-muted-foreground">
+          <p>
+            This platform (lumifylive.com) is owned and operated by Bright Solutionslab
+            (BN 9689076), Lagos, Nigeria, which is responsible for personal data collected
+            through this website.
+          </p>
+        </div>
+
         <div className="mt-10 space-y-10 text-sm leading-relaxed text-muted-foreground">
           <section>
             <h2 className="text-xl text-foreground">1. Who we are</h2>
@@ -150,6 +158,7 @@ function PrivacyPage() {
           <Link to="/refunds" className="text-primary hover:underline">Refund Policy</Link>
           <Link to="/trust" className="text-primary hover:underline">Trust &amp; Security</Link>
         </div>
+        <p className="mt-6 text-xs text-muted-foreground">© 2026 Bright Solutionslab (BN 9689076). Lumify is a product of Bright Solutionslab. Support: <a href="mailto:support@lumifylive.com" className="hover:text-foreground">support@lumifylive.com</a></p>
       </main>
     </div>
   );
