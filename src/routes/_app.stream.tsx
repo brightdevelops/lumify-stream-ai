@@ -479,10 +479,11 @@ function StreamPage() {
       const model = models.realtime("lucy-2.5" as any);
       const baseVideo: MediaTrackConstraints = {
         ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
-        frameRate: { ideal: model.fps },
-        width: { ideal: model.width },
-        height: { ideal: model.height },
+        frameRate: { ideal: model.fps as unknown as number },
+        width: { ideal: model.width as unknown as number },
+        height: { ideal: model.height as unknown as number },
       };
+
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: baseVideo, audio: false });
       } catch (inner: any) {
