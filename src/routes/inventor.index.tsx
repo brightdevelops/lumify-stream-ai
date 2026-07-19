@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, CreditCard, Wallet, TrendingUp, Coins, Activity } from "lucide-react";
+import { Users, CreditCard, Wallet, TrendingUp, Coins, Activity, Cpu } from "lucide-react";
 import { inventorGetMetrics, type InventorMetrics } from "@/lib/inventor.functions";
+import { getLucyModel, setLucyModel } from "@/lib/site-settings.functions";
 import { NGN, NUM, pkgName, shortDate } from "@/lib/inventor-utils";
 
 export const Route = createFileRoute("/inventor/")({
@@ -11,12 +12,31 @@ export const Route = createFileRoute("/inventor/")({
 
 function OverviewPage() {
   const fn = useServerFn(inventorGetMetrics);
+  const getLucy = useServerFn(getLucyModel);
+  const setLucy = useServerFn(setLucyModel);
   const [m, setM] = useState<InventorMetrics | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [use25, setUse25] = useState<boolean | null>(null);
+  const [savingModel, setSavingModel] = useState(false);
 
   useEffect(() => {
     fn().then((r) => setM(r.metrics)).catch((e) => setErr(String(e?.message ?? e)));
-  }, [fn]);
+    getLucy().then((r) => setUse25(r.use25)).catch(() => {});
+  }, [fn, getLucy]);
+
+  const toggleModel = async () => {
+    if (use25 === null || savingModel) return;
+    setSavingModel(true);
+    try {
+      const next = !use25;
+      const r = await setLucy({ data: { use25: next } });
+      setUse25(r.use25);
+    } catch (e: any) {
+      alert(e?.message ?? "Failed to update model");
+    } finally {
+      setSavingModel(false);
+    }
+  };
 
   if (err) return <p className="text-sm text-destructive">{err}</p>;
   if (!m) return <p className="text-sm text-muted-foreground">Loading…</p>;
