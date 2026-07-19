@@ -477,22 +477,39 @@ function StreamPage() {
     let stream: MediaStream;
     try {
       const model = models.realtime("lucy-2.5" as any);
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          ...(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {}),
-          frameRate: model.fps,
-          width: model.width,
-          height: model.height,
-        },
-        audio: false,
-      });
-    } catch (e) {
-      console.error(e);
+      const baseVideo: MediaTrackConstraints = {
+        ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
+        frameRate: { ideal: model.fps },
+        width: { ideal: model.width },
+        height: { ideal: model.height },
+      };
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: baseVideo, audio: false });
+      } catch (inner: any) {
+        // OverconstrainedError / NotReadableError — retry with permissive constraints
+        if (inner?.name === "OverconstrainedError" || inner?.name === "NotReadableError" || inner?.name === "AbortError") {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        } else {
+          throw inner;
+        }
+      }
+    } catch (e: any) {
+      console.error("getUserMedia failed", e?.name, e?.message, e);
       setConnecting(false);
       startingRef.current = false;
-      setError("Camera access was denied. Please allow camera access in your browser to start streaming.");
+      const name = e?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
+      } else if (name === "NotReadableError") {
+        setError("Your camera is already in use by another app (Zoom, OBS, Teams, etc.). Close it and try again.");
+      } else {
+        setError(`Could not start camera: ${e?.message || name || "unknown error"}. Try reloading the page.`);
+      }
       return;
     }
+
     mediaStreamRef.current = stream;
     if (inputVideoRef.current) {
       inputVideoRef.current.srcObject = stream;
