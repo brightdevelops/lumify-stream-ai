@@ -118,9 +118,16 @@ function StreamPage() {
   const streamingRef = useRef(false);
   const lucyModelIdRef = useRef<string>("lucy-latest");
 
-  useEffect(() => {
-    getLucyModel().then((r) => { lucyModelIdRef.current = r.modelId; }).catch(() => {});
-  }, []);
+  // Always refetch the current Lucy model id right before starting/restarting
+  // a session so an admin toggle in Inventor takes effect without a page reload.
+  const refreshLucyModelId = async () => {
+    try {
+      const r = await getLucyModel();
+      if (r?.modelId) lucyModelIdRef.current = r.modelId;
+    } catch { /* keep last known */ }
+  };
+
+  useEffect(() => { refreshLucyModelId(); }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -256,6 +263,7 @@ function StreamPage() {
     if (!mediaStreamRef.current) return;
 
     try {
+      await refreshLucyModelId();
       const model = models.realtime(lucyModelIdRef.current as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
@@ -485,6 +493,7 @@ function StreamPage() {
 
     let stream: MediaStream;
     try {
+      await refreshLucyModelId();
       const model = models.realtime(lucyModelIdRef.current as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
@@ -531,6 +540,7 @@ function StreamPage() {
 
     try {
       const { apiKey } = await getDecartKey();
+      await refreshLucyModelId();
       const model = models.realtime(lucyModelIdRef.current as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
