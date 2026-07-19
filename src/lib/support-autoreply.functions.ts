@@ -84,7 +84,7 @@ export const tryAutoReply = createServerFn({ method: "POST" })
       .select("message, sender, is_auto_reply, created_at")
       .eq("conversation_id", data.conversationId)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(200);
 
     const now = Date.now();
     const msgs = recent ?? [];
