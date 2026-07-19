@@ -251,8 +251,11 @@ function StreamPage() {
 
     try {
       const model = models.realtime("lucy-latest" as any);
+      const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
+      const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
+      const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: model.width, height: model.height },
+        video: { deviceId: { exact: deviceId }, frameRate: fps, width, height },
         audio: false,
       });
       const newTrack = newStream.getVideoTracks()[0];
