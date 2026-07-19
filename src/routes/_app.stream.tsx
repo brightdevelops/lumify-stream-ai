@@ -118,9 +118,16 @@ function StreamPage() {
   const streamingRef = useRef(false);
   const lucyModelIdRef = useRef<string>("lucy-latest");
 
-  useEffect(() => {
-    getLucyModel().then((r) => { lucyModelIdRef.current = r.modelId; }).catch(() => {});
-  }, []);
+  // Always refetch the current Lucy model id right before starting/restarting
+  // a session so an admin toggle in Inventor takes effect without a page reload.
+  const refreshLucyModelId = async () => {
+    try {
+      const r = await getLucyModel();
+      if (r?.modelId) lucyModelIdRef.current = r.modelId;
+    } catch { /* keep last known */ }
+  };
+
+  useEffect(() => { refreshLucyModelId(); }, []);
 
   useEffect(() => {
     if (!user) return;
