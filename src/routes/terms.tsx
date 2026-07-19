@@ -129,8 +129,13 @@ function TermsPage() {
           </section>
         </div>
 
-        <div className="mt-12">
-          <Link to="/signup" className="text-sm text-primary hover:underline">← Back to sign up</Link>
+        <div className="mt-12 flex flex-col gap-4">
+          <div className="flex flex-wrap gap-6 text-sm">
+            <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+            <Link to="/refunds" className="text-primary hover:underline">Refund Policy</Link>
+            <Link to="/trust" className="text-primary hover:underline">Trust &amp; Security</Link>
+          </div>
+          <p className="text-xs text-muted-foreground">© 2026 Bright Solutionslab (BN 9689076). Lumify is a product of Bright Solutionslab. Support: <a href="mailto:support@lumifylive.com" className="hover:text-foreground">support@lumifylive.com</a></p>
         </div>
       </main>
     </div>
