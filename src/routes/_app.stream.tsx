@@ -250,7 +250,7 @@ function StreamPage() {
     if (!mediaStreamRef.current) return;
 
     try {
-      const model = models.realtime("lucy-2.1");
+      const model = models.realtime("lucy-2.5");
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: model.width, height: model.height },
         audio: false,
@@ -476,7 +476,7 @@ function StreamPage() {
 
     let stream: MediaStream;
     try {
-      const model = models.realtime("lucy-2.1");
+      const model = models.realtime("lucy-2.5");
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
           ...(selectedCameraId ? { deviceId: { exact: selectedCameraId } } : {}),
@@ -501,7 +501,7 @@ function StreamPage() {
 
     try {
       const { apiKey } = await getDecartKey();
-      const model = models.realtime("lucy-2.1");
+      const model = models.realtime("lucy-2.5");
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
@@ -890,7 +890,7 @@ function StreamPage() {
                 <div className="absolute inset-0 grid place-items-center bg-black/60">
                   <div className="text-center">
                     <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
-                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy 2.1…</div>
+                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy 2.5…</div>
                   </div>
                 </div>
               )}
@@ -1019,7 +1019,7 @@ function StreamPage() {
           </SidePanel>
 
           <SidePanel title="Session Info">
-            <Row k="Model" v="Lucy 2.1" />
+            <Row k="Model" v="Lucy 2.5" />
             <Row k="Rate" v={`${RATE} credits/sec`} />
             <Row k="Quality" v="720p" />
             <Row k="Status" v={
