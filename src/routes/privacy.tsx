@@ -30,6 +30,14 @@ function PrivacyPage() {
         <h1 className="text-4xl font-display">Privacy Policy</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated: {updated}</p>
 
+        <div className="mt-8 text-sm leading-relaxed text-muted-foreground">
+          <p>
+            This platform (lumifylive.com) is owned and operated by Bright Solutionslab
+            (BN 9689076), Lagos, Nigeria, which is responsible for personal data collected
+            through this website.
+          </p>
+        </div>
+
         <div className="mt-10 space-y-10 text-sm leading-relaxed text-muted-foreground">
           <section>
             <h2 className="text-xl text-foreground">1. Who we are</h2>
