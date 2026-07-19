@@ -32,6 +32,7 @@ const send = (ch: RealtimeChannel, payload: Payload) =>
 export function startBroadcaster(streamToken: string, stream: MediaStream) {
   const ch = supabase.channel(channelName(streamToken), {
 
+
     config: { broadcast: { self: false, ack: false } },
   });
   const peers = new Map<string, RTCPeerConnection>();
