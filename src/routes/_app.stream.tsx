@@ -250,7 +250,7 @@ function StreamPage() {
     if (!mediaStreamRef.current) return;
 
     try {
-      const model = models.realtime("lucy-v2v-720p-rt" as any);
+      const model = models.realtime("lucy-latest" as any);
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: deviceId }, frameRate: model.fps, width: model.width, height: model.height },
         audio: false,
@@ -476,7 +476,7 @@ function StreamPage() {
 
     let stream: MediaStream;
     try {
-      const model = models.realtime("lucy-v2v-720p-rt" as any);
+      const model = models.realtime("lucy-latest" as any);
       const baseVideo: MediaTrackConstraints = {
         ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
         frameRate: { ideal: model.fps as unknown as number },
@@ -519,7 +519,7 @@ function StreamPage() {
 
     try {
       const { apiKey } = await getDecartKey();
-      const model = models.realtime("lucy-v2v-720p-rt" as any);
+      const model = models.realtime("lucy-latest" as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
