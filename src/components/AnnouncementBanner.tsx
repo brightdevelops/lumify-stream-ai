@@ -13,7 +13,7 @@ const ANNOUNCEMENT: {
 } | null = {
   id: "maintenance-2026-07-19-2pm",
   message:
-    "🛠️ Scheduled maintenance in progress. Streaming and credit purchases are temporarily disabled. We'll be back by 2:00 PM WAT today. Your credits and balance are safe.",
+    "🛠️ Maintenance in progress. Streaming and credit purchases are temporarily disabled. We'll be back by 2:00 PM WAT today. Your credits and balance are safe.",
 };
 // ────────────────────────────────────────────────────────────────────────────
 
