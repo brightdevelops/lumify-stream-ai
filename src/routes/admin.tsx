@@ -497,68 +497,6 @@ function AdminPage() {
           })()}
         </Section>
 
-        {/* Crypto invoices — including pending/failed attempts */}
-        <Section
-          title="Crypto checkouts (NOWPayments)"
-          icon={Bitcoin}
-          actions={
-            <div className="flex gap-1 text-xs flex-wrap">
-              {(["all", "pending", "paid", "expired", "cancelled"] as const).map((t) => (
-                <button key={t} onClick={() => setCryptoFilter(t)}
-                  className={`px-3 py-1 rounded-md border capitalize ${cryptoFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          }
-        >
-          {cryptoInvoices.length === 0 ? (
-            <Empty>No crypto checkouts {cryptoFilter !== "all" ? `with status "${cryptoFilter}"` : "yet"}.</Empty>
-          ) : (
-            <>
-              <div className="hidden md:block">
-                <Tbl headers={["User", "Pack", "Credits", "Amount", "Status", "Started", "Paid", "Link"]}>
-                  {cryptoInvoices.map((ci) => (
-                    <tr key={ci.id} className="border-t border-border">
-                      <Td>
-                        <div className="font-medium">{ci.full_name || ci.user_email?.split("@")[0]}</div>
-                        <div className="text-xs text-muted-foreground">{ci.user_email}</div>
-                      </Td>
-                      <Td className="capitalize">{ci.pack_id}</Td>
-                      <Td>{fmtNum(ci.credits)}</Td>
-                      <Td>{fmtMoney(ci.amount_ngn)} <span className="text-xs text-muted-foreground">(${ci.price_usd})</span></Td>
-                      <Td><InvoiceStatusBadge status={ci.status} /></Td>
-                      <Td className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(ci.created_at)}</Td>
-                      <Td className="text-xs text-muted-foreground whitespace-nowrap">{ci.paid_at ? fmtDate(ci.paid_at) : "—"}</Td>
-                      <Td>
-                        {ci.invoice_url ? (
-                          <a href={ci.invoice_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">open</a>
-                        ) : "—"}
-                      </Td>
-                    </tr>
-                  ))}
-                </Tbl>
-              </div>
-              <div className="md:hidden divide-y divide-border">
-                {cryptoInvoices.map((ci) => (
-                  <div key={ci.id} className="p-4 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate">{ci.user_email}</span>
-                      <InvoiceStatusBadge status={ci.status} />
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                      <span className="capitalize"><span className="text-muted-foreground">Pack:</span> {ci.pack_id}</span>
-                      <span><span className="text-muted-foreground">Credits:</span> {fmtNum(ci.credits)}</span>
-                      <span><span className="text-muted-foreground">Amount:</span> {fmtMoney(ci.amount_ngn)}</span>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">Started {fmtDate(ci.created_at)} · {ci.paid_at ? `Paid ${fmtDate(ci.paid_at)}` : "Not paid"}</div>
-                    {ci.invoice_url && <a href={ci.invoice_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">open invoice</a>}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </Section>
 
         {/* Payment issue tickets */}
         <Section
