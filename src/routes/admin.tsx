@@ -586,13 +586,9 @@ function AdminPage() {
             {(() => {
               const purchases = userTx.filter((t) => t.type === "purchase");
               const cardCount = purchases.filter((t) => paymentMethod(t.description) === "card").length;
-              const cryptoCount = purchases.filter((t) => paymentMethod(t.description) === "crypto").length;
-              const pendingCrypto = cryptoInvoices.filter((ci) => ci.user_id === selectedUser.user_id && ci.status === "pending").length;
               return (
                 <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-border text-xs">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1"><CreditCard className="h-3 w-3" /> {cardCount} card</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1"><Bitcoin className="h-3 w-3" /> {cryptoCount} crypto</span>
-                  {pendingCrypto > 0 && <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-600 px-2.5 py-1">{pendingCrypto} pending crypto invoice{pendingCrypto > 1 ? "s" : ""}</span>}
                 </div>
               );
             })()}
@@ -765,32 +761,19 @@ function ProfitStat({ label, value, sub, tone }: { label: string; value: string;
 
 // Identify the payment method by parsing the marker we stamp into
 // transactions.description when crediting a purchase.
-function paymentMethod(description: string | null): "card" | "crypto" | "unknown" {
+function paymentMethod(description: string | null): "card" | "unknown" {
   if (!description) return "unknown";
-  if (description.includes("NOWPayments:")) return "crypto";
   if (description.includes("Flutterwave:")) return "card";
   return "unknown";
 }
 
-function MethodBadge({ method }: { method: "card" | "crypto" | "unknown" }) {
-  if (method === "crypto") {
-    return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500"><Bitcoin className="h-3 w-3" /> crypto</span>;
-  }
+function MethodBadge({ method }: { method: "card" | "unknown" }) {
   if (method === "card") {
     return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-500"><CreditCard className="h-3 w-3" /> card</span>;
   }
   return <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">—</span>;
 }
 
-function InvoiceStatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    paid: "bg-emerald-500/15 text-emerald-500",
-    pending: "bg-amber-500/15 text-amber-500",
-    expired: "bg-muted text-muted-foreground",
-    cancelled: "bg-muted text-muted-foreground",
-  };
-  return <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${map[status] ?? "bg-muted text-muted-foreground"}`}>{status}</span>;
-}
 
 function IssueStatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
