@@ -1088,6 +1088,7 @@ export type Database = {
           visits_week: number
         }[]
       }
+      auto_close_stale_stream_sessions: { Args: never; Returns: undefined }
       can_start_stream: {
         Args: never
         Returns: {
@@ -1104,6 +1105,10 @@ export type Database = {
           target_user_id: string
         }
         Returns: undefined
+      }
+      deduct_and_mark_session: {
+        Args: { p_amount: number; p_credits: number; p_session_id?: string }
+        Returns: number
       }
       deduct_credits: {
         Args: {

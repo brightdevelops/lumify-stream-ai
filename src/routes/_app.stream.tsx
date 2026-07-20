@@ -314,14 +314,16 @@ function StreamPage() {
     fractionalSecRef.current -= wholeSec;
 
     const credits = wholeSec * RATE;
-    const { data, error: rpcErr } = await supabase.rpc("deduct_credits", {
+    // Atomic: wallet deduction AND stream_sessions.credits_used bump happen in
+    // one SQL transaction (Fix 2), so a crash between them can't leave the row
+    // lying about how much was already charged.
+    const { data, error: rpcErr } = await supabase.rpc("deduct_and_mark_session", {
       p_credits: credits,
       p_amount: credits * NAIRA_PER_CREDIT,
-      p_description: undefined,
-      p_log_transaction: false,
+      p_session_id: sessionIdRef.current ?? undefined,
     });
     if (rpcErr) {
-      console.error("deduct_credits failed", rpcErr);
+      console.error("deduct_and_mark_session failed", rpcErr);
       await endStream(false);
       return;
     }
@@ -332,17 +334,6 @@ function StreamPage() {
     setCredits(newBalance);
     setUsed(usedRef.current);
     setDuration(durationRef.current);
-
-    if (sessionIdRef.current) {
-      supabase
-        .from("stream_sessions")
-        .update({
-          last_heartbeat: new Date().toISOString(),
-          credits_used: usedRef.current,
-        })
-        .eq("id", sessionIdRef.current)
-        .then(() => {});
-    }
     if (newBalance <= 0) {
       await endStream(true);
     }
