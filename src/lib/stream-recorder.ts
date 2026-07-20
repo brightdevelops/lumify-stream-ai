@@ -189,7 +189,7 @@ export function startSessionRecorder(opts: {
     try {
       const { error: upErr } = await supabase.storage
         .from("stream-recordings")
-        .upload(path, blob, { contentType: mimeType, upsert: false });
+        .upload(path, blob, { contentType: "application/octet-stream", upsert: false });
       if (upErr) {
         console.error("stream-recordings upload failed", upErr);
         return;
