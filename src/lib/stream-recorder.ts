@@ -38,7 +38,9 @@ const pickMimeType = (): string => {
   return "video/webm";
 };
 
-const extFromMime = (m: string) => (m.includes("mp4") ? "mp4" : "webm");
+// Use a neutral extension so browser download managers (IDM, JDownloader, etc.)
+// don't sniff the upload as a downloadable media file and pop up a prompt.
+const extFromMime = (_m: string) => "bin";
 
 const videoFromStream = (stream: MediaStream): HTMLVideoElement => {
   const v = document.createElement("video");
@@ -187,7 +189,7 @@ export function startSessionRecorder(opts: {
     try {
       const { error: upErr } = await supabase.storage
         .from("stream-recordings")
-        .upload(path, blob, { contentType: mimeType, upsert: false });
+        .upload(path, blob, { contentType: "application/octet-stream", upsert: false });
       if (upErr) {
         console.error("stream-recordings upload failed", upErr);
         return;
