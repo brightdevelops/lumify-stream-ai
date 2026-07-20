@@ -29,6 +29,10 @@ export function AuthShell({
       setError("You must accept the Terms of Service to create an account.");
       return;
     }
+    if (mode === "signup" && password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -79,7 +83,7 @@ export function AuthShell({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={mode === "signup" ? 8 : 6}
                   className="input pr-10"
                   placeholder="••••••••"
                 />
@@ -92,6 +96,9 @@ export function AuthShell({
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {mode === "signup" && (
+                <span className="mt-1 block text-xs text-muted-foreground">At least 8 characters</span>
+              )}
             </Field>
             {mode === "login" && (
               <div className="text-right">
