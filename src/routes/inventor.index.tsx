@@ -5,6 +5,7 @@ import { Users, CreditCard, Wallet, TrendingUp, Coins, Activity, Cpu } from "luc
 import { inventorGetMetrics, type InventorMetrics } from "@/lib/inventor.functions";
 import { getLucyModel, setLucyModel } from "@/lib/site-settings.functions";
 import { NGN, NUM, pkgName, shortDate } from "@/lib/inventor-utils";
+import { AnnouncementEditor } from "@/components/inventor/AnnouncementEditor";
 
 export const Route = createFileRoute("/inventor/")({
   component: OverviewPage,
@@ -99,6 +100,8 @@ function OverviewPage() {
           </button>
         </div>
       </div>
+
+      <AnnouncementEditor />
 
       <div className="rounded-lg border border-border bg-card">
         <div className="border-b border-border px-4 py-3">
