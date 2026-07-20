@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.log_usage_transaction(integer, numeric, text, uuid) FROM anon, PUBLIC;
