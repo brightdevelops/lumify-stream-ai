@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, Bitcoin, LifeBuoy, CreditCard, Wrench } from "lucide-react";
+import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, LifeBuoy, CreditCard, Wrench } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
@@ -14,7 +14,6 @@ import {
   adminUserTransactions,
   adminGetActiveStreams,
   adminDailyProfit,
-  adminListCryptoInvoices,
   adminListPaymentIssues,
   adminUpdatePaymentIssue,
 
@@ -23,8 +22,8 @@ import {
   type TransactionRow,
   type ActiveStream,
   type DailyProfitPoint,
-  type CryptoInvoiceRow,
   type PaymentIssueRow,
+
 
 } from "@/lib/admin.functions";
 
@@ -66,7 +65,6 @@ function AdminPage() {
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
   const profitFn = useServerFn(adminDailyProfit);
-  const cryptoInvFn = useServerFn(adminListCryptoInvoices);
   const issuesFn = useServerFn(adminListPaymentIssues);
   const updateIssueFn = useServerFn(adminUpdatePaymentIssue);
   
@@ -81,9 +79,7 @@ function AdminPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [active, setActive] = useState<ActiveStream[]>([]);
-  const [cryptoInvoices, setCryptoInvoices] = useState<CryptoInvoiceRow[]>([]);
   const [paymentIssues, setPaymentIssues] = useState<PaymentIssueRow[]>([]);
-  const [cryptoFilter, setCryptoFilter] = useState<"all" | "pending" | "paid" | "expired" | "cancelled">("all");
   const [issueFilter, setIssueFilter] = useState<"all" | "open" | "in_progress" | "resolved" | "dismissed">("open");
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -92,7 +88,7 @@ function AdminPage() {
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "created_at", dir: "desc" });
-  const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage" | "crypto" | "card">("all");
+  const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage" | "card">("all");
 
   const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive">("all");
   const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
@@ -117,14 +113,13 @@ function AdminPage() {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [s, u, a, p, ci, pi] = await Promise.all([
+      const [s, u, a, p, pi] = await Promise.all([
         statsFn(), usersFn(), activeFn(), profitFn(),
-        cryptoInvFn({ data: { status: cryptoFilter === "all" ? null : cryptoFilter, limit: 200 } }),
         issuesFn({ data: { status: issueFilter === "all" ? null : issueFilter, limit: 200 } }),
       ]);
       setStats(s.stats); setUsers(u.users); setActive(a.streams);
       setDailyProfit(p.points); setCreditsUsedToday(p.credits_used_today); setCreditsUsedMonth(p.credits_used_month);
-      setCryptoInvoices(ci.invoices); setPaymentIssues(pi.issues);
+      setPaymentIssues(pi.issues);
 
       setLastUpdated(new Date());
       setError(null);
@@ -133,7 +128,7 @@ function AdminPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [statsFn, usersFn, activeFn, profitFn, cryptoInvFn, issuesFn, cryptoFilter, issueFilter]);
+  }, [statsFn, usersFn, activeFn, profitFn, issuesFn, issueFilter]);
 
 
   // Initial + interval refresh of dynamic data
@@ -443,7 +438,7 @@ function AdminPage() {
           icon={Coins}
           actions={
             <div className="flex gap-1 text-xs flex-wrap">
-              {(["all", "purchase", "usage", "card", "crypto"] as const).map((t) => (
+              {(["all", "purchase", "usage", "card"] as const).map((t) => (
                 <button key={t} onClick={() => setTxFilter(t)}
                   className={`px-3 py-1 rounded-md border capitalize ${txFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
                   {t}
@@ -455,7 +450,6 @@ function AdminPage() {
           {(() => {
             const filtered = transactions.filter((t) => {
               if (txFilter === "card") return paymentMethod(t.description) === "card";
-              if (txFilter === "crypto") return paymentMethod(t.description) === "crypto";
               return true;
             });
             return (
