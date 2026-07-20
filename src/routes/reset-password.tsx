@@ -29,6 +29,10 @@ function ResetPassword() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -67,7 +71,7 @@ function ResetPassword() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={8}
                     className="input pr-10"
                     placeholder="••••••••"
                   />
@@ -80,6 +84,7 @@ function ResetPassword() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                <span className="mt-1 block text-xs text-muted-foreground">At least 8 characters</span>
               </label>
               {error && <p className="text-sm text-red-400">{error}</p>}
               <button
