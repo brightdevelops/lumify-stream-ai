@@ -678,6 +678,7 @@ function StreamPage() {
         p_credits: totalUsed,
         p_amount: totalUsed * NAIRA_PER_CREDIT,
         p_description: `Stream session — ${mins} min ${secs} sec`,
+        p_session_id: sessionIdRef.current ?? undefined,
       });
     }
     if (sessionIdRef.current) {

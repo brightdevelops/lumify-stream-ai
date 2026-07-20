@@ -693,6 +693,7 @@ export type Database = {
           id: string
           package_id: string | null
           reference: string | null
+          session_id: string | null
           type: Database["public"]["Enums"]["transaction_type"] | null
           user_id: string
         }
@@ -705,6 +706,7 @@ export type Database = {
           id?: string
           package_id?: string | null
           reference?: string | null
+          session_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"] | null
           user_id: string
         }
@@ -717,10 +719,19 @@ export type Database = {
           id?: string
           package_id?: string | null
           reference?: string | null
+          session_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"] | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "stream_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -760,6 +771,25 @@ export type Database = {
       admin_delete_user: {
         Args: { target_user_id: string }
         Returns: undefined
+      }
+      admin_dry_run_overcharge_refunds: {
+        Args: never
+        Returns: {
+          allowed_credits: number
+          charged_credits: number
+          over_credits: number
+          tx_created_at: string
+          tx_id: string
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_execute_overcharge_refunds: {
+        Args: never
+        Returns: {
+          refunded_tx_count: number
+          total_credits_refunded: number
+        }[]
       }
       admin_get_active_streams: {
         Args: never
@@ -1081,10 +1111,24 @@ export type Database = {
       }
       inventor_visit_stats: { Args: never; Returns: Json }
       is_maintenance_mode: { Args: never; Returns: boolean }
-      log_usage_transaction: {
-        Args: { p_amount: number; p_credits: number; p_description?: string }
-        Returns: undefined
-      }
+      log_usage_transaction:
+        | {
+            Args: {
+              p_amount: number
+              p_credits: number
+              p_description?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_credits: number
+              p_description?: string
+              p_session_id?: string
+            }
+            Returns: undefined
+          }
       mark_my_conversation_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
