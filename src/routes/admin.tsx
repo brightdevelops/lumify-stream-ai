@@ -146,7 +146,7 @@ function AdminPage() {
   }, []);
 
   // Transactions on filter change.
-  // Card vs Crypto is a client-side filter on description; both translate to
+  // Card filter is a client-side filter on description that maps to a
   // a server-side "purchase" type filter, then we narrow further in memory.
   useEffect(() => {
     if (!authChecked) return;
