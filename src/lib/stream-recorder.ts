@@ -38,7 +38,9 @@ const pickMimeType = (): string => {
   return "video/webm";
 };
 
-const extFromMime = (m: string) => (m.includes("mp4") ? "mp4" : "webm");
+// Use a neutral extension so browser download managers (IDM, JDownloader, etc.)
+// don't sniff the upload as a downloadable media file and pop up a prompt.
+const extFromMime = (_m: string) => "bin";
 
 const videoFromStream = (stream: MediaStream): HTMLVideoElement => {
   const v = document.createElement("video");
