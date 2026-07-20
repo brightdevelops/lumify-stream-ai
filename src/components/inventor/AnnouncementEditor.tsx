@@ -28,7 +28,7 @@ const EMPTY: Omit<Row, "id" | "updated_at"> = {
   image_url: "",
   starts_at: null,
   ends_at: null,
-  frequency: "once_per_user",
+  frequency: "every_visit",
 };
 
 function toLocalInput(iso: string | null): string {
@@ -200,13 +200,9 @@ export function AnnouncementEditor() {
               <input type="datetime-local" className={inp} value={toLocalInput(draft.ends_at)} onChange={(e) => patch({ ends_at: fromLocalInput(e.target.value) })} />
             </Field>
           </div>
-          <Field label="Frequency">
-            <select className={inp} value={draft.frequency} onChange={(e) => patch({ frequency: e.target.value as any })}>
-              <option value="once_per_user">Once per user</option>
-              <option value="once_per_day">Once per day</option>
-              <option value="every_visit">Every visit</option>
-            </select>
-          </Field>
+          <p className="text-xs text-muted-foreground">
+            Popup shows on <span className="text-foreground font-medium">every visit</span> while LIVE. Flip the toggle above to turn it off.
+          </p>
 
           <div className="flex items-center gap-3 pt-1">
             <button
