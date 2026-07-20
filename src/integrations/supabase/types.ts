@@ -365,6 +365,39 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_receipts: {
+        Row: {
+          amount_ngn: number | null
+          created_at: string
+          credits: number
+          description: string | null
+          id: string
+          provider: string
+          reference: string
+          user_id: string
+        }
+        Insert: {
+          amount_ngn?: number | null
+          created_at?: string
+          credits: number
+          description?: string | null
+          id?: string
+          provider: string
+          reference: string
+          user_id: string
+        }
+        Update: {
+          amount_ngn?: number | null
+          created_at?: string
+          credits?: number
+          description?: string | null
+          id?: string
+          provider?: string
+          reference?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           banned: boolean
