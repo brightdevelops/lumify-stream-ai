@@ -231,14 +231,8 @@ export const adminDailyProfit = createServerFn({ method: "GET" })
   });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Crypto invoices + payment issue tickets
+// Payment issue tickets
 // ─────────────────────────────────────────────────────────────────────────────
-
-export type CryptoInvoiceRow = {
-  id: string; user_id: string; user_email: string | null; full_name: string | null;
-  order_id: string; pack_id: string; credits: number; price_usd: number; amount_ngn: number;
-  status: string; invoice_url: string | null; paid_at: string | null; created_at: string;
-};
 
 export type PaymentIssueRow = {
   id: string; user_id: string; user_email: string | null; full_name: string | null;
@@ -247,18 +241,6 @@ export type PaymentIssueRow = {
   resolved_at: string | null; created_at: string;
 };
 
-export const adminListCryptoInvoices = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { status?: string | null; limit?: number }) => input)
-  .handler(async ({ context, data }) => {
-    await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
-    const { data: rows, error } = await context.supabase.rpc("admin_list_crypto_invoices", {
-      p_status: data.status ?? undefined,
-      p_limit: data.limit ?? 200,
-    });
-    if (error) throw new Error(error.message);
-    return { invoices: (rows ?? []) as CryptoInvoiceRow[] };
-  });
 
 export const adminListPaymentIssues = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

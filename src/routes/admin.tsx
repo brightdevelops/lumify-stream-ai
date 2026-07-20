@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, Bitcoin, LifeBuoy, CreditCard, Wrench } from "lucide-react";
+import { Shield, Users, Coins, Wallet, Activity, ShieldCheck, ArrowLeft, Radio, Search, X, RefreshCw, AlertTriangle, TrendingUp, LifeBuoy, CreditCard, Wrench } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
@@ -14,7 +14,6 @@ import {
   adminUserTransactions,
   adminGetActiveStreams,
   adminDailyProfit,
-  adminListCryptoInvoices,
   adminListPaymentIssues,
   adminUpdatePaymentIssue,
 
@@ -23,8 +22,8 @@ import {
   type TransactionRow,
   type ActiveStream,
   type DailyProfitPoint,
-  type CryptoInvoiceRow,
   type PaymentIssueRow,
+
 
 } from "@/lib/admin.functions";
 
@@ -66,7 +65,6 @@ function AdminPage() {
   const userTxFn = useServerFn(adminUserTransactions);
   const activeFn = useServerFn(adminGetActiveStreams);
   const profitFn = useServerFn(adminDailyProfit);
-  const cryptoInvFn = useServerFn(adminListCryptoInvoices);
   const issuesFn = useServerFn(adminListPaymentIssues);
   const updateIssueFn = useServerFn(adminUpdatePaymentIssue);
   
@@ -81,9 +79,7 @@ function AdminPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [active, setActive] = useState<ActiveStream[]>([]);
-  const [cryptoInvoices, setCryptoInvoices] = useState<CryptoInvoiceRow[]>([]);
   const [paymentIssues, setPaymentIssues] = useState<PaymentIssueRow[]>([]);
-  const [cryptoFilter, setCryptoFilter] = useState<"all" | "pending" | "paid" | "expired" | "cancelled">("all");
   const [issueFilter, setIssueFilter] = useState<"all" | "open" | "in_progress" | "resolved" | "dismissed">("open");
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -92,7 +88,7 @@ function AdminPage() {
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "created_at", dir: "desc" });
-  const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage" | "crypto" | "card">("all");
+  const [txFilter, setTxFilter] = useState<"all" | "purchase" | "usage" | "card">("all");
 
   const [userFilter, setUserFilter] = useState<"all" | "active" | "inactive">("all");
   const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
@@ -117,14 +113,13 @@ function AdminPage() {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [s, u, a, p, ci, pi] = await Promise.all([
+      const [s, u, a, p, pi] = await Promise.all([
         statsFn(), usersFn(), activeFn(), profitFn(),
-        cryptoInvFn({ data: { status: cryptoFilter === "all" ? null : cryptoFilter, limit: 200 } }),
         issuesFn({ data: { status: issueFilter === "all" ? null : issueFilter, limit: 200 } }),
       ]);
       setStats(s.stats); setUsers(u.users); setActive(a.streams);
       setDailyProfit(p.points); setCreditsUsedToday(p.credits_used_today); setCreditsUsedMonth(p.credits_used_month);
-      setCryptoInvoices(ci.invoices); setPaymentIssues(pi.issues);
+      setPaymentIssues(pi.issues);
 
       setLastUpdated(new Date());
       setError(null);
@@ -133,7 +128,7 @@ function AdminPage() {
     } finally {
       setRefreshing(false);
     }
-  }, [statsFn, usersFn, activeFn, profitFn, cryptoInvFn, issuesFn, cryptoFilter, issueFilter]);
+  }, [statsFn, usersFn, activeFn, profitFn, issuesFn, issueFilter]);
 
 
   // Initial + interval refresh of dynamic data
@@ -151,7 +146,7 @@ function AdminPage() {
   }, []);
 
   // Transactions on filter change.
-  // Card vs Crypto is a client-side filter on description; both translate to
+  // Card filter is a client-side filter on description that maps to a
   // a server-side "purchase" type filter, then we narrow further in memory.
   useEffect(() => {
     if (!authChecked) return;
@@ -443,7 +438,7 @@ function AdminPage() {
           icon={Coins}
           actions={
             <div className="flex gap-1 text-xs flex-wrap">
-              {(["all", "purchase", "usage", "card", "crypto"] as const).map((t) => (
+              {(["all", "purchase", "usage", "card"] as const).map((t) => (
                 <button key={t} onClick={() => setTxFilter(t)}
                   className={`px-3 py-1 rounded-md border capitalize ${txFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
                   {t}
@@ -455,7 +450,6 @@ function AdminPage() {
           {(() => {
             const filtered = transactions.filter((t) => {
               if (txFilter === "card") return paymentMethod(t.description) === "card";
-              if (txFilter === "crypto") return paymentMethod(t.description) === "crypto";
               return true;
             });
             return (
@@ -503,68 +497,6 @@ function AdminPage() {
           })()}
         </Section>
 
-        {/* Crypto invoices — including pending/failed attempts */}
-        <Section
-          title="Crypto checkouts (NOWPayments)"
-          icon={Bitcoin}
-          actions={
-            <div className="flex gap-1 text-xs flex-wrap">
-              {(["all", "pending", "paid", "expired", "cancelled"] as const).map((t) => (
-                <button key={t} onClick={() => setCryptoFilter(t)}
-                  className={`px-3 py-1 rounded-md border capitalize ${cryptoFilter === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          }
-        >
-          {cryptoInvoices.length === 0 ? (
-            <Empty>No crypto checkouts {cryptoFilter !== "all" ? `with status "${cryptoFilter}"` : "yet"}.</Empty>
-          ) : (
-            <>
-              <div className="hidden md:block">
-                <Tbl headers={["User", "Pack", "Credits", "Amount", "Status", "Started", "Paid", "Link"]}>
-                  {cryptoInvoices.map((ci) => (
-                    <tr key={ci.id} className="border-t border-border">
-                      <Td>
-                        <div className="font-medium">{ci.full_name || ci.user_email?.split("@")[0]}</div>
-                        <div className="text-xs text-muted-foreground">{ci.user_email}</div>
-                      </Td>
-                      <Td className="capitalize">{ci.pack_id}</Td>
-                      <Td>{fmtNum(ci.credits)}</Td>
-                      <Td>{fmtMoney(ci.amount_ngn)} <span className="text-xs text-muted-foreground">(${ci.price_usd})</span></Td>
-                      <Td><InvoiceStatusBadge status={ci.status} /></Td>
-                      <Td className="text-xs text-muted-foreground whitespace-nowrap">{fmtDate(ci.created_at)}</Td>
-                      <Td className="text-xs text-muted-foreground whitespace-nowrap">{ci.paid_at ? fmtDate(ci.paid_at) : "—"}</Td>
-                      <Td>
-                        {ci.invoice_url ? (
-                          <a href={ci.invoice_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">open</a>
-                        ) : "—"}
-                      </Td>
-                    </tr>
-                  ))}
-                </Tbl>
-              </div>
-              <div className="md:hidden divide-y divide-border">
-                {cryptoInvoices.map((ci) => (
-                  <div key={ci.id} className="p-4 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate">{ci.user_email}</span>
-                      <InvoiceStatusBadge status={ci.status} />
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                      <span className="capitalize"><span className="text-muted-foreground">Pack:</span> {ci.pack_id}</span>
-                      <span><span className="text-muted-foreground">Credits:</span> {fmtNum(ci.credits)}</span>
-                      <span><span className="text-muted-foreground">Amount:</span> {fmtMoney(ci.amount_ngn)}</span>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">Started {fmtDate(ci.created_at)} · {ci.paid_at ? `Paid ${fmtDate(ci.paid_at)}` : "Not paid"}</div>
-                    {ci.invoice_url && <a href={ci.invoice_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline">open invoice</a>}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </Section>
 
         {/* Payment issue tickets */}
         <Section
@@ -654,13 +586,9 @@ function AdminPage() {
             {(() => {
               const purchases = userTx.filter((t) => t.type === "purchase");
               const cardCount = purchases.filter((t) => paymentMethod(t.description) === "card").length;
-              const cryptoCount = purchases.filter((t) => paymentMethod(t.description) === "crypto").length;
-              const pendingCrypto = cryptoInvoices.filter((ci) => ci.user_id === selectedUser.user_id && ci.status === "pending").length;
               return (
                 <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-border text-xs">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1"><CreditCard className="h-3 w-3" /> {cardCount} card</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1"><Bitcoin className="h-3 w-3" /> {cryptoCount} crypto</span>
-                  {pendingCrypto > 0 && <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-600 px-2.5 py-1">{pendingCrypto} pending crypto invoice{pendingCrypto > 1 ? "s" : ""}</span>}
                 </div>
               );
             })()}
@@ -833,32 +761,19 @@ function ProfitStat({ label, value, sub, tone }: { label: string; value: string;
 
 // Identify the payment method by parsing the marker we stamp into
 // transactions.description when crediting a purchase.
-function paymentMethod(description: string | null): "card" | "crypto" | "unknown" {
+function paymentMethod(description: string | null): "card" | "unknown" {
   if (!description) return "unknown";
-  if (description.includes("NOWPayments:")) return "crypto";
   if (description.includes("Flutterwave:")) return "card";
   return "unknown";
 }
 
-function MethodBadge({ method }: { method: "card" | "crypto" | "unknown" }) {
-  if (method === "crypto") {
-    return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500"><Bitcoin className="h-3 w-3" /> crypto</span>;
-  }
+function MethodBadge({ method }: { method: "card" | "unknown" }) {
   if (method === "card") {
     return <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-500"><CreditCard className="h-3 w-3" /> card</span>;
   }
   return <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">—</span>;
 }
 
-function InvoiceStatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    paid: "bg-emerald-500/15 text-emerald-500",
-    pending: "bg-amber-500/15 text-amber-500",
-    expired: "bg-muted text-muted-foreground",
-    cancelled: "bg-muted text-muted-foreground",
-  };
-  return <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${map[status] ?? "bg-muted text-muted-foreground"}`}>{status}</span>;
-}
 
 function IssueStatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
