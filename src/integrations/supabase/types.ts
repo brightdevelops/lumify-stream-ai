@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          body: string
+          button_link: string
+          button_text: string
+          created_at: string
+          ends_at: string | null
+          frequency: string
+          id: string
+          image_url: string
+          is_active: boolean
+          singleton_key: string
+          starts_at: string | null
+          tag_text: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          button_link?: string
+          button_text?: string
+          created_at?: string
+          ends_at?: string | null
+          frequency?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          singleton_key?: string
+          starts_at?: string | null
+          tag_text?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          button_link?: string
+          button_text?: string
+          created_at?: string
+          ends_at?: string | null
+          frequency?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          singleton_key?: string
+          starts_at?: string | null
+          tag_text?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           balance_after: number
