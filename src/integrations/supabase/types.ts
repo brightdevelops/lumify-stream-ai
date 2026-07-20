@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_integrity_alerts: {
+        Row: {
+          actual_balance: number
+          computed_balance: number
+          detected_at: string
+          drift: number
+          id: string
+          note: string | null
+          resolved_at: string | null
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_balance: number
+          computed_balance: number
+          detected_at?: string
+          drift: number
+          id?: string
+          note?: string | null
+          resolved_at?: string | null
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_balance?: number
+          computed_balance?: number
+          detected_at?: string
+          drift?: number
+          id?: string
+          note?: string | null
+          resolved_at?: string | null
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           body: string
@@ -1169,6 +1205,16 @@ export type Database = {
       record_login: { Args: never; Returns: undefined }
       regenerate_stream_token: { Args: never; Returns: string }
       resolve_stream_token: { Args: { p_token: string }; Returns: string }
+      run_credit_integrity_check: {
+        Args: never
+        Returns: {
+          actual_balance: number
+          computed_balance: number
+          drift: number
+          user_email: string
+          user_id: string
+        }[]
+      }
       set_site_setting: {
         Args: { p_key: string; p_value: boolean }
         Returns: boolean
