@@ -41,8 +41,6 @@ import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
-import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
-import { Route as ApiPublicCryptomusIpnRouteImport } from './routes/api/public/cryptomus-ipn'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -209,16 +207,6 @@ const ApiPublicResolveStreamTokenRoute =
     path: '/api/public/resolve-stream-token',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
-  id: '/api/public/nowpayments-ipn',
-  path: '/api/public/nowpayments-ipn',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCryptomusIpnRoute = ApiPublicCryptomusIpnRouteImport.update({
-  id: '/api/public/cryptomus-ipn',
-  path: '/api/public/cryptomus-ipn',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -277,8 +265,6 @@ export interface FileRoutesByFullPath {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
-  '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
-  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -316,8 +302,6 @@ export interface FileRoutesByTo {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
-  '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
-  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -358,8 +342,6 @@ export interface FileRoutesById {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
-  '/api/public/cryptomus-ipn': typeof ApiPublicCryptomusIpnRoute
-  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -400,8 +382,6 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
-    | '/api/public/cryptomus-ipn'
-    | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
@@ -439,8 +419,6 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/users'
     | '/inventor'
-    | '/api/public/cryptomus-ipn'
-    | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
@@ -480,8 +458,6 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/users'
     | '/inventor/'
-    | '/api/public/cryptomus-ipn'
-    | '/api/public/nowpayments-ipn'
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
@@ -508,8 +484,6 @@ export interface RootRouteChildren {
   TrustRoute: typeof TrustRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
-  ApiPublicCryptomusIpnRoute: typeof ApiPublicCryptomusIpnRoute
-  ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
@@ -746,20 +720,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicResolveStreamTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/nowpayments-ipn': {
-      id: '/api/public/nowpayments-ipn'
-      path: '/api/public/nowpayments-ipn'
-      fullPath: '/api/public/nowpayments-ipn'
-      preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/cryptomus-ipn': {
-      id: '/api/public/cryptomus-ipn'
-      path: '/api/public/cryptomus-ipn'
-      fullPath: '/api/public/cryptomus-ipn'
-      preLoaderRoute: typeof ApiPublicCryptomusIpnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -860,8 +820,6 @@ const rootRouteChildren: RootRouteChildren = {
   TrustRoute: TrustRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
-  ApiPublicCryptomusIpnRoute: ApiPublicCryptomusIpnRoute,
-  ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
