@@ -158,51 +158,6 @@ export type Database = {
         }
         Relationships: []
       }
-      crypto_invoices: {
-        Row: {
-          amount_ngn: number
-          created_at: string
-          credits: number
-          id: string
-          invoice_url: string | null
-          order_id: string
-          pack_id: string
-          paid_at: string | null
-          price_usd: number
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount_ngn: number
-          created_at?: string
-          credits: number
-          id?: string
-          invoice_url?: string | null
-          order_id: string
-          pack_id: string
-          paid_at?: string | null
-          price_usd: number
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount_ngn?: number
-          created_at?: string
-          credits?: number
-          id?: string
-          invoice_url?: string | null
-          order_id?: string
-          pack_id?: string
-          paid_at?: string | null
-          price_usd?: number
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       email_send_log: {
         Row: {
           created_at: string
@@ -929,24 +884,6 @@ export type Database = {
           unique_visitors_logged_in: number
           visits_last_7_days: number
           visits_today: number
-        }[]
-      }
-      admin_list_crypto_invoices: {
-        Args: { p_limit?: number; p_status?: string }
-        Returns: {
-          amount_ngn: number
-          created_at: string
-          credits: number
-          full_name: string
-          id: string
-          invoice_url: string
-          order_id: string
-          pack_id: string
-          paid_at: string
-          price_usd: number
-          status: string
-          user_email: string
-          user_id: string
         }[]
       }
       admin_list_payment_issues: {
