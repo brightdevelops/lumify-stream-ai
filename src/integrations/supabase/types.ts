@@ -1208,11 +1208,11 @@ export type Database = {
       run_credit_integrity_check: {
         Args: never
         Returns: {
-          actual_balance: number
-          computed_balance: number
-          drift: number
-          user_email: string
-          user_id: string
+          out_actual_balance: number
+          out_computed_balance: number
+          out_drift: number
+          out_user_email: string
+          out_user_id: string
         }[]
       }
       set_site_setting: {
