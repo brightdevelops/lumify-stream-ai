@@ -28,7 +28,7 @@ const EMPTY: Omit<Row, "id" | "updated_at"> = {
   image_url: "",
   starts_at: null,
   ends_at: null,
-  frequency: "once_per_user",
+  frequency: "every_visit",
 };
 
 function toLocalInput(iso: string | null): string {
