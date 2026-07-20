@@ -70,16 +70,18 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
     const pack = PACKS[packId];
 
     // GLOBAL idempotency — a Flutterwave txRef can only ever be credited once.
+    // Uses the append-only payment_receipts table (no user-facing access), so
+    // wiping billing history cannot clear the marker and enable a replay.
     const marker = `Flutterwave:${data.txRef}`;
-    const { data: existing, error: existingErr } = await supabaseAdmin
-      .from("transactions")
+    const { data: existingReceipt, error: existingReceiptErr } = await supabaseAdmin
+      .from("payment_receipts")
       .select("id, user_id")
-      .like("description", `%${marker}%`)
-      .limit(1)
+      .eq("provider", "flutterwave")
+      .eq("reference", data.txRef)
       .maybeSingle();
-    if (existingErr) throw new Error(existingErr.message);
-    if (existing) {
-      if (existing.user_id === userId) return { ok: true, alreadyCredited: true, packId };
+    if (existingReceiptErr) throw new Error(existingReceiptErr.message);
+    if (existingReceipt) {
+      if (existingReceipt.user_id === userId) return { ok: true, alreadyCredited: true, packId };
       throw new Error("This payment reference has already been credited to another account");
     }
 
@@ -105,6 +107,26 @@ export const verifyFlutterwaveAndCredit = createServerFn({ method: "POST" })
     if (tx.tx_ref !== data.txRef) throw new Error("Reference mismatch");
     if (Number(tx.amount) < pack.amountNgn) {
       throw new Error("Payment amount does not match selected pack");
+    }
+
+    // Reserve the receipt FIRST — the unique (provider, reference) constraint is
+    // the authoritative replay guard. If a concurrent call already reserved it,
+    // this throws and we bail without crediting again.
+    const { error: receiptErr } = await supabaseAdmin
+      .from("payment_receipts")
+      .insert({
+        provider: "flutterwave",
+        reference: data.txRef,
+        user_id: userId,
+        credits: pack.credits,
+        amount_ngn: pack.amountNgn,
+        description: `Credit purchase — ${pack.name} pack (${marker})`,
+      });
+    if (receiptErr) {
+      if ((receiptErr as { code?: string }).code === "23505") {
+        return { ok: true, alreadyCredited: true, packId };
+      }
+      throw new Error(receiptErr.message);
     }
 
     const { error: rpcErr } = await supabaseAdmin.rpc("purchase_credits_for_user", {
