@@ -21,6 +21,7 @@ export type Database = {
           detected_at: string
           drift: number
           id: string
+          kind: string
           note: string | null
           resolved_at: string | null
           user_email: string | null
@@ -32,6 +33,7 @@ export type Database = {
           detected_at?: string
           drift: number
           id?: string
+          kind?: string
           note?: string | null
           resolved_at?: string | null
           user_email?: string | null
@@ -43,6 +45,7 @@ export type Database = {
           detected_at?: string
           drift?: number
           id?: string
+          kind?: string
           note?: string | null
           resolved_at?: string | null
           user_email?: string | null
