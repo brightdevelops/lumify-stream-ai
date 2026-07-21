@@ -492,7 +492,7 @@ function StreamPage() {
     let stream: MediaStream;
     try {
       await refreshLucyModelId();
-      const model = models.realtime(lucyModelIdRef.current as any);
+      const model = models.realtime("lucy-2.1" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
