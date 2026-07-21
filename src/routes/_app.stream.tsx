@@ -27,15 +27,17 @@ const MIN_CREDITS_TO_START = 10;
 const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
 // Decart API key is fetched at stream start from an authenticated server function.
 
-const REALISM_KEYWORDS = "photorealistic, natural human skin texture, realistic lighting, high detail, lifelike";
-
 const buildPrompt = (
   preset: string | null,
   mode: "realistic" | "stylized",
   realism: number,
+  hasReference: boolean = false,
 ) => {
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
+    const base = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail.`;
+    return hasReference
+      ? `${base} Keep transformations subtle and natural, avoid cartoon or anime effects.`
+      : base;
   }
   return preset
     ? `Transform into this character in ${preset} style.`
