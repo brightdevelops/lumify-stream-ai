@@ -622,10 +622,12 @@ function StreamPage() {
     setUsed(0);
     setDuration(0);
     setConnecting(false);
-    streamingRef.current = true;
-    setStreaming(true);
-    startingRef.current = false;
 
+    // CRITICAL: create the stream_sessions row and populate sessionIdRef BEFORE
+    // enabling the meter tick. If streaming is turned on first, the tick can
+    // fire with p_session_id=null, wallet gets deducted but
+    // stream_sessions.credits_used stays 0, and endStream's
+    // log_usage_transaction then double-charges via v_delta.
     if (user) {
       const { data: sess } = await supabase.from("stream_sessions").insert({
         user_id: user.id,
@@ -654,6 +656,10 @@ function StreamPage() {
         imagePath: initialImagePath,
       });
     }
+
+    streamingRef.current = true;
+    setStreaming(true);
+    startingRef.current = false;
   };
 
   const endStream = async (outOfCredits = false) => {
