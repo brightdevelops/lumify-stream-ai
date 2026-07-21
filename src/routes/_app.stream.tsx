@@ -409,7 +409,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset, mode, realism),
+        prompt: buildPrompt(preset, mode, realism, !!image),
         image,
         enhance: true,
       } as never);
@@ -448,7 +448,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism),
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
           });
         })();
       }
@@ -584,7 +584,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
         image: photo,
         enhance: true,
       } as never);
@@ -646,7 +646,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -706,7 +706,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism),
+          prompt: buildPrompt(next, mode, realism, !!referenceImage),
         });
       }
     }
@@ -722,7 +722,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
