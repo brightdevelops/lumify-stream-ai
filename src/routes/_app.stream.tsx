@@ -311,6 +311,10 @@ function StreamPage() {
   // accounting, the user is undercharged while Decart keeps billing us.
   const runMeterTick = async () => {
     if (!user || !streamingRef.current) return;
+    // Belt-and-braces: never charge without a session id — otherwise
+    // deduct_and_mark_session can't bump stream_sessions.credits_used, which
+    // makes endStream's log_usage_transaction double-charge via v_delta.
+    if (!sessionIdRef.current) return;
     const now = Date.now();
     const elapsedSec = (now - lastTickAtRef.current) / 1000;
     if (elapsedSec <= 0) return;
@@ -622,10 +626,12 @@ function StreamPage() {
     setUsed(0);
     setDuration(0);
     setConnecting(false);
-    streamingRef.current = true;
-    setStreaming(true);
-    startingRef.current = false;
 
+    // CRITICAL: create the stream_sessions row and populate sessionIdRef BEFORE
+    // enabling the meter tick. If streaming is turned on first, the tick can
+    // fire with p_session_id=null, wallet gets deducted but
+    // stream_sessions.credits_used stays 0, and endStream's
+    // log_usage_transaction then double-charges via v_delta.
     if (user) {
       const { data: sess } = await supabase.from("stream_sessions").insert({
         user_id: user.id,
@@ -654,6 +660,10 @@ function StreamPage() {
         imagePath: initialImagePath,
       });
     }
+
+    streamingRef.current = true;
+    setStreaming(true);
+    startingRef.current = false;
   };
 
   const endStream = async (outOfCredits = false) => {
