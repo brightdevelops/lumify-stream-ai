@@ -311,6 +311,10 @@ function StreamPage() {
   // accounting, the user is undercharged while Decart keeps billing us.
   const runMeterTick = async () => {
     if (!user || !streamingRef.current) return;
+    // Belt-and-braces: never charge without a session id — otherwise
+    // deduct_and_mark_session can't bump stream_sessions.credits_used, which
+    // makes endStream's log_usage_transaction double-charge via v_delta.
+    if (!sessionIdRef.current) return;
     const now = Date.now();
     const elapsedSec = (now - lastTickAtRef.current) / 1000;
     if (elapsedSec <= 0) return;
