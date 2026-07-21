@@ -27,15 +27,17 @@ const MIN_CREDITS_TO_START = 10;
 const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
 // Decart API key is fetched at stream start from an authenticated server function.
 
-const REALISM_KEYWORDS = "photorealistic, natural human skin texture, realistic lighting, high detail, lifelike";
-
 const buildPrompt = (
   preset: string | null,
   mode: "realistic" | "stylized",
   realism: number,
+  hasReference: boolean = false,
 ) => {
   if (mode === "realistic") {
-    return `Transform into this character while keeping a natural, human appearance. Strength ${realism}/10. ${REALISM_KEYWORDS}. Keep transformations subtle and natural, avoid cartoon or anime effects.`;
+    const base = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail.`;
+    return hasReference
+      ? `${base} Keep transformations subtle and natural, avoid cartoon or anime effects.`
+      : base;
   }
   return preset
     ? `Transform into this character in ${preset} style.`
@@ -264,12 +266,17 @@ function StreamPage() {
 
     try {
       await refreshLucyModelId();
-      const model = models.realtime(lucyModelIdRef.current as any);
+      const model = models.realtime("lucy-2.1" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, frameRate: fps, width, height },
+        video: {
+          deviceId: { exact: deviceId },
+          frameRate: { ideal: fps },
+          width: { ideal: width },
+          height: { ideal: height },
+        },
         audio: false,
       });
       const newTrack = newStream.getVideoTracks()[0];
@@ -402,7 +409,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset, mode, realism),
+        prompt: buildPrompt(preset, mode, realism, !!image),
         image,
         enhance: true,
       } as never);
@@ -441,7 +448,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism),
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
           });
         })();
       }
@@ -485,7 +492,7 @@ function StreamPage() {
     let stream: MediaStream;
     try {
       await refreshLucyModelId();
-      const model = models.realtime(lucyModelIdRef.current as any);
+      const model = models.realtime("lucy-2.1" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -532,7 +539,7 @@ function StreamPage() {
     try {
       const { apiKey } = await getDecartKey();
       await refreshLucyModelId();
-      const model = models.realtime(lucyModelIdRef.current as any);
+      const model = models.realtime("lucy-2.1" as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
@@ -577,7 +584,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
         image: photo,
         enhance: true,
       } as never);
@@ -639,7 +646,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -699,7 +706,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism),
+          prompt: buildPrompt(next, mode, realism, !!referenceImage),
         });
       }
     }
@@ -715,7 +722,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
