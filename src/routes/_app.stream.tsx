@@ -649,19 +649,9 @@ function StreamPage() {
     setDuration(0);
     setConnecting(false);
 
-    // CRITICAL: create the stream_sessions row and populate sessionIdRef BEFORE
-    // enabling the meter tick. If streaming is turned on first, the tick can
-    // fire with p_session_id=null, wallet gets deducted but
-    // stream_sessions.credits_used stays 0, and endStream's
-    // log_usage_transaction then double-charges via v_delta.
+    // sessionIdRef was set up-front by start_stream_session() before Decart
+    // connected. Just record the initial image + start event now.
     if (user) {
-      const { data: sess } = await supabase.from("stream_sessions").insert({
-        user_id: user.id,
-      } as never).select("id").maybeSingle();
-      sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
-      try {
-        recorderRef.current?.setSessionId(sessionIdRef.current);
-      } catch {}
       let initialImagePath: string | null = null;
       if (referenceImage) {
         initialImagePath = await uploadSwapImage({
