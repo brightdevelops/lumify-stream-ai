@@ -1197,6 +1197,7 @@ export type Database = {
         Args: { p_key: string; p_value: boolean }
         Returns: boolean
       }
+      start_stream_session: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
