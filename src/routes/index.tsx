@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { Zap, CreditCard, Wand2, Check } from "lucide-react";
+import SideRays from "@/components/SideRays";
 
 
 export const Route = createFileRoute("/")({
@@ -70,7 +71,23 @@ function Landing() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground relative">
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <SideRays
+          speed={2.5}
+          rayColor1="#A8E063"
+          rayColor2="#96c8ff"
+          intensity={1.4}
+          spread={2}
+          origin="top-right"
+          tilt={0}
+          saturation={1.3}
+          blend={0.65}
+          falloff={1.8}
+          opacity={0.55}
+        />
+      </div>
+      <div className="relative z-10">
       <header className={`sticky top-0 z-50 transition-colors ${scrolled ? "bg-background/80 backdrop-blur border-b border-border" : ""}`}>
         <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
           <Logo />
@@ -158,6 +175,7 @@ function Landing() {
           </nav>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
