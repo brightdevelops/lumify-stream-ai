@@ -491,29 +491,12 @@ function StreamPage() {
       return;
     }
 
-    // Enforce ONE active stream session per account, server-side. This must
-    // run BEFORE getDecartKey (which counts against the 60/hour rate limit)
-    // and before WebRTC setup. A returned session_id is the ONLY way this
-    // stream can be metered — without it, streaming would be free.
-    {
-      const { data: startRes, error: startErr } = await supabase.rpc("start_stream_session" as never);
-      const res = (startRes ?? null) as { status?: string; session_id?: string } | null;
-      if (startErr || !res || (res.status !== "ok") || !res.session_id) {
-        startingRef.current = false;
-        if (res?.status === "conflict") {
-          setError(
-            "You already have an active stream (possibly in another tab or device). Stop it there first — or if it just closed unexpectedly, wait about 30 seconds and try again.",
-          );
-        } else {
-          setError("Couldn't start your stream — please try again.");
-        }
-        return;
-      }
-      sessionIdRef.current = res.session_id;
-      try { recorderRef.current?.setSessionId(sessionIdRef.current); } catch {}
-    }
+    const { data: sess } = await supabase.from("stream_sessions").insert({ user_id: user.id }).select("id").maybeSingle();
+    sessionIdRef.current = sess?.id ?? null;
+    try { recorderRef.current?.setSessionId(sessionIdRef.current); } catch {}
 
     setConnecting(true);
+
 
     let stream: MediaStream;
     try {
@@ -543,13 +526,9 @@ function StreamPage() {
       console.error("getUserMedia failed", e?.name, e?.message, e);
       setConnecting(false);
       startingRef.current = false;
-      if (sessionIdRef.current) {
-        const sid = sessionIdRef.current;
-        sessionIdRef.current = null;
-        void supabase.from("stream_sessions").update({ ended_at: new Date().toISOString() } as never).eq("id", sid);
-      }
       const name = e?.name || "";
       if (name === "NotAllowedError" || name === "SecurityError") {
+
         setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
       } else if (name === "NotFoundError" || name === "OverconstrainedError") {
         setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
