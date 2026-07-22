@@ -543,6 +543,11 @@ function StreamPage() {
       console.error("getUserMedia failed", e?.name, e?.message, e);
       setConnecting(false);
       startingRef.current = false;
+      if (sessionIdRef.current) {
+        const sid = sessionIdRef.current;
+        sessionIdRef.current = null;
+        void supabase.from("stream_sessions").update({ ended_at: new Date().toISOString() } as never).eq("id", sid);
+      }
       const name = e?.name || "";
       if (name === "NotAllowedError" || name === "SecurityError") {
         setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
