@@ -54,6 +54,7 @@ export function AuthShell({
     }
     setLoading(true);
     try {
+      await flushExpiredStoredSession();
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
