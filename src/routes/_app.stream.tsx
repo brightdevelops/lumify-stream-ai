@@ -624,6 +624,11 @@ function StreamPage() {
       teardownStream();
       setConnecting(false);
       startingRef.current = false;
+      if (sessionIdRef.current) {
+        const sid = sessionIdRef.current;
+        sessionIdRef.current = null;
+        void supabase.from("stream_sessions").update({ ended_at: new Date().toISOString() } as never).eq("id", sid);
+      }
       const msg = e instanceof Error ? e.message : String(e ?? "");
       if (msg.includes("Another stream is already active") || msg.includes("Insufficient credits")) {
         setError(msg);
