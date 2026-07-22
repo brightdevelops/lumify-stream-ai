@@ -491,6 +491,28 @@ function StreamPage() {
       return;
     }
 
+    // Enforce ONE active stream session per account, server-side. This must
+    // run BEFORE getDecartKey (which counts against the 60/hour rate limit)
+    // and before WebRTC setup. A returned session_id is the ONLY way this
+    // stream can be metered — without it, streaming would be free.
+    {
+      const { data: startRes, error: startErr } = await supabase.rpc("start_stream_session" as never);
+      const res = (startRes ?? null) as { status?: string; session_id?: string } | null;
+      if (startErr || !res || (res.status !== "ok") || !res.session_id) {
+        startingRef.current = false;
+        if (res?.status === "conflict") {
+          setError(
+            "You already have an active stream (possibly in another tab or device). Stop it there first — or if it just closed unexpectedly, wait about 30 seconds and try again.",
+          );
+        } else {
+          setError("Couldn't start your stream — please try again.");
+        }
+        return;
+      }
+      sessionIdRef.current = res.session_id;
+      try { recorderRef.current?.setSessionId(sessionIdRef.current); } catch {}
+    }
+
     setConnecting(true);
 
     let stream: MediaStream;
@@ -521,6 +543,11 @@ function StreamPage() {
       console.error("getUserMedia failed", e?.name, e?.message, e);
       setConnecting(false);
       startingRef.current = false;
+      if (sessionIdRef.current) {
+        const sid = sessionIdRef.current;
+        sessionIdRef.current = null;
+        void supabase.from("stream_sessions").update({ ended_at: new Date().toISOString() } as never).eq("id", sid);
+      }
       const name = e?.name || "";
       if (name === "NotAllowedError" || name === "SecurityError") {
         setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
@@ -597,6 +624,11 @@ function StreamPage() {
       teardownStream();
       setConnecting(false);
       startingRef.current = false;
+      if (sessionIdRef.current) {
+        const sid = sessionIdRef.current;
+        sessionIdRef.current = null;
+        void supabase.from("stream_sessions").update({ ended_at: new Date().toISOString() } as never).eq("id", sid);
+      }
       const msg = e instanceof Error ? e.message : String(e ?? "");
       if (msg.includes("Another stream is already active") || msg.includes("Insufficient credits")) {
         setError(msg);
@@ -627,19 +659,9 @@ function StreamPage() {
     setDuration(0);
     setConnecting(false);
 
-    // CRITICAL: create the stream_sessions row and populate sessionIdRef BEFORE
-    // enabling the meter tick. If streaming is turned on first, the tick can
-    // fire with p_session_id=null, wallet gets deducted but
-    // stream_sessions.credits_used stays 0, and endStream's
-    // log_usage_transaction then double-charges via v_delta.
+    // sessionIdRef was set up-front by start_stream_session() before Decart
+    // connected. Just record the initial image + start event now.
     if (user) {
-      const { data: sess } = await supabase.from("stream_sessions").insert({
-        user_id: user.id,
-      } as never).select("id").maybeSingle();
-      sessionIdRef.current = (sess as { id?: string } | null)?.id ?? null;
-      try {
-        recorderRef.current?.setSessionId(sessionIdRef.current);
-      } catch {}
       let initialImagePath: string | null = null;
       if (referenceImage) {
         initialImagePath = await uploadSwapImage({
