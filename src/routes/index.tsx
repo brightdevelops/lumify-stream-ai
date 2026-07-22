@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { Zap, CreditCard, Wand2, Check } from "lucide-react";
+import SideRays from "@/components/SideRays";
 
 
 export const Route = createFileRoute("/")({
