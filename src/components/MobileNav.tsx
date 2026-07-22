@@ -17,7 +17,7 @@ const items = [
 export function MobileNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -78,7 +78,7 @@ export function MobileNav() {
             <button
               onClick={async () => {
                 setOpen(false);
-                await supabase.auth.signOut();
+                await signOut();
                 navigate({ to: "/" });
               }}
               className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
