@@ -3,6 +3,25 @@ import { useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
+import { parseStoredSupabaseSession } from "@/lib/supabase-session-storage";
+
+async function flushExpiredStoredSession() {
+  if (typeof window === "undefined") return;
+  for (let i = 0; i < window.localStorage.length; i += 1) {
+    const key = window.localStorage.key(i);
+    if (!key?.startsWith("sb-") || !key.endsWith("-auth-token")) continue;
+    const stored = parseStoredSupabaseSession(window.localStorage.getItem(key));
+    const exp = (stored as any)?.expires_at as number | undefined;
+    if (stored && typeof exp === "number" && exp * 1000 < Date.now()) {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        // ignore — best-effort flush
+      }
+      return;
+    }
+  }
+}
 
 export function AuthShell({
   mode,
