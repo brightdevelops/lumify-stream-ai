@@ -43,6 +43,13 @@ export function AuthShell({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    turnstileRef.current?.reset();
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -55,6 +62,10 @@ export function AuthShell({
       setError("Password must be at least 8 characters");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the human verification.");
+      return;
+    }
     setLoading(true);
     try {
       await flushExpiredStoredSession();
@@ -65,17 +76,23 @@ export function AuthShell({
           options: {
             emailRedirectTo: `${window.location.origin}/dashboard`,
             data: { full_name: name },
+            captchaToken,
           },
         });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+          options: { captchaToken },
+        } as any);
         if (error) throw error;
         (supabase.rpc as any)("record_login").then(() => {}, () => {});
       }
       navigate({ to: "/dashboard" });
     } catch (err: any) {
       setError(err?.message ?? "Something went wrong");
+      resetCaptcha();
     } finally {
       setLoading(false);
     }
