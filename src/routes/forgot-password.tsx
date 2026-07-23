@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
+
+const TURNSTILE_SITE_KEY = "0x4AAAAAAD77-FQ0SwtMxBSL";
 
 export const Route = createFileRoute("/forgot-password")({
   component: ForgotPassword,
@@ -12,23 +15,33 @@ function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!captchaToken) {
+      setError("Please complete the human verification.");
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
+        captchaToken,
       });
       if (error) throw error;
       setSent(true);
     } catch (err: any) {
       setError(err?.message ?? "Something went wrong");
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen grid place-items-center bg-background px-4 py-12">
