@@ -1,9 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { parseStoredSupabaseSession } from "@/lib/supabase-session-storage";
+
+const TURNSTILE_SITE_KEY = "0x4AAAAAAD77-FQ0SwtMxBSL";
 
 async function flushExpiredStoredSession() {
   if (typeof window === "undefined") return;
