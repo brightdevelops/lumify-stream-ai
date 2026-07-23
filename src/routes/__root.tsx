@@ -65,8 +65,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:title", content: "Lumify — Real-time AI video transformation" },
       { name: "twitter:description", content: "Lumify transforms your live stream with intelligent light. Real-time AI video, pay as you stream." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1e23754-9480-4238-bc33-7c0b93e18543" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1e23754-9480-4238-bc33-7c0b93e18543" },
+      { property: "og:image", content: "https://lumifylive.com/og-image.png" },
+      { name: "twitter:image", content: "https://lumifylive.com/og-image.png" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
