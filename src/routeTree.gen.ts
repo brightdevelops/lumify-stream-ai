@@ -27,6 +27,7 @@ import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorUsersRouteImport } from './routes/inventor.users'
 import { Route as InventorSupportRouteImport } from './routes/inventor.support'
 import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
+import { Route as InventorPurchasesRouteImport } from './routes/inventor.purchases'
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
 import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
 import { Route as InventorIpSearchRouteImport } from './routes/inventor.ip-search'
@@ -134,6 +135,11 @@ const InventorSupportRoute = InventorSupportRouteImport.update({
 const InventorRecordingsRoute = InventorRecordingsRouteImport.update({
   id: '/recordings',
   path: '/recordings',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorPurchasesRoute = InventorPurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
   getParentRoute: () => InventorRoute,
 } as any)
 const InventorMonitorRoute = InventorMonitorRouteImport.update({
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/purchases': typeof InventorPurchasesRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
@@ -298,6 +305,7 @@ export interface FileRoutesByTo {
   '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/purchases': typeof InventorPurchasesRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
@@ -338,6 +346,7 @@ export interface FileRoutesById {
   '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
+  '/inventor/purchases': typeof InventorPurchasesRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/users': typeof InventorUsersRoute
@@ -378,6 +387,7 @@ export interface FileRouteTypes {
     | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
+    | '/inventor/purchases'
     | '/inventor/recordings'
     | '/inventor/support'
     | '/inventor/users'
@@ -415,6 +425,7 @@ export interface FileRouteTypes {
     | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
+    | '/inventor/purchases'
     | '/inventor/recordings'
     | '/inventor/support'
     | '/inventor/users'
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
+    | '/inventor/purchases'
     | '/inventor/recordings'
     | '/inventor/support'
     | '/inventor/users'
@@ -622,6 +634,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventorRecordingsRouteImport
       parentRoute: typeof InventorRoute
     }
+    '/inventor/purchases': {
+      id: '/inventor/purchases'
+      path: '/purchases'
+      fullPath: '/inventor/purchases'
+      preLoaderRoute: typeof InventorPurchasesRouteImport
+      parentRoute: typeof InventorRoute
+    }
     '/inventor/monitor': {
       id: '/inventor/monitor'
       path: '/monitor'
@@ -783,6 +802,7 @@ interface InventorRouteChildren {
   InventorIpSearchRoute: typeof InventorIpSearchRoute
   InventorLedgerRoute: typeof InventorLedgerRoute
   InventorMonitorRoute: typeof InventorMonitorRoute
+  InventorPurchasesRoute: typeof InventorPurchasesRoute
   InventorRecordingsRoute: typeof InventorRecordingsRoute
   InventorSupportRoute: typeof InventorSupportRoute
   InventorUsersRoute: typeof InventorUsersRoute
@@ -794,6 +814,7 @@ const InventorRouteChildren: InventorRouteChildren = {
   InventorIpSearchRoute: InventorIpSearchRoute,
   InventorLedgerRoute: InventorLedgerRoute,
   InventorMonitorRoute: InventorMonitorRoute,
+  InventorPurchasesRoute: InventorPurchasesRoute,
   InventorRecordingsRoute: InventorRecordingsRoute,
   InventorSupportRoute: InventorSupportRoute,
   InventorUsersRoute: InventorUsersRoute,
@@ -832,13 +853,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
