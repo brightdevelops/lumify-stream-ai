@@ -763,7 +763,7 @@ function ProfitStat({ label, value, sub, tone }: { label: string; value: string;
 // transactions.description when crediting a purchase.
 function paymentMethod(description: string | null): "card" | "unknown" {
   if (!description) return "unknown";
-  if (description.includes("Flutterwave:")) return "card";
+  if (description.includes("Korapay:") || description.includes("Flutterwave:")) return "card";
   return "unknown";
 }
 

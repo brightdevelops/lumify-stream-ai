@@ -86,8 +86,8 @@ function TrustPage() {
 
           <Section icon={Lock} title="Payments">
             <p>
-              Card and bank payments are processed by Flutterwave. Lumify never sees full card
-              numbers. Every successful payment is verified server-side against Flutterwave before
+              Card and bank payments are processed by Korapay. Lumify never sees full card
+              numbers. Every successful payment is verified server-side against Korapay before
               credits are issued, and webhook callbacks are signature-checked.
             </p>
           </Section>
