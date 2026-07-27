@@ -40,7 +40,7 @@ function CreditsPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
-  const [issueMethod, setIssueMethod] = useState<"flutterwave" | "other">("flutterwave");
+  const [issueMethod, setIssueMethod] = useState<"flutterwave" | "korapay" | "other">("flutterwave");
   const [issueRef, setIssueRef] = useState("");
   const [issueMsg, setIssueMsg] = useState("");
   const [issueSubmitting, setIssueSubmitting] = useState(false);
@@ -52,30 +52,55 @@ function CreditsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("flutterwave") !== "1") return;
-    const txRef = params.get("tx_ref");
-    const transactionId = params.get("transaction_id");
-    const status = params.get("status");
     if (!user) return;
-    // Strip query early so a refresh doesn't retrigger verification.
-    window.history.replaceState({}, "", "/credits");
-    if (status === "cancelled" || !txRef || !transactionId) {
-      if (status && status !== "successful" && status !== "completed") {
-        setError("Payment was cancelled or did not complete.");
+
+    if (params.get("flutterwave") === "1") {
+      const txRef = params.get("tx_ref");
+      const transactionId = params.get("transaction_id");
+      const status = params.get("status");
+      window.history.replaceState({}, "", "/credits");
+      if (status === "cancelled" || !txRef || !transactionId) {
+        if (status && status !== "successful" && status !== "completed") {
+          setError("Payment was cancelled or did not complete.");
+        }
+        return;
       }
+      setProcessing(true);
+      (async () => {
+        try {
+          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
+          navigate({ to: "/dashboard" });
+        } catch (e: any) {
+          setProcessing(false);
+          setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+        }
+      })();
       return;
     }
-    setProcessing(true);
-    (async () => {
-      try {
-        await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
-        navigate({ to: "/dashboard" });
-      } catch (e: any) {
-        setProcessing(false);
-        setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+
+    if (params.get("korapay") === "1") {
+      const reference = params.get("reference");
+      const status = params.get("status");
+      window.history.replaceState({}, "", "/credits");
+      if (!reference) {
+        if (status && status !== "success" && status !== "successful") {
+          setError("Payment was cancelled or did not complete.");
+        }
+        return;
       }
-    })();
+      setProcessing(true);
+      (async () => {
+        try {
+          await verifyKorapayAndCredit({ data: { reference } });
+          navigate({ to: "/dashboard" });
+        } catch (e: any) {
+          setProcessing(false);
+          setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+        }
+      })();
+    }
   }, [user, navigate]);
+
 
   const submitIssue = async () => {
     if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
