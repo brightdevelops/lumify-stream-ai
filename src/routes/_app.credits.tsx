@@ -248,14 +248,15 @@ function CreditsPage() {
                   <p className="text-sm text-emerald-500">Thanks — we received your report. The team will reach out shortly.</p>
                 ) : (
                   <>
-                    <div className="flex gap-1 text-xs">
-                      {(["flutterwave", "other"] as const).map((m) => (
+                    <div className="flex flex-wrap gap-1 text-xs">
+                      {(["flutterwave", "korapay", "other"] as const).map((m) => (
                         <button key={m} onClick={() => setIssueMethod(m)}
                           className={`px-3 py-1 rounded-md border capitalize ${issueMethod === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
                           {m}
                         </button>
                       ))}
                     </div>
+
                     <input
                       value={issueRef}
                       onChange={(e) => setIssueRef(e.target.value)}
