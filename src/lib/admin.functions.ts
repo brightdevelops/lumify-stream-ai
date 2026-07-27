@@ -267,4 +267,128 @@ export const adminUpdatePaymentIssue = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Full per-user history: profile snapshot + all transactions + stream sessions.
+export type UserHistoryStreamSession = {
+  id: string;
+  started_at: string;
+  ended_at: string | null;
+  last_heartbeat: string;
+  credits_used: number;
+  duration_seconds: number;
+};
+
+export type UserHistoryPayload = {
+  profile: {
+    id: string;
+    email: string;
+    full_name: string | null;
+    created_at: string;
+    balance: number;
+    last_seen: string | null;
+    last_country: string | null;
+    last_ip: string | null;
+    is_vpn: boolean | null;
+    banned: boolean;
+    is_admin: boolean;
+  } | null;
+  transactions: Omit<TransactionRow, "user_id" | "user_email">[];
+  sessions: UserHistoryStreamSession[];
+  totals: {
+    purchases_count: number;
+    purchased_credits: number;
+    revenue_ngn: number;
+    usage_count: number;
+    used_credits: number;
+    adjustments_count: number;
+    adjustments_credits: number;
+    sessions_count: number;
+    total_stream_seconds: number;
+  };
+};
+
+export const adminUserHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string }) => input)
+  .handler(async ({ context, data }): Promise<UserHistoryPayload> => {
+    await assertAdminEmail(context.userId, context.claims?.email as string | undefined);
+
+    const [{ data: profile }, { data: txRows, error: txErr }, { data: sessRows, error: sessErr }, { data: credit }] =
+      await Promise.all([
+        supabaseAdmin
+          .from("profiles")
+          .select("id, email, full_name, created_at, last_seen, last_country, last_ip, is_vpn, banned, is_admin")
+          .eq("id", data.userId)
+          .maybeSingle(),
+        context.supabase.rpc("admin_user_transactions", { p_user: data.userId }),
+        supabaseAdmin
+          .from("stream_sessions")
+          .select("id, started_at, ended_at, last_heartbeat, credits_used")
+          .eq("user_id", data.userId)
+          .order("started_at", { ascending: false })
+          .limit(500),
+        supabaseAdmin.from("credits").select("balance").eq("user_id", data.userId).maybeSingle(),
+      ]);
+    if (txErr) throw new Error(txErr.message);
+    if (sessErr) throw new Error(sessErr.message);
+
+    const transactions = (txRows ?? []) as Omit<TransactionRow, "user_id" | "user_email">[];
+    const sessions: UserHistoryStreamSession[] = (sessRows ?? []).map((s) => {
+      const start = new Date(s.started_at).getTime();
+      const endIso = s.ended_at ?? s.last_heartbeat;
+      const end = endIso ? new Date(endIso).getTime() : start;
+      return {
+        id: s.id,
+        started_at: s.started_at,
+        ended_at: s.ended_at,
+        last_heartbeat: s.last_heartbeat,
+        credits_used: Number(s.credits_used) || 0,
+        duration_seconds: Math.max(0, Math.round((end - start) / 1000)),
+      };
+    });
+
+    let purchases_count = 0, purchased_credits = 0, revenue_ngn = 0;
+    let usage_count = 0, used_credits = 0;
+    let adjustments_count = 0, adjustments_credits = 0;
+    for (const t of transactions) {
+      const c = Number(t.credits) || 0;
+      const a = Number(t.amount) || 0;
+      if (t.type === "purchase") { purchases_count++; purchased_credits += c; revenue_ngn += a; }
+      else if (t.type === "usage") { usage_count++; used_credits += Math.abs(c); }
+      else if (c !== 0) { adjustments_count++; adjustments_credits += c; }
+    }
+    const total_stream_seconds = sessions.reduce((s, x) => s + x.duration_seconds, 0);
+
+    return {
+      profile: profile
+        ? {
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            created_at: profile.created_at,
+            balance: Number(credit?.balance ?? 0),
+            last_seen: profile.last_seen,
+            last_country: profile.last_country,
+            last_ip: profile.last_ip,
+            is_vpn: profile.is_vpn,
+            banned: !!profile.banned,
+            is_admin: !!profile.is_admin,
+          }
+        : null,
+      transactions,
+      sessions,
+      totals: {
+        purchases_count,
+        purchased_credits,
+        revenue_ngn,
+        usage_count,
+        used_credits,
+        adjustments_count,
+        adjustments_credits,
+        sessions_count: sessions.length,
+        total_stream_seconds,
+      },
+    };
+  });
+
+
 
