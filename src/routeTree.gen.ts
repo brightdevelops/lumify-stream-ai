@@ -31,6 +31,7 @@ import { Route as InventorPurchasesRouteImport } from './routes/inventor.purchas
 import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
 import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
 import { Route as InventorIpSearchRouteImport } from './routes/inventor.ip-search'
+import { Route as InventorHistoryRouteImport } from './routes/inventor.history'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AppSupportRouteImport } from './routes/_app.support'
@@ -157,6 +158,11 @@ const InventorIpSearchRoute = InventorIpSearchRouteImport.update({
   path: '/ip-search',
   getParentRoute: () => InventorRoute,
 } as any)
+const InventorHistoryRoute = InventorHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => InventorRoute,
+} as any)
 const InventorFinanceRoute = InventorFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -264,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof AppSupportRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/history': typeof InventorHistoryRoute
   '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/support': typeof AppSupportRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/history': typeof InventorHistoryRoute
   '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
@@ -343,6 +351,7 @@ export interface FileRoutesById {
   '/_app/support': typeof AppSupportRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
+  '/inventor/history': typeof InventorHistoryRoute
   '/inventor/ip-search': typeof InventorIpSearchRoute
   '/inventor/ledger': typeof InventorLedgerRoute
   '/inventor/monitor': typeof InventorMonitorRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/email/unsubscribe'
     | '/inventor/finance'
+    | '/inventor/history'
     | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/email/unsubscribe'
     | '/inventor/finance'
+    | '/inventor/history'
     | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/_app/support'
     | '/email/unsubscribe'
     | '/inventor/finance'
+    | '/inventor/history'
     | '/inventor/ip-search'
     | '/inventor/ledger'
     | '/inventor/monitor'
@@ -662,6 +674,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InventorIpSearchRouteImport
       parentRoute: typeof InventorRoute
     }
+    '/inventor/history': {
+      id: '/inventor/history'
+      path: '/history'
+      fullPath: '/inventor/history'
+      preLoaderRoute: typeof InventorHistoryRouteImport
+      parentRoute: typeof InventorRoute
+    }
     '/inventor/finance': {
       id: '/inventor/finance'
       path: '/finance'
@@ -799,6 +818,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 interface InventorRouteChildren {
   InventorFinanceRoute: typeof InventorFinanceRoute
+  InventorHistoryRoute: typeof InventorHistoryRoute
   InventorIpSearchRoute: typeof InventorIpSearchRoute
   InventorLedgerRoute: typeof InventorLedgerRoute
   InventorMonitorRoute: typeof InventorMonitorRoute
@@ -811,6 +831,7 @@ interface InventorRouteChildren {
 
 const InventorRouteChildren: InventorRouteChildren = {
   InventorFinanceRoute: InventorFinanceRoute,
+  InventorHistoryRoute: InventorHistoryRoute,
   InventorIpSearchRoute: InventorIpSearchRoute,
   InventorLedgerRoute: InventorLedgerRoute,
   InventorMonitorRoute: InventorMonitorRoute,
