@@ -99,7 +99,7 @@ function CreditsPage() {
     }
   };
 
-  const handlePayment = async (provider: "flutterwave" | "korapay") => {
+  const handlePayment = async () => {
     if (purchasesPaused) return;
     if (!user?.email) {
       setError("You must be logged in.");
@@ -109,10 +109,7 @@ function CreditsPage() {
     setProcessing(true);
     try {
       const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
-      const { checkoutUrl } =
-        provider === "korapay"
-          ? await createKorapayCheckout({ data: { packId } })
-          : await createFlutterwaveCheckout({ data: { packId } });
+      const { checkoutUrl } = await createKorapayCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
