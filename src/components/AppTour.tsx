@@ -2,8 +2,9 @@ import { useEffect } from "react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { useAuth } from "@/hooks/use-auth";
+import { useRouterState } from "@tanstack/react-router";
 
-const TOUR_KEY = "lumify_tour_v1_completed";
+const TOUR_KEY = "lumify_tour_v2_stream_completed";
 
 export function startTour() {
   const d = driver({
