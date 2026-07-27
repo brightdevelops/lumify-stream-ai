@@ -98,6 +98,8 @@ export function AppTour() {
   useEffect(() => {
     if (loading || !user) return;
     if (typeof window === "undefined") return;
+    // Only auto-start the tour on the Stream page
+    if (window.location.pathname !== "/stream") return;
     let done = "1";
     try { done = localStorage.getItem(TOUR_KEY) ?? ""; } catch { /* noop */ }
     if (done === "1") return;
