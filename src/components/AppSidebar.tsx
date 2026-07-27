@@ -79,7 +79,7 @@ export function AppSidebar() {
         )}
       </nav>
       <div className="p-3 space-y-2">
-        <div className="rounded-2xl border border-[color:var(--border-soft)] bg-card p-3.5">
+        <div data-tour="balance" className="rounded-2xl border border-[color:var(--border-soft)] bg-card p-3.5">
           <div className="eyebrow text-[10px]">Balance</div>
           <div className="mt-1 font-display text-xl text-foreground">
             {balance === null ? "—" : balance.toLocaleString()} <span className="text-[11px] text-[color:var(--faint)]">credits</span>
