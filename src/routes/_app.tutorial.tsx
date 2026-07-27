@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { GraduationCap, PlayCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/tutorial")({
   head: () => ({
@@ -13,13 +15,27 @@ export const Route = createFileRoute("/_app/tutorial")({
   component: TutorialPage,
 });
 
-const videos = [
-  { title: "Getting started with Lumify", desc: "Create your account, top up your wallet, and go live for the first time.", url: "" },
-  { title: "Connecting Lumify to OBS", desc: "Copy your OBS browser source URL and stream your AI persona anywhere.", url: "" },
-  { title: "Choosing the right mode & realism", desc: "When to use Realistic vs Stylized and how the realism slider affects your look.", url: "" },
-];
+type Tutorial = {
+  id: string;
+  title: string;
+  description: string;
+  video_url: string;
+};
 
 function TutorialPage() {
+  const [items, setItems] = useState<Tutorial[] | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("tutorials")
+        .select("id, title, description, video_url")
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false });
+      setItems((data ?? []) as Tutorial[]);
+    })();
+  }, []);
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-8">
@@ -34,20 +50,28 @@ function TutorialPage() {
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {videos.map((v) => (
-          <div key={v.title} className="card-lift rounded-2xl border border-[color:var(--border-soft)] bg-card overflow-hidden">
-            <div className="aspect-video bg-[color:var(--sidebar)] grid place-items-center text-[color:var(--faint)]">
-              <PlayCircle className="h-10 w-10" />
+      {items === null ? (
+        <p className="text-sm text-[color:var(--muted-foreground)]">Loading tutorials…</p>
+      ) : items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[color:var(--border-soft)] bg-card p-10 text-center">
+          <PlayCircle className="h-10 w-10 mx-auto text-[color:var(--faint)] mb-3" />
+          <p className="text-sm text-[color:var(--muted-foreground)]">No tutorials yet. Check back soon.</p>
+        </div>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {items.map((v) => (
+            <div key={v.id} className="card-lift rounded-2xl border border-[color:var(--border-soft)] bg-card overflow-hidden">
+              <video src={v.video_url} controls preload="metadata" className="w-full aspect-video bg-[color:var(--sidebar)]" />
+              <div className="p-4">
+                <div className="font-semibold text-[15px]">{v.title}</div>
+                {v.description && (
+                  <p className="mt-1 text-[13px] text-[color:var(--muted-foreground)]">{v.description}</p>
+                )}
+              </div>
             </div>
-            <div className="p-4">
-              <div className="font-semibold text-[15px]">{v.title}</div>
-              <p className="mt-1 text-[13px] text-[color:var(--muted-foreground)]">{v.desc}</p>
-              <div className="mt-3 eyebrow text-[10px] text-[color:var(--faint)]">Coming soon</div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
