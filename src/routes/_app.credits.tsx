@@ -172,25 +172,15 @@ function CreditsPage() {
           </div>
 
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-          <div className={`mt-6 grid gap-3 ${korapayEnabled ? "sm:grid-cols-2" : ""}`}>
+          <div className="mt-6">
             <button
-              onClick={() => handlePayment("flutterwave")}
+              onClick={() => handlePayment()}
               disabled={processing || purchasesPaused}
               title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
-              className="rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Flutterwave"}
+              {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Korapay"}
             </button>
-            {korapayEnabled && (
-              <button
-                onClick={() => handlePayment("korapay")}
-                disabled={processing || purchasesPaused}
-                title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
-                className="rounded-md border border-primary/50 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Korapay"}
-              </button>
-            )}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             Card, bank transfer, USSD & mobile money — all in NGN. Pick whichever provider works best for you.
