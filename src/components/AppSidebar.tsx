@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Wrench, LifeBuoy, Plus } from "lucide-react";
+import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Wrench, GraduationCap, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +14,7 @@ const items = [
 
 const secondary = [
   { to: "/settings", label: "Settings", icon: Settings },
-  { to: "/support", label: "Support", icon: LifeBuoy },
+  { to: "/tutorial", label: "Tutorial", icon: GraduationCap },
 ] as const;
 
 export function AppSidebar() {
