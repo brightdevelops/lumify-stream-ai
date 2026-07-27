@@ -66,7 +66,7 @@ export function AuthShell({
       setError("Password must be at least 8 characters");
       return;
     }
-    if (!captchaToken) {
+    if (captchaRequired && !captchaToken) {
       setError("Please complete the human verification.");
       return;
     }
