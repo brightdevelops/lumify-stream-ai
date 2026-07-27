@@ -34,6 +34,7 @@ import { Route as InventorIpSearchRouteImport } from './routes/inventor.ip-searc
 import { Route as InventorHistoryRouteImport } from './routes/inventor.history'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as AppTutorialRouteImport } from './routes/_app.tutorial'
 import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppStreamRouteImport } from './routes/_app.stream'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
@@ -173,6 +174,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppTutorialRoute = AppTutorialRouteImport.update({
+  id: '/tutorial',
+  path: '/tutorial',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSupportRoute = AppSupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -268,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
   '/support': typeof AppSupportRoute
+  '/tutorial': typeof AppTutorialRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/stream': typeof AppStreamRoute
   '/support': typeof AppSupportRoute
+  '/tutorial': typeof AppTutorialRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/stream': typeof AppStreamRoute
   '/_app/support': typeof AppSupportRoute
+  '/_app/tutorial': typeof AppTutorialRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stream'
     | '/support'
+    | '/tutorial'
     | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/stream'
     | '/support'
+    | '/tutorial'
     | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
@@ -471,6 +482,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/stream'
     | '/_app/support'
+    | '/_app/tutorial'
     | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
@@ -695,6 +707,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/tutorial': {
+      id: '/_app/tutorial'
+      path: '/tutorial'
+      fullPath: '/tutorial'
+      preLoaderRoute: typeof AppTutorialRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/support': {
       id: '/_app/support'
       path: '/support'
@@ -803,6 +822,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppStreamRoute: typeof AppStreamRoute
   AppSupportRoute: typeof AppSupportRoute
+  AppTutorialRoute: typeof AppTutorialRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -812,6 +832,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppStreamRoute: AppStreamRoute,
   AppSupportRoute: AppSupportRoute,
+  AppTutorialRoute: AppTutorialRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
