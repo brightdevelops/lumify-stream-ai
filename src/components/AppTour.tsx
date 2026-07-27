@@ -4,9 +4,18 @@ import "driver.js/dist/driver.css";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouterState } from "@tanstack/react-router";
 
-const TOUR_KEY = "lumify_tour_v2_stream_completed";
+const TOUR_KEY = "lumify_tour_v3_dashboard_stream_completed";
+const AUTO_TOUR_PATHS = new Set(["/stream", "/dashboard"]);
+const TOUR_TARGET_BY_PATH: Record<string, string> = {
+  "/stream": '[data-tour="stream"]',
+  "/dashboard": '[data-tour="dashboard"]',
+};
+
+let tourRunning = false;
 
 export function startTour() {
+  if (tourRunning || document.querySelector(".driver-popover")) return;
+  tourRunning = true;
   const d = driver({
     showProgress: true,
     allowClose: true,
@@ -83,6 +92,7 @@ export function startTour() {
       },
     ],
     onDestroyed: () => {
+      tourRunning = false;
       try { localStorage.setItem(TOUR_KEY, "1"); } catch { /* noop */ }
     },
   });
@@ -100,15 +110,21 @@ export function AppTour() {
   useEffect(() => {
     if (loading || !user) return;
     if (typeof window === "undefined") return;
-    if (pathname !== "/stream" && pathname !== "/dashboard") return;
+    if (!AUTO_TOUR_PATHS.has(pathname)) return;
     let done = "1";
     try { done = localStorage.getItem(TOUR_KEY) ?? ""; } catch { /* noop */ }
     if (done === "1") return;
-    // Wait for sidebar/support widget to mount
-    const t = window.setTimeout(() => {
-      if (document.querySelector('[data-tour="stream"]')) startTour();
-    }, 800);
-    return () => window.clearTimeout(t);
+    let attempts = 0;
+    const target = TOUR_TARGET_BY_PATH[pathname];
+    const t = window.setInterval(() => {
+      attempts += 1;
+      if (target && document.querySelector(target)) {
+        window.clearInterval(t);
+        startTour();
+      }
+      if (attempts >= 20) window.clearInterval(t);
+    }, 250);
+    return () => window.clearInterval(t);
   }, [user, loading, pathname]);
 
   return null;
