@@ -95,21 +95,21 @@ export function resetTour() {
 
 export function AppTour() {
   const { user, loading } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     if (loading || !user) return;
     if (typeof window === "undefined") return;
-    // Only auto-start the tour on the Stream page
-    if (window.location.pathname !== "/stream") return;
+    if (pathname !== "/stream") return;
     let done = "1";
     try { done = localStorage.getItem(TOUR_KEY) ?? ""; } catch { /* noop */ }
     if (done === "1") return;
     // Wait for sidebar/support widget to mount
     const t = window.setTimeout(() => {
-      if (document.querySelector('[data-tour="dashboard"]')) startTour();
+      if (document.querySelector('[data-tour="stream"]')) startTour();
     }, 800);
     return () => window.clearTimeout(t);
-  }, [user, loading]);
+  }, [user, loading, pathname]);
 
   return null;
 }
