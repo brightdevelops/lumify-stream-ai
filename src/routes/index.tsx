@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Play, ArrowRight, Sparkles, Zap, Palette, Monitor, CreditCard, Lock,
-  Camera, Wand2, Radio, Check, Plus, Minus,
+  Camera, Check, Plus, Minus,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
