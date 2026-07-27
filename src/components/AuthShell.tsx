@@ -80,7 +80,7 @@ export function AuthShell({
           options: {
             emailRedirectTo: `${window.location.origin}/dashboard`,
             data: { full_name: name },
-            captchaToken,
+            ...(captchaToken ? { captchaToken } : {}),
           },
         });
         if (error) throw error;
@@ -88,7 +88,7 @@ export function AuthShell({
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
-          options: { captchaToken },
+          options: captchaToken ? { captchaToken } : {},
         } as any);
         if (error) throw error;
         (supabase.rpc as any)("record_login").then(() => {}, () => {});
