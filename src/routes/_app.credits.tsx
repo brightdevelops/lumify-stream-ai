@@ -46,35 +46,11 @@ function CreditsPage() {
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
 
-  // Handle Flutterwave redirect callback: /credits?flutterwave=1&status=&tx_ref=&transaction_id=
+  // Handle Korapay redirect callback: /credits?korapay=1&reference=...
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (!user) return;
-
-    if (params.get("flutterwave") === "1") {
-      const txRef = params.get("tx_ref");
-      const transactionId = params.get("transaction_id");
-      const status = params.get("status");
-      window.history.replaceState({}, "", "/credits");
-      if (status === "cancelled" || !txRef || !transactionId) {
-        if (status && status !== "successful" && status !== "completed") {
-          setError("Payment was cancelled or did not complete.");
-        }
-        return;
-      }
-      setProcessing(true);
-      (async () => {
-        try {
-          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
-          navigate({ to: "/dashboard" });
-        } catch (e: any) {
-          setProcessing(false);
-          setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
-        }
-      })();
-      return;
-    }
 
     if (params.get("korapay") === "1") {
       const reference = params.get("reference");
