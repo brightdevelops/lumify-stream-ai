@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Play, ArrowRight, Sparkles, Zap, Palette, Monitor, CreditCard, Lock,
-  Camera, Wand2, Radio, Check, Plus, Minus,
+  Camera, Check, Plus, Minus,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -123,14 +123,14 @@ function Landing() {
               <span className="ml-3 text-[11px] text-[color:var(--faint)]">lumify.live/studio</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-6 p-6 md:p-10">
-              <DemoPanel label="Your camera" muted />
-              <div className="grid place-items-center">
+              <DemoPanel variant="camera" />
+              <div className="grid place-items-center rotate-90 md:rotate-0">
                 <div className="grid h-11 w-11 place-items-center rounded-full bg-primary text-[color:var(--primary-foreground)]"
                      style={{ boxShadow: "0 0 30px var(--accent-glow)" }}>
                   <ArrowRight size={18} />
                 </div>
               </div>
-              <DemoPanel label="Lumify output" glow />
+              <DemoPanel variant="output" />
             </div>
           </div>
 
@@ -284,29 +284,114 @@ function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
   );
 }
 
-function DemoPanel({ label, muted, glow }: { label: string; muted?: boolean; glow?: boolean }) {
+function DemoPanel({ variant }: { variant: "camera" | "output" }) {
+  const isOutput = variant === "output";
   return (
-    <div className={`relative rounded-xl border overflow-hidden aspect-[4/3] ${glow ? "border-[color:var(--primary)]" : ""}`}
-         style={glow ? { boxShadow: "0 0 40px -10px var(--accent-glow), inset 0 0 40px -20px var(--accent-glow)" } : undefined}>
-      <div className="absolute inset-0"
-           style={{
-             background: glow
-               ? "radial-gradient(80% 80% at 50% 40%, rgba(198,242,78,0.15), #0b0d0a 80%)"
-               : "linear-gradient(180deg, #1a1d15 0%, #0e1108 100%)",
-           }} />
-      <div className="absolute top-3 left-3 eyebrow text-[10px]">{label}</div>
-      <div className="absolute inset-0 grid place-items-center">
-        {glow ? (
-          <Wand2 size={44} className="text-primary opacity-90" />
-        ) : (
-          <Camera size={44} className={muted ? "text-[color:var(--faint)]" : "text-[color:var(--muted-foreground)]"} />
+    <div className="space-y-3">
+      <div
+        className={`relative rounded-xl border overflow-hidden ${isOutput ? "border-[color:var(--primary)]" : ""}`}
+        style={{
+          aspectRatio: "16 / 11",
+          ...(isOutput
+            ? { boxShadow: "0 0 40px -10px var(--accent-glow), inset 0 0 40px -20px var(--accent-glow)" }
+            : {}),
+        }}
+      >
+        {/* backdrop */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: isOutput
+              ? "radial-gradient(70% 70% at 50% 45%, rgba(198,242,78,0.18), #0b0d0a 82%)"
+              : "radial-gradient(70% 70% at 50% 45%, #1c2016 0%, #0b0d0a 85%)",
+          }}
+        />
+
+        {/* silhouette */}
+        <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
+          <defs>
+            <linearGradient id={`sil-${variant}`} x1="0" x2="0" y1="0" y2="1">
+              {isOutput ? (
+                <>
+                  <stop offset="0%" stopColor="#c6f24e" stopOpacity="0.85" />
+                  <stop offset="100%" stopColor="#3a5a12" stopOpacity="0.55" />
+                </>
+              ) : (
+                <>
+                  <stop offset="0%" stopColor="#4a5240" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.9" />
+                </>
+              )}
+            </linearGradient>
+          </defs>
+          {/* head */}
+          <circle cx="80" cy="46" r="20" fill={`url(#sil-${variant})`} stroke={isOutput ? "#c6f24e" : "none"} strokeWidth={isOutput ? 0.6 : 0} />
+          {/* shoulders */}
+          <path
+            d="M40 110 C46 82, 68 70, 80 70 C92 70, 114 82, 120 110 Z"
+            fill={`url(#sil-${variant})`}
+            stroke={isOutput ? "#c6f24e" : "none"}
+            strokeWidth={isOutput ? 0.6 : 0}
+          />
+          {isOutput && (
+            <>
+              <circle cx="55" cy="30" r="0.7" fill="#c6f24e" />
+              <circle cx="120" cy="38" r="0.9" fill="#c6f24e" />
+              <circle cx="112" cy="20" r="0.6" fill="#c6f24e" />
+              <circle cx="42" cy="60" r="0.7" fill="#c6f24e" />
+              <circle cx="135" cy="72" r="0.8" fill="#c6f24e" />
+            </>
+          )}
+        </svg>
+
+        {/* scanline overlay for camera */}
+        {!isOutput && (
+          <div
+            className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)",
+            }}
+          />
         )}
-      </div>
-      {glow && (
-        <div className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-primary">
-          <Radio size={10} /> Live
+
+        {/* corner label */}
+        <div
+          className={`absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${
+            isOutput
+              ? "border border-[color:var(--primary)] bg-[color:var(--accent-soft)] text-primary"
+              : "border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 text-[color:var(--muted-foreground)]"
+          }`}
+        >
+          {isOutput ? "Lumify output" : "Your camera"}
         </div>
-      )}
+
+        {/* HUD chips */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {isOutput ? (
+            <>
+              <span className="rounded-md border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-primary">
+                Lucy 2.5
+              </span>
+              <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-semibold text-[color:var(--muted-foreground)]">
+                &lt; 120 ms
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[#ff7a6b]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a6b] animate-pulse" /> Rec
+              </span>
+              <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-semibold text-[color:var(--muted-foreground)]">
+                720p
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+      <p className="text-center text-[11.5px] text-[color:var(--faint)]">
+        {isOutput ? "AI-enhanced, in real time" : "Plain webcam feed"}
+      </p>
     </div>
   );
 }
