@@ -792,20 +792,17 @@ function StreamPage() {
           {/* Live preview */}
           <div className="card-surface p-0 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-              <Panel label="Your camera">
-                <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
+              <Panel label="Your camera" streaming={streaming}>
+                {!streaming && <SilhouetteBg variant="camera" />}
+                <video ref={inputVideoRef} muted playsInline className="relative z-[1] h-full w-full object-cover" />
                 {!streaming && <PanelEmpty icon={<CameraIcon size={22} />} title="Camera off" hint="Face a window or lamp for the best AI output" />}
-                {streaming && (
-                  <div className="absolute top-3 right-3 z-10 rounded-md bg-black/70 backdrop-blur px-2 py-1 text-[11px] font-mono text-primary">
-                    {mmss(duration)}
-                  </div>
-                )}
               </Panel>
-              <Panel label="AI output" accent>
-                <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
+              <Panel label="AI output" accent streaming={streaming}>
+                {!streaming && <SilhouetteBg variant="output" />}
+                <video ref={outputVideoRef} muted playsInline className="relative z-[1] h-full w-full object-cover" />
                 {!streaming && <PanelEmpty icon={<Sparkles size={22} />} title="Waiting for stream" hint="Your transformed feed appears here in real time" accent />}
                 {connecting && (
-                  <div className="absolute inset-0 grid place-items-center bg-black/70">
+                  <div className="absolute inset-0 z-[3] grid place-items-center bg-black/70">
                     <div className="text-center">
                       <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
                       <div className="mt-2 text-[12px] text-[color:var(--muted-foreground)]">Connecting to Lucy…</div>
