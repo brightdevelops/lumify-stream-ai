@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle, Info, ChevronDown, Camera as CameraIcon } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle, Info, ChevronDown, Camera as CameraIcon, PictureInPicture2 } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -801,6 +801,33 @@ function StreamPage() {
                 {!streaming && <SilhouetteBg variant="output" />}
                 <video ref={outputVideoRef} muted playsInline className="relative z-[1] h-full w-full object-cover" />
                 {!streaming && <PanelEmpty icon={<Sparkles size={22} />} title="Waiting for stream" hint="Your transformed feed appears here in real time" accent />}
+                {streaming && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const v = outputVideoRef.current;
+                      try {
+                        if (v && document.pictureInPictureEnabled && !v.disablePictureInPicture) {
+                          if (document.pictureInPictureElement === v) {
+                            await document.exitPictureInPicture();
+                          } else {
+                            await v.requestPictureInPicture();
+                          }
+                          return;
+                        }
+                      } catch {
+                        /* fall through to popup */
+                      }
+                      if (obsUrl) {
+                        window.open(obsUrl, "lumify-ai-output", "popup=yes,width=720,height=450,noopener,noreferrer");
+                      }
+                    }}
+                    title="Pop out AI output"
+                    className="absolute bottom-3 right-3 z-[4] inline-flex items-center gap-1.5 rounded-md border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary hover:bg-[color:var(--primary)]/20 transition"
+                  >
+                    <PictureInPicture2 size={12} /> Pop out
+                  </button>
+                )}
                 {connecting && (
                   <div className="absolute inset-0 z-[3] grid place-items-center bg-black/70">
                     <div className="text-center">
