@@ -763,6 +763,39 @@ export type Database = {
           },
         ]
       }
+      tutorials: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          sort_order: number
+          storage_path: string | null
+          title: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          sort_order?: number
+          storage_path?: string | null
+          title: string
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          sort_order?: number
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
