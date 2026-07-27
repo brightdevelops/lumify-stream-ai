@@ -45,6 +45,10 @@ export function AuthShell({
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance | null>(null);
+  const captchaRequired =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "lumifylive.com" ||
+      window.location.hostname === "www.lumifylive.com");
 
   const resetCaptcha = () => {
     setCaptchaToken(null);
@@ -62,7 +66,7 @@ export function AuthShell({
       setError("Password must be at least 8 characters");
       return;
     }
-    if (!captchaToken) {
+    if (captchaRequired && !captchaToken) {
       setError("Please complete the human verification.");
       return;
     }
@@ -76,7 +80,7 @@ export function AuthShell({
           options: {
             emailRedirectTo: `${window.location.origin}/dashboard`,
             data: { full_name: name },
-            captchaToken,
+            ...(captchaToken ? { captchaToken } : {}),
           },
         });
         if (error) throw error;
@@ -84,7 +88,7 @@ export function AuthShell({
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
-          options: { captchaToken },
+          options: captchaToken ? { captchaToken } : {},
         } as any);
         if (error) throw error;
         (supabase.rpc as any)("record_login").then(() => {}, () => {});
@@ -164,18 +168,20 @@ export function AuthShell({
                 </span>
               </label>
             )}
-            <div className="flex justify-center">
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={TURNSTILE_SITE_KEY}
-                options={{ theme: "dark" }}
-                onSuccess={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken(null)}
-                onError={() => setCaptchaToken(null)}
-              />
-            </div>
+            {captchaRequired && (
+              <div className="flex justify-center">
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  options={{ theme: "dark" }}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onExpire={() => setCaptchaToken(null)}
+                  onError={() => setCaptchaToken(null)}
+                />
+              </div>
+            )}
             {error && <p className="text-sm text-red-400">{error}</p>}
-            <button type="submit" disabled={loading || !captchaToken} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
+            <button type="submit" disabled={loading || (captchaRequired && !captchaToken)} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
               {loading ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
             </button>
 
