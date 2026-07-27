@@ -212,7 +212,7 @@ function CreditsPage() {
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-1 text-xs">
-                      {(["flutterwave", "korapay", "other"] as const).map((m) => (
+                      {(["korapay", "other"] as const).map((m) => (
                         <button key={m} onClick={() => setIssueMethod(m)}
                           className={`px-3 py-1 rounded-md border capitalize ${issueMethod === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
                           {m}
