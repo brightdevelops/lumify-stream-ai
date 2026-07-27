@@ -263,7 +263,10 @@ function Landing() {
         <div className="mx-auto max-w-[1160px] px-6 py-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <Logo />
-            <p className="text-[12px] text-[color:var(--faint)]">© 2026 Lumify.</p>
+            <p className="text-[12px] text-[color:var(--faint)]">
+              Support: <a href="mailto:support@lumifylive.com" className="hover:text-foreground">support@lumifylive.com</a>
+            </p>
+            <p className="text-[12px] text-[color:var(--faint)]">© 2026 Bright Solutionslab (BN 9689076). Lumify is a product of Bright Solutionslab.</p>
           </div>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[color:var(--muted-foreground)]">
             <a href="#pricing" className="hover:text-foreground">Pricing</a>
