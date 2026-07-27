@@ -53,6 +53,7 @@ function AppLayout() {
         </main>
       </div>
       <SupportWidget />
+      <AppTour />
     </div>
   );
 }
