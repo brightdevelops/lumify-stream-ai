@@ -38,14 +38,13 @@ function CreditsPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
-  const [issueMethod, setIssueMethod] = useState<"flutterwave" | "korapay" | "other">("flutterwave");
+  const [issueMethod, setIssueMethod] = useState<"korapay" | "other">("korapay");
   const [issueRef, setIssueRef] = useState("");
   const [issueMsg, setIssueMsg] = useState("");
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueSent, setIssueSent] = useState(false);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
-  const korapayEnabled = user?.email?.toLowerCase() === "brightsolutionslab@gmail.com";
 
   // Handle Flutterwave redirect callback: /credits?flutterwave=1&status=&tx_ref=&transaction_id=
   useEffect(() => {
