@@ -801,7 +801,7 @@ function StreamPage() {
                 {!streaming && <SilhouetteBg variant="output" />}
                 <video ref={outputVideoRef} muted playsInline className="relative z-[1] h-full w-full object-cover" />
                 {!streaming && <PanelEmpty icon={<Sparkles size={22} />} title="Waiting for stream" hint="Your transformed feed appears here in real time" accent />}
-                {streaming && (
+                {streaming && user?.email === "brightsolutionslab@gmail.com" && (
                   <button
                     type="button"
                     onClick={() => {
@@ -819,6 +819,7 @@ function StreamPage() {
                     <ExternalLink size={12} /> Pop out
                   </button>
                 )}
+
                 {connecting && (
                   <div className="absolute inset-0 z-[3] grid place-items-center bg-black/70">
                     <div className="text-center">
