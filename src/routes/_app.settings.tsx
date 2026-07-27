@@ -96,6 +96,19 @@ function SettingsPage() {
               />
             </div>
           </section>
+
+          <section className="card-surface">
+            <div className="eyebrow mb-3">Product tour</div>
+            <p className="text-[13.5px] text-[color:var(--muted-foreground)]">
+              Take the quick guided tour of the app again.
+            </p>
+            <button
+              onClick={() => { resetTour(); startTour(); }}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-[13px] font-semibold text-primary hover:bg-[color:var(--accent-soft)]"
+            >
+              <Compass size={14} /> Replay tour
+            </button>
+          </section>
         </div>
 
         {/* Right column */}
