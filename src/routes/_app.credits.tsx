@@ -47,6 +47,7 @@ function CreditsPage() {
   const [issueSent, setIssueSent] = useState(false);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
+  const korapayEnabled = user?.email?.toLowerCase() === "brightsolutionslab@gmail.com";
 
   // Handle Flutterwave redirect callback: /credits?flutterwave=1&status=&tx_ref=&transaction_id=
   useEffect(() => {
