@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
-import { useAuth } from "@/hooks/use-auth";
 import { useRouterState } from "@tanstack/react-router";
 
 const TOUR_KEY = "lumify_tour_v3_dashboard_stream_completed";
@@ -104,11 +103,9 @@ export function resetTour() {
 }
 
 export function AppTour() {
-  const { user, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (loading || !user) return;
     if (typeof window === "undefined") return;
     if (!AUTO_TOUR_PATHS.has(pathname)) return;
     let done = "1";
@@ -125,7 +122,7 @@ export function AppTour() {
       if (attempts >= 20) window.clearInterval(t);
     }, 250);
     return () => window.clearInterval(t);
-  }, [user, loading, pathname]);
+  }, [pathname]);
 
   return null;
 }
