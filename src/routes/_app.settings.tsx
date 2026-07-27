@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Copy, Check, RefreshCw } from "lucide-react";
+import { Copy, Check, RefreshCw, Compass } from "lucide-react";
 import { getMyStreamToken, regenerateMyStreamToken } from "@/lib/stream-token.functions";
 import { useAuth } from "@/hooks/use-auth";
+import { startTour, resetTour } from "@/components/AppTour";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
