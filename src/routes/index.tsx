@@ -266,7 +266,7 @@ function Landing() {
             <p className="text-[12px] text-[color:var(--faint)]">
               Support: <a href="mailto:support@lumifylive.com" className="hover:text-foreground">support@lumifylive.com</a>
             </p>
-            <p className="text-[12px] text-[color:var(--faint)]">© 2026 Bright Solutionslab (BN 9689076). Lumify is a product of Bright Solutionslab.</p>
+            <p className="text-[12px] text-[color:var(--faint)]">© 2026 Bright Solutionslab. Lumify is a product of Bright Solutionslab.</p>
           </div>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-[color:var(--muted-foreground)]">
             <a href="#pricing" className="hover:text-foreground">Pricing</a>
