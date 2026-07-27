@@ -9,101 +9,55 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
-import { Route as TrustRouteImport } from './routes/trust'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RefundsRouteImport } from './routes/refunds'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as OutputRouteImport } from './routes/output'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as InventorRouteImport } from './routes/inventor'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as InventorIndexRouteImport } from './routes/inventor.index'
-import { Route as InventorUsersRouteImport } from './routes/inventor.users'
-import { Route as InventorTutorialsRouteImport } from './routes/inventor.tutorials'
-import { Route as InventorSupportRouteImport } from './routes/inventor.support'
-import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
-import { Route as InventorPurchasesRouteImport } from './routes/inventor.purchases'
-import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
-import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
-import { Route as InventorIpSearchRouteImport } from './routes/inventor.ip-search'
-import { Route as InventorHistoryRouteImport } from './routes/inventor.history'
-import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
-import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
-import { Route as AppTutorialRouteImport } from './routes/_app.tutorial'
-import { Route as AppSupportRouteImport } from './routes/_app.support'
-import { Route as AppStreamRouteImport } from './routes/_app.stream'
-import { Route as AppSettingsRouteImport } from './routes/_app.settings'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppCreditsRouteImport } from './routes/_app.credits'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as InventorRouteImport } from './routes/inventor'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as OutputRouteImport } from './routes/output'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RefundsRouteImport } from './routes/refunds'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TrustRouteImport } from './routes/trust'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
-import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
-import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
+import { Route as AppCreditsRouteImport } from './routes/_app.credits'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppStreamRouteImport } from './routes/_app.stream'
+import { Route as AppSupportRouteImport } from './routes/_app.support'
+import { Route as AppTutorialRouteImport } from './routes/_app.tutorial'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as InventorIndexRouteImport } from './routes/inventor.index'
+import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
+import { Route as InventorHistoryRouteImport } from './routes/inventor.history'
+import { Route as InventorIpSearchRouteImport } from './routes/inventor.ip-search'
+import { Route as InventorLedgerRouteImport } from './routes/inventor.ledger'
+import { Route as InventorMonitorRouteImport } from './routes/inventor.monitor'
+import { Route as InventorPurchasesRouteImport } from './routes/inventor.purchases'
+import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
+import { Route as InventorSupportRouteImport } from './routes/inventor.support'
+import { Route as InventorTutorialsRouteImport } from './routes/inventor.tutorials'
+import { Route as InventorUsersRouteImport } from './routes/inventor.users'
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
-import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 
-const UnsubscribeRoute = UnsubscribeRouteImport.update({
-  id: '/unsubscribe',
-  path: '/unsubscribe',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TrustRoute = TrustRouteImport.update({
-  id: '/trust',
-  path: '/trust',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RefundsRoute = RefundsRouteImport.update({
-  id: '/refunds',
-  path: '/refunds',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OutputRoute = OutputRouteImport.update({
-  id: '/output',
-  path: '/output',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InventorRoute = InventorRouteImport.update({
-  id: '/inventor',
-  path: '/inventor',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -111,98 +65,64 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const InventorRoute = InventorRouteImport.update({
+  id: '/inventor',
+  path: '/inventor',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InventorIndexRoute = InventorIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorUsersRoute = InventorUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorTutorialsRoute = InventorTutorialsRouteImport.update({
-  id: '/tutorials',
-  path: '/tutorials',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorSupportRoute = InventorSupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorRecordingsRoute = InventorRecordingsRouteImport.update({
-  id: '/recordings',
-  path: '/recordings',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorPurchasesRoute = InventorPurchasesRouteImport.update({
-  id: '/purchases',
-  path: '/purchases',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorMonitorRoute = InventorMonitorRouteImport.update({
-  id: '/monitor',
-  path: '/monitor',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorLedgerRoute = InventorLedgerRouteImport.update({
-  id: '/ledger',
-  path: '/ledger',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorIpSearchRoute = InventorIpSearchRouteImport.update({
-  id: '/ip-search',
-  path: '/ip-search',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorHistoryRoute = InventorHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => InventorRoute,
-} as any)
-const InventorFinanceRoute = InventorFinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
-  getParentRoute: () => InventorRoute,
-} as any)
-const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
-  id: '/email/unsubscribe',
-  path: '/email/unsubscribe',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppTutorialRoute = AppTutorialRouteImport.update({
-  id: '/tutorial',
-  path: '/tutorial',
-  getParentRoute: () => AppRoute,
+const OutputRoute = OutputRouteImport.update({
+  id: '/output',
+  path: '/output',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppSupportRoute = AppSupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => AppRoute,
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppStreamRoute = AppStreamRouteImport.update({
-  id: '/stream',
-  path: '/stream',
-  getParentRoute: () => AppRoute,
+const RefundsRoute = RefundsRouteImport.update({
+  id: '/refunds',
+  path: '/refunds',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrustRoute = TrustRouteImport.update({
+  id: '/trust',
+  path: '/trust',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppBillingRoute = AppBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCreditsRoute = AppCreditsRouteImport.update({
@@ -210,20 +130,90 @@ const AppCreditsRoute = AppCreditsRouteImport.update({
   path: '/credits',
   getParentRoute: () => AppRoute,
 } as any)
-const AppBillingRoute = AppBillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
-const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
-  id: '/lovable/email/suppression',
-  path: '/lovable/email/suppression',
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStreamRoute = AppStreamRouteImport.update({
+  id: '/stream',
+  path: '/stream',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSupportRoute = AppSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTutorialRoute = AppTutorialRouteImport.update({
+  id: '/tutorial',
+  path: '/tutorial',
+  getParentRoute: () => AppRoute,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
-  id: '/api/public/track-visit',
-  path: '/api/public/track-visit',
-  getParentRoute: () => rootRouteImport,
+const InventorIndexRoute = InventorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorFinanceRoute = InventorFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorHistoryRoute = InventorHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorIpSearchRoute = InventorIpSearchRouteImport.update({
+  id: '/ip-search',
+  path: '/ip-search',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorLedgerRoute = InventorLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorMonitorRoute = InventorMonitorRouteImport.update({
+  id: '/monitor',
+  path: '/monitor',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorPurchasesRoute = InventorPurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorRecordingsRoute = InventorRecordingsRouteImport.update({
+  id: '/recordings',
+  path: '/recordings',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorSupportRoute = InventorSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorTutorialsRoute = InventorTutorialsRouteImport.update({
+  id: '/tutorials',
+  path: '/tutorials',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorUsersRoute = InventorUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => InventorRoute,
 } as any)
 const ApiPublicResolveStreamTokenRoute =
   ApiPublicResolveStreamTokenRouteImport.update({
@@ -231,10 +221,30 @@ const ApiPublicResolveStreamTokenRoute =
     path: '/api/public/resolve-stream-token',
     getParentRoute: () => rootRouteImport,
   } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
+const ApiPublicTrackVisitRoute = ApiPublicTrackVisitRouteImport.update({
+  id: '/api/public/track-visit',
+  path: '/api/public/track-visit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
 const LovableEmailTransactionalPreviewRoute =
@@ -243,22 +253,12 @@ const LovableEmailTransactionalPreviewRoute =
     path: '/lovable/email/transactional/preview',
     getParentRoute: () => rootRouteImport,
   } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
     getParentRoute: () => rootRouteImport,
   } as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -544,88 +544,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/unsubscribe': {
-      id: '/unsubscribe'
-      path: '/unsubscribe'
-      fullPath: '/unsubscribe'
-      preLoaderRoute: typeof UnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/trust': {
-      id: '/trust'
-      path: '/trust'
-      fullPath: '/trust'
-      preLoaderRoute: typeof TrustRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/refunds': {
-      id: '/refunds'
-      path: '/refunds'
-      fullPath: '/refunds'
-      preLoaderRoute: typeof RefundsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/output': {
-      id: '/output'
-      path: '/output'
-      fullPath: '/output'
-      preLoaderRoute: typeof OutputRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inventor': {
-      id: '/inventor'
-      path: '/inventor'
-      fullPath: '/inventor'
-      preLoaderRoute: typeof InventorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -635,130 +558,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/inventor/': {
-      id: '/inventor/'
-      path: '/'
-      fullPath: '/inventor/'
-      preLoaderRoute: typeof InventorIndexRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/users': {
-      id: '/inventor/users'
-      path: '/users'
-      fullPath: '/inventor/users'
-      preLoaderRoute: typeof InventorUsersRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/tutorials': {
-      id: '/inventor/tutorials'
-      path: '/tutorials'
-      fullPath: '/inventor/tutorials'
-      preLoaderRoute: typeof InventorTutorialsRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/support': {
-      id: '/inventor/support'
-      path: '/support'
-      fullPath: '/inventor/support'
-      preLoaderRoute: typeof InventorSupportRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/recordings': {
-      id: '/inventor/recordings'
-      path: '/recordings'
-      fullPath: '/inventor/recordings'
-      preLoaderRoute: typeof InventorRecordingsRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/purchases': {
-      id: '/inventor/purchases'
-      path: '/purchases'
-      fullPath: '/inventor/purchases'
-      preLoaderRoute: typeof InventorPurchasesRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/monitor': {
-      id: '/inventor/monitor'
-      path: '/monitor'
-      fullPath: '/inventor/monitor'
-      preLoaderRoute: typeof InventorMonitorRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/ledger': {
-      id: '/inventor/ledger'
-      path: '/ledger'
-      fullPath: '/inventor/ledger'
-      preLoaderRoute: typeof InventorLedgerRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/ip-search': {
-      id: '/inventor/ip-search'
-      path: '/ip-search'
-      fullPath: '/inventor/ip-search'
-      preLoaderRoute: typeof InventorIpSearchRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/history': {
-      id: '/inventor/history'
-      path: '/history'
-      fullPath: '/inventor/history'
-      preLoaderRoute: typeof InventorHistoryRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/inventor/finance': {
-      id: '/inventor/finance'
-      path: '/finance'
-      fullPath: '/inventor/finance'
-      preLoaderRoute: typeof InventorFinanceRouteImport
-      parentRoute: typeof InventorRoute
-    }
-    '/email/unsubscribe': {
-      id: '/email/unsubscribe'
-      path: '/email/unsubscribe'
-      fullPath: '/email/unsubscribe'
-      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/tutorial': {
-      id: '/_app/tutorial'
-      path: '/tutorial'
-      fullPath: '/tutorial'
-      preLoaderRoute: typeof AppTutorialRouteImport
-      parentRoute: typeof AppRoute
+    '/inventor': {
+      id: '/inventor'
+      path: '/inventor'
+      fullPath: '/inventor'
+      preLoaderRoute: typeof InventorRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/support': {
-      id: '/_app/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof AppSupportRouteImport
-      parentRoute: typeof AppRoute
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/stream': {
-      id: '/_app/stream'
-      path: '/stream'
-      fullPath: '/stream'
-      preLoaderRoute: typeof AppStreamRouteImport
-      parentRoute: typeof AppRoute
+    '/output': {
+      id: '/output'
+      path: '/output'
+      fullPath: '/output'
+      preLoaderRoute: typeof OutputRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
+    '/refunds': {
+      id: '/refunds'
+      path: '/refunds'
+      fullPath: '/refunds'
+      preLoaderRoute: typeof RefundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trust': {
+      id: '/trust'
+      path: '/trust'
+      fullPath: '/trust'
+      preLoaderRoute: typeof TrustRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/billing': {
+      id: '/_app/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/credits': {
@@ -768,18 +656,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCreditsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/billing': {
-      id: '/_app/billing'
-      path: '/billing'
-      fullPath: '/billing'
-      preLoaderRoute: typeof AppBillingRouteImport
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/lovable/email/suppression': {
-      id: '/lovable/email/suppression'
-      path: '/lovable/email/suppression'
-      fullPath: '/lovable/email/suppression'
-      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/stream': {
+      id: '/_app/stream'
+      path: '/stream'
+      fullPath: '/stream'
+      preLoaderRoute: typeof AppStreamRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/support': {
+      id: '/_app/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AppSupportRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tutorial': {
+      id: '/_app/tutorial'
+      path: '/tutorial'
+      fullPath: '/tutorial'
+      preLoaderRoute: typeof AppTutorialRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventor/': {
+      id: '/inventor/'
+      path: '/'
+      fullPath: '/inventor/'
+      preLoaderRoute: typeof InventorIndexRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/finance': {
+      id: '/inventor/finance'
+      path: '/finance'
+      fullPath: '/inventor/finance'
+      preLoaderRoute: typeof InventorFinanceRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/history': {
+      id: '/inventor/history'
+      path: '/history'
+      fullPath: '/inventor/history'
+      preLoaderRoute: typeof InventorHistoryRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/ip-search': {
+      id: '/inventor/ip-search'
+      path: '/ip-search'
+      fullPath: '/inventor/ip-search'
+      preLoaderRoute: typeof InventorIpSearchRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/ledger': {
+      id: '/inventor/ledger'
+      path: '/ledger'
+      fullPath: '/inventor/ledger'
+      preLoaderRoute: typeof InventorLedgerRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/monitor': {
+      id: '/inventor/monitor'
+      path: '/monitor'
+      fullPath: '/inventor/monitor'
+      preLoaderRoute: typeof InventorMonitorRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/purchases': {
+      id: '/inventor/purchases'
+      path: '/purchases'
+      fullPath: '/inventor/purchases'
+      preLoaderRoute: typeof InventorPurchasesRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/recordings': {
+      id: '/inventor/recordings'
+      path: '/recordings'
+      fullPath: '/inventor/recordings'
+      preLoaderRoute: typeof InventorRecordingsRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/support': {
+      id: '/inventor/support'
+      path: '/support'
+      fullPath: '/inventor/support'
+      preLoaderRoute: typeof InventorSupportRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/tutorials': {
+      id: '/inventor/tutorials'
+      path: '/tutorials'
+      fullPath: '/inventor/tutorials'
+      preLoaderRoute: typeof InventorTutorialsRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/users': {
+      id: '/inventor/users'
+      path: '/users'
+      fullPath: '/inventor/users'
+      preLoaderRoute: typeof InventorUsersRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/api/public/resolve-stream-token': {
+      id: '/api/public/resolve-stream-token'
+      path: '/api/public/resolve-stream-token'
+      fullPath: '/api/public/resolve-stream-token'
+      preLoaderRoute: typeof ApiPublicResolveStreamTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/track-visit': {
@@ -789,32 +789,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTrackVisitRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/resolve-stream-token': {
-      id: '/api/public/resolve-stream-token'
-      path: '/api/public/resolve-stream-token'
-      fullPath: '/api/public/resolve-stream-token'
-      preLoaderRoute: typeof ApiPublicResolveStreamTokenRouteImport
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/webhook': {
@@ -824,11 +810,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
