@@ -4,8 +4,6 @@ import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   reportPaymentIssue,
-  createFlutterwaveCheckout,
-  verifyFlutterwaveAndCredit,
   createKorapayCheckout,
   verifyKorapayAndCredit,
 } from "@/lib/payments.functions";
