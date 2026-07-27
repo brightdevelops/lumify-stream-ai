@@ -1,65 +1,106 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Info } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Check, Wallet as WalletIcon, ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  reportPaymentIssue,
   createKorapayCheckout,
   verifyKorapayAndCredit,
 } from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
-
+import { StatusBadge } from "./_app.dashboard";
 
 export const Route = createFileRoute("/_app/credits")({
-  component: CreditsPage,
+  component: WalletPage,
+  head: () => ({
+    meta: [
+      { title: "Wallet — Lumify" },
+      { name: "description", content: "Top up your Lumify balance with Korapay. Card, bank transfer, mobile money." },
+    ],
+  }),
 });
 
-// ── Maintenance flag ────────────────────────────────────────────────────────
 const PURCHASES_PAUSED = false;
 const PURCHASES_PAUSED_MESSAGE =
   "Credit purchases are temporarily paused for maintenance. Your existing credits and streaming are unaffected.";
-// ────────────────────────────────────────────────────────────────────────────
+
+const RATE = 2;
 
 const PACKS = [
-  { id: "starter", name: "Starter", credits: 500, price: 11500 },
-  { id: "basic", name: "Basic", credits: 1000, price: 23000 },
-  { id: "pro", name: "Pro", credits: 2000, price: 46000 },
+  { id: "starter", name: "Starter",  credits: 500,  price: 11500 },
+  { id: "basic",   name: "Basic",    credits: 1000, price: 23000, save: 0 },
+  { id: "pro",     name: "Pro",      credits: 2000, price: 46000, save: 0 },
   { id: "enterprise", name: "Enterprise", credits: 5000, price: 115000 },
 ];
-const METHODS = ["Card", "Bank Transfer", "USSD", "Mobile Money"];
 
-function CreditsPage() {
+type Txn = {
+  id: string;
+  type: string | null;
+  credits: number;
+  amount: number | null;
+  amount_ngn: number | null;
+  description: string | null;
+  reference: string | null;
+  created_at: string;
+};
+
+function fmtTime(sec: number) {
+  const m = Math.floor(sec / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${String(m % 60).padStart(2, "0")}m`;
+  return `${m}m`;
+}
+
+function WalletPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { enabled: maintenanceOn } = useMaintenanceMode();
-  const purchasesPaused = PURCHASES_PAUSED || maintenanceOn;
-  const purchasesPausedMessage = maintenanceOn ? MAINTENANCE_PURCHASE_MESSAGE : PURCHASES_PAUSED_MESSAGE;
+  const paused = PURCHASES_PAUSED || maintenanceOn;
+  const pausedMsg = maintenanceOn ? MAINTENANCE_PURCHASE_MESSAGE : PURCHASES_PAUSED_MESSAGE;
+
   const [selected, setSelected] = useState("basic");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [issueOpen, setIssueOpen] = useState(false);
-  const [issueMethod, setIssueMethod] = useState<"korapay" | "other">("korapay");
-  const [issueRef, setIssueRef] = useState("");
-  const [issueMsg, setIssueMsg] = useState("");
-  const [issueSubmitting, setIssueSubmitting] = useState(false);
-  const [issueSent, setIssueSent] = useState(false);
   const pack = PACKS.find((p) => p.id === selected)!;
-  const streamMins = Math.round(pack.credits / 2 / 60);
 
-  // Handle Korapay redirect callback: /credits?korapay=1&reference=...
+  const { data: balance = 0 } = useQuery({
+    queryKey: ["wallet-balance", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("credits").select("balance").eq("user_id", user!.id).maybeSingle();
+      return data?.balance ?? 0;
+    },
+  });
+
+  const { data: txns = [] } = useQuery({
+    queryKey: ["wallet-txns", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("transactions")
+        .select("id,type,credits,amount,amount_ngn,description,reference,created_at")
+        .eq("user_id", user!.id)
+        .eq("type", "purchase")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return (data ?? []) as Txn[];
+    },
+  });
+
+  const totalToppedUp = txns.reduce((s, t) => s + Number(t.amount_ngn ?? t.amount ?? 0), 0);
+  const totalCreditsPurchased = txns.reduce((s, t) => s + Number(t.credits ?? 0), 0);
+  const secondsLeft = Math.floor(balance / RATE);
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !user) return;
     const params = new URLSearchParams(window.location.search);
-    if (!user) return;
-
     if (params.get("korapay") === "1") {
       const reference = params.get("reference");
       const status = params.get("status");
       window.history.replaceState({}, "", "/credits");
       if (!reference) {
-        if (status && status !== "success" && status !== "successful") {
-          setError("Payment was cancelled or did not complete.");
-        }
+        if (status && status !== "success" && status !== "successful") setError("Payment was cancelled or did not complete.");
         return;
       }
       setProcessing(true);
@@ -75,36 +116,8 @@ function CreditsPage() {
     }
   }, [user, navigate]);
 
-
-  const submitIssue = async () => {
-    if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
-    setIssueSubmitting(true);
-    setError(null);
-    try {
-      await reportPaymentIssue({
-        data: {
-          method: issueMethod,
-          message: issueMsg.trim(),
-          orderReference: issueRef.trim() || null,
-          packId: pack.id as "starter" | "basic" | "pro" | "enterprise",
-        },
-      });
-      setIssueSent(true);
-      setIssueMsg(""); setIssueRef("");
-      setTimeout(() => { setIssueOpen(false); setIssueSent(false); }, 2500);
-    } catch (e: any) {
-      setError(e?.message ?? "Could not send report");
-    } finally {
-      setIssueSubmitting(false);
-    }
-  };
-
   const handlePayment = async () => {
-    if (purchasesPaused) return;
-    if (!user?.email) {
-      setError("You must be logged in.");
-      return;
-    }
+    if (paused || !user?.email) return;
     setError(null);
     setProcessing(true);
     try {
@@ -117,155 +130,120 @@ function CreditsPage() {
     }
   };
 
-
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
-      <h1 className="text-3xl">Buy Credits</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Add credits to your account. Pay once, stream when you need.</p>
-
-      <div className="mt-6 flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-sm text-muted-foreground">
-        <Info className="h-4 w-4 text-primary" />
-        <span><span className="text-foreground font-medium">2 credits per second (₦46/sec)</span> · 1 credit = ₦23 · Credits never expire</span>
+    <div>
+      <div className="mb-8">
+        <h1 className="font-display text-[38px] leading-tight">Wallet</h1>
+        <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)] flex items-center gap-2">
+          Top up your balance — payments secured by <span className="text-foreground font-semibold">Korapay</span>.
+          <ShieldCheck size={14} className="text-primary" />
+        </p>
       </div>
 
-      {purchasesPaused && (
-        <div
-          role="status"
-          className="mt-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground whitespace-pre-line"
-        >
-          {purchasesPausedMessage}
+      {paused && (
+        <div className="mb-6 rounded-2xl border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-5 py-4 text-[14px] text-foreground whitespace-pre-line">
+          {pausedMsg}
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6">
-        {PACKS.map((p) => {
-          const active = selected === p.id;
-          return (
-            <button
-              key={p.id}
-              onClick={() => setSelected(p.id)}
-              className={`text-left rounded-xl border p-5 transition-colors ${active ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{p.name}</span>
-                {active && <Check className="h-4 w-4 text-primary" />}
-              </div>
-              <div className="mt-3 text-3xl font-display text-primary">{p.credits.toLocaleString()}</div>
-              <div className="text-xs text-muted-foreground">credits</div>
-              <div className="mt-3 text-xl">₦{p.price.toLocaleString()}</div>
-              <div className="mt-1 text-xs text-muted-foreground">≈ {Math.round(p.credits / 2 / 60)} min stream</div>
-            </button>
-          );
-        })}
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <div className="accent-card rounded-2xl p-5">
+          <div className="eyebrow">Current balance</div>
+          <div className="mt-3 font-display text-[34px] leading-none">{balance.toLocaleString()}</div>
+          <div className="mt-1 text-[12px] text-[color:var(--muted-foreground)]">≈ {fmtTime(secondsLeft)} of streaming</div>
+        </div>
+        <StatCard label="Total topped up" value={`₦${totalToppedUp.toLocaleString()}`} hint="Lifetime" />
+        <StatCard label="Credits purchased" value={totalCreditsPurchased.toLocaleString()} hint="Lifetime" />
       </div>
 
-      <div className="grid gap-6 mt-8 lg:grid-cols-[1fr_320px]">
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg">Payment summary</h2>
-          <div className="mt-5 space-y-3 text-sm">
-            <Row k="Package" v={pack.name} />
-            <Row k="Credits" v={<span className="text-primary font-medium">{pack.credits.toLocaleString()}</span>} />
-            <Row k="Stream time" v={`≈ ${streamMins} minutes`} />
-
-            <div className="h-px bg-border my-3" />
-            <Row k={<span className="text-foreground">Total</span>} v={<span className="text-foreground font-display text-xl">₦{pack.price.toLocaleString()}</span>} />
+      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        {/* Packs */}
+        <div className="card-surface">
+          <div className="eyebrow mb-5">Choose a pack</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {PACKS.map((p) => {
+              const active = selected === p.id;
+              const mins = Math.round(p.credits / 2 / 60);
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelected(p.id)}
+                  className={`text-left rounded-xl border p-5 transition-colors relative ${
+                    active ? "border-[color:var(--primary)]" : "border-[color:var(--border)] hover:border-[color:var(--primary)]/60"
+                  }`}
+                  style={active ? { background: "var(--accent-soft)" } : undefined}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="eyebrow">{p.name}</span>
+                    {active && <Check size={16} className="text-primary" />}
+                  </div>
+                  <div className="mt-2 font-display text-[28px] leading-none text-foreground">
+                    {p.credits.toLocaleString()} <span className="text-[13px] text-[color:var(--muted-foreground)]">cr</span>
+                  </div>
+                  <div className="mt-2 text-[15px] text-foreground">₦{p.price.toLocaleString()}</div>
+                  <div className="text-[12px] text-[color:var(--faint)]">≈ {mins} min stream</div>
+                </button>
+              );
+            })}
           </div>
 
-          {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-          <div className="mt-6">
-            <button
-              onClick={() => handlePayment()}
-              disabled={processing || purchasesPaused}
-              title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
-              className="w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Korapay"}
-            </button>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Card, bank transfer, USSD & mobile money — all in NGN. Pick whichever provider works best for you.
+          {error && <p className="mt-4 text-[13px] text-[color:var(--destructive)]">{error}</p>}
+
+          <button
+            onClick={handlePayment}
+            disabled={processing || paused}
+            className="btn-primary w-full mt-6"
+          >
+            <WalletIcon size={15} />
+            {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Korapay`}
+          </button>
+          <p className="mt-3 text-center text-[12px] text-[color:var(--faint)]">
+            Card · Bank transfer · Mobile money
           </p>
-
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {METHODS.map((m) => (
-              <span key={m} className="rounded-full border border-border bg-secondary px-3 py-1 text-xs text-muted-foreground">{m}</span>
-            ))}
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-border">
-            {!issueOpen ? (
-              <button
-                onClick={() => { setIssueOpen(true); setIssueSent(false); }}
-                className="text-xs text-muted-foreground hover:text-foreground underline"
-              >
-                Having trouble with a payment? Report an issue
-              </button>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Report a payment issue</h4>
-                  <button onClick={() => setIssueOpen(false)} className="text-xs text-muted-foreground hover:text-foreground">close</button>
-                </div>
-                {issueSent ? (
-                  <p className="text-sm text-emerald-500">Thanks — we received your report. The team will reach out shortly.</p>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap gap-1 text-xs">
-                      {(["korapay", "other"] as const).map((m) => (
-                        <button key={m} onClick={() => setIssueMethod(m)}
-                          className={`px-3 py-1 rounded-md border capitalize ${issueMethod === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-
-                    <input
-                      value={issueRef}
-                      onChange={(e) => setIssueRef(e.target.value)}
-                      placeholder="Transaction reference / order ID (if any)"
-                      className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
-                    />
-                    <textarea
-                      value={issueMsg}
-                      onChange={(e) => setIssueMsg(e.target.value)}
-                      placeholder="Describe what went wrong (e.g. paid but credits never arrived, transaction stuck pending…)"
-                      rows={3}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    />
-                    <button
-                      onClick={submitIssue}
-                      disabled={issueSubmitting}
-                      className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-                    >
-                      {issueSubmitting ? "Sending…" : "Send report"}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
         </div>
 
-
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h3 className="text-sm uppercase tracking-wide text-muted-foreground">What you get</h3>
-          <ul className="mt-4 space-y-3 text-sm">
-            {["Credits never expire", "Switch styles mid-stream", "720p output", "Pause anytime"].map((x) => (
-              <li key={x} className="flex gap-2 text-muted-foreground"><Check className="h-4 w-4 text-primary mt-0.5" /> {x}</li>
-            ))}
-          </ul>
+        {/* Recent top-ups */}
+        <div className="card-surface p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b">
+            <div className="eyebrow">Recent top-ups</div>
+          </div>
+          <div className="max-h-[480px] overflow-y-auto">
+            {txns.length === 0 ? (
+              <div className="p-8 text-center text-[13px] text-[color:var(--faint)]">No top-ups yet.</div>
+            ) : (
+              <ul className="divide-y divide-[color:var(--border-soft)]">
+                {txns.map((t) => (
+                  <li key={t.id} className="px-5 py-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[13.5px] text-foreground truncate">
+                        {t.credits.toLocaleString()} credits
+                      </div>
+                      <div className="text-[11.5px] text-[color:var(--faint)] truncate">
+                        {new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[13.5px] text-foreground">₦{Number(t.amount_ngn ?? t.amount ?? 0).toLocaleString()}</div>
+                      <div className="mt-1"><StatusBadge status="Success" /></div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function Row({ k, v }: { k: React.ReactNode; v: React.ReactNode }) {
+function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{k}</span>
-      <span>{v}</span>
+    <div className="card-surface">
+      <div className="eyebrow">{label}</div>
+      <div className="mt-3 font-display text-[28px] leading-none text-foreground">{value}</div>
+      <div className="mt-1 text-[12px] text-[color:var(--faint)]">{hint}</div>
     </div>
   );
 }
