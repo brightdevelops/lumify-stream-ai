@@ -45,6 +45,10 @@ export function AuthShell({
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance | null>(null);
+  const captchaRequired =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "lumifylive.com" ||
+      window.location.hostname === "www.lumifylive.com");
 
   const resetCaptcha = () => {
     setCaptchaToken(null);
