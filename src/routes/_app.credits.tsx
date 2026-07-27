@@ -4,8 +4,6 @@ import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   reportPaymentIssue,
-  createFlutterwaveCheckout,
-  verifyFlutterwaveAndCredit,
   createKorapayCheckout,
   verifyKorapayAndCredit,
 } from "@/lib/payments.functions";
@@ -40,44 +38,19 @@ function CreditsPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
-  const [issueMethod, setIssueMethod] = useState<"flutterwave" | "korapay" | "other">("flutterwave");
+  const [issueMethod, setIssueMethod] = useState<"korapay" | "other">("korapay");
   const [issueRef, setIssueRef] = useState("");
   const [issueMsg, setIssueMsg] = useState("");
   const [issueSubmitting, setIssueSubmitting] = useState(false);
   const [issueSent, setIssueSent] = useState(false);
   const pack = PACKS.find((p) => p.id === selected)!;
   const streamMins = Math.round(pack.credits / 2 / 60);
-  const korapayEnabled = user?.email?.toLowerCase() === "brightsolutionslab@gmail.com";
 
-  // Handle Flutterwave redirect callback: /credits?flutterwave=1&status=&tx_ref=&transaction_id=
+  // Handle Korapay redirect callback: /credits?korapay=1&reference=...
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (!user) return;
-
-    if (params.get("flutterwave") === "1") {
-      const txRef = params.get("tx_ref");
-      const transactionId = params.get("transaction_id");
-      const status = params.get("status");
-      window.history.replaceState({}, "", "/credits");
-      if (status === "cancelled" || !txRef || !transactionId) {
-        if (status && status !== "successful" && status !== "completed") {
-          setError("Payment was cancelled or did not complete.");
-        }
-        return;
-      }
-      setProcessing(true);
-      (async () => {
-        try {
-          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
-          navigate({ to: "/dashboard" });
-        } catch (e: any) {
-          setProcessing(false);
-          setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
-        }
-      })();
-      return;
-    }
 
     if (params.get("korapay") === "1") {
       const reference = params.get("reference");
@@ -126,7 +99,7 @@ function CreditsPage() {
     }
   };
 
-  const handlePayment = async (provider: "flutterwave" | "korapay") => {
+  const handlePayment = async () => {
     if (purchasesPaused) return;
     if (!user?.email) {
       setError("You must be logged in.");
@@ -136,10 +109,7 @@ function CreditsPage() {
     setProcessing(true);
     try {
       const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
-      const { checkoutUrl } =
-        provider === "korapay"
-          ? await createKorapayCheckout({ data: { packId } })
-          : await createFlutterwaveCheckout({ data: { packId } });
+      const { checkoutUrl } = await createKorapayCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
@@ -202,25 +172,15 @@ function CreditsPage() {
           </div>
 
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-          <div className={`mt-6 grid gap-3 ${korapayEnabled ? "sm:grid-cols-2" : ""}`}>
+          <div className="mt-6">
             <button
-              onClick={() => handlePayment("flutterwave")}
+              onClick={() => handlePayment()}
               disabled={processing || purchasesPaused}
               title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
-              className="rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Flutterwave"}
+              {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Korapay"}
             </button>
-            {korapayEnabled && (
-              <button
-                onClick={() => handlePayment("korapay")}
-                disabled={processing || purchasesPaused}
-                title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
-                className="rounded-md border border-primary/50 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Korapay"}
-              </button>
-            )}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             Card, bank transfer, USSD & mobile money — all in NGN. Pick whichever provider works best for you.
@@ -252,7 +212,7 @@ function CreditsPage() {
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-1 text-xs">
-                      {(["flutterwave", "korapay", "other"] as const).map((m) => (
+                      {(["korapay", "other"] as const).map((m) => (
                         <button key={m} onClick={() => setIssueMethod(m)}
                           className={`px-3 py-1 rounded-md border capitalize ${issueMethod === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
                           {m}
