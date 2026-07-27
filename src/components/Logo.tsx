@@ -5,8 +5,8 @@ export function Logo({ className = "" }: { className?: string }) {
   const { user } = useAuth();
   const to = user ? "/dashboard" : "/";
   return (
-    <Link to={to} className={`inline-flex items-center ${className}`}>
-      <span className="font-display text-2xl tracking-tight text-primary">Lumify</span>
+    <Link to={to} className={`inline-flex items-center logo-serif ${className}`}>
+      Lum<em>ify</em>
     </Link>
   );
 }

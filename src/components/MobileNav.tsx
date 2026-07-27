@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Coins, Receipt, Settings, LogOut, Shield, Menu } from "lucide-react";
+import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Menu, LifeBuoy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -9,9 +9,10 @@ import { useAuth } from "@/hooks/use-auth";
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/stream", label: "Start Stream", icon: Video },
-  { to: "/credits", label: "Buy Credits", icon: Coins },
+  { to: "/credits", label: "Wallet", icon: Wallet },
   { to: "/billing", label: "Billing", icon: Receipt },
   { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/support", label: "Support", icon: LifeBuoy },
 ] as const;
 
 export function MobileNav() {
@@ -24,12 +25,7 @@ export function MobileNav() {
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
     let cancelled = false;
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle()
+    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
       .then(({ data }) => { if (!cancelled) setIsAdmin(!!data); });
     return () => { cancelled = true; };
   }, [user]);
@@ -39,21 +35,16 @@ export function MobileNav() {
     : items;
 
   return (
-    <header className="md:hidden sticky top-0 z-40 flex items-center gap-3 h-14 px-4 border-b border-border bg-card">
+    <header className="md:hidden sticky top-0 z-40 flex items-center gap-3 h-14 px-4 border-b bg-[color:var(--sidebar)]">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <button
-            aria-label="Open menu"
-            className="p-2 -ml-2 rounded-md text-foreground hover:bg-secondary"
-          >
-            <Menu className="h-5 w-5" />
+          <button aria-label="Open menu" className="p-2 -ml-2 rounded-md text-foreground hover:bg-card">
+            <Menu size={20} />
           </button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0 bg-card border-border flex flex-col">
-          <div className="px-5 py-5 border-b border-border">
-            <Logo />
-          </div>
-          <nav className="flex-1 p-3 space-y-1">
+        <SheetContent side="left" className="w-72 p-0 bg-[color:var(--sidebar)] border-border flex flex-col">
+          <div className="px-6 py-6"><Logo /></div>
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             {navItems.map((it) => {
               const active = path === it.to || path.startsWith(it.to + "/");
               const Icon = it.icon;
@@ -62,28 +53,23 @@ export function MobileNav() {
                   key={it.to}
                   to={it.to}
                   onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                  className={`flex items-center gap-3 rounded-full px-3.5 py-2.5 text-sm transition-colors ${
                     active
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "text-[color:var(--muted-foreground)] hover:text-foreground hover:bg-card"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {it.label}
+                  <Icon size={17} strokeWidth={1.75} /> {it.label}
                 </Link>
               );
             })}
           </nav>
-          <div className="p-3 border-t border-border">
+          <div className="p-3 border-t">
             <button
-              onClick={async () => {
-                setOpen(false);
-                await signOut();
-                navigate({ to: "/" });
-              }}
-              className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
+              onClick={async () => { setOpen(false); await signOut(); navigate({ to: "/" }); }}
+              className="w-full flex items-center gap-3 rounded-full px-3.5 py-2.5 text-sm text-[color:var(--muted-foreground)] hover:text-foreground hover:bg-card"
             >
-              <LogOut className="h-4 w-4" /> Logout
+              <LogOut size={17} /> Log out
             </button>
           </div>
         </SheetContent>
