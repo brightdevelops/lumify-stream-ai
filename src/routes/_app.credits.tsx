@@ -2,8 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, Info } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { reportPaymentIssue, createFlutterwaveCheckout, verifyFlutterwaveAndCredit } from "@/lib/payments.functions";
+import {
+  reportPaymentIssue,
+  createFlutterwaveCheckout,
+  verifyFlutterwaveAndCredit,
+  createKorapayCheckout,
+  verifyKorapayAndCredit,
+} from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
+
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
@@ -33,7 +40,7 @@ function CreditsPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
-  const [issueMethod, setIssueMethod] = useState<"flutterwave" | "other">("flutterwave");
+  const [issueMethod, setIssueMethod] = useState<"flutterwave" | "korapay" | "other">("flutterwave");
   const [issueRef, setIssueRef] = useState("");
   const [issueMsg, setIssueMsg] = useState("");
   const [issueSubmitting, setIssueSubmitting] = useState(false);
@@ -45,30 +52,55 @@ function CreditsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("flutterwave") !== "1") return;
-    const txRef = params.get("tx_ref");
-    const transactionId = params.get("transaction_id");
-    const status = params.get("status");
     if (!user) return;
-    // Strip query early so a refresh doesn't retrigger verification.
-    window.history.replaceState({}, "", "/credits");
-    if (status === "cancelled" || !txRef || !transactionId) {
-      if (status && status !== "successful" && status !== "completed") {
-        setError("Payment was cancelled or did not complete.");
+
+    if (params.get("flutterwave") === "1") {
+      const txRef = params.get("tx_ref");
+      const transactionId = params.get("transaction_id");
+      const status = params.get("status");
+      window.history.replaceState({}, "", "/credits");
+      if (status === "cancelled" || !txRef || !transactionId) {
+        if (status && status !== "successful" && status !== "completed") {
+          setError("Payment was cancelled or did not complete.");
+        }
+        return;
       }
+      setProcessing(true);
+      (async () => {
+        try {
+          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
+          navigate({ to: "/dashboard" });
+        } catch (e: any) {
+          setProcessing(false);
+          setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+        }
+      })();
       return;
     }
-    setProcessing(true);
-    (async () => {
-      try {
-        await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
-        navigate({ to: "/dashboard" });
-      } catch (e: any) {
-        setProcessing(false);
-        setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+
+    if (params.get("korapay") === "1") {
+      const reference = params.get("reference");
+      const status = params.get("status");
+      window.history.replaceState({}, "", "/credits");
+      if (!reference) {
+        if (status && status !== "success" && status !== "successful") {
+          setError("Payment was cancelled or did not complete.");
+        }
+        return;
       }
-    })();
+      setProcessing(true);
+      (async () => {
+        try {
+          await verifyKorapayAndCredit({ data: { reference } });
+          navigate({ to: "/dashboard" });
+        } catch (e: any) {
+          setProcessing(false);
+          setError(e?.message ?? "Payment could not be verified. If you were charged, contact support with your reference.");
+        }
+      })();
+    }
   }, [user, navigate]);
+
 
   const submitIssue = async () => {
     if (issueMsg.trim().length < 5) { setError("Please describe the issue (min 5 chars)."); return; }
@@ -93,7 +125,7 @@ function CreditsPage() {
     }
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (provider: "flutterwave" | "korapay") => {
     if (purchasesPaused) return;
     if (!user?.email) {
       setError("You must be logged in.");
@@ -102,15 +134,18 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      const { checkoutUrl } = await createFlutterwaveCheckout({
-        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
-      });
+      const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
+      const { checkoutUrl } =
+        provider === "korapay"
+          ? await createKorapayCheckout({ data: { packId } })
+          : await createFlutterwaveCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Could not start payment");
     }
   };
+
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
@@ -166,17 +201,28 @@ function CreditsPage() {
           </div>
 
           {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-          <button
-            onClick={handlePayment}
-            disabled={processing || purchasesPaused}
-            title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
-            className="mt-6 w-full rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {purchasesPaused ? "Purchases paused for maintenance" : processing ? "Processing…" : "Pay with Flutterwave (NGN)"}
-          </button>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <button
+              onClick={() => handlePayment("flutterwave")}
+              disabled={processing || purchasesPaused}
+              title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
+              className="rounded-md bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Flutterwave"}
+            </button>
+            <button
+              onClick={() => handlePayment("korapay")}
+              disabled={processing || purchasesPaused}
+              title={purchasesPaused ? "Purchases are temporarily paused for maintenance" : undefined}
+              className="rounded-md border border-primary/50 bg-primary/10 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {purchasesPaused ? "Paused" : processing ? "Processing…" : "Pay with Korapay"}
+            </button>
+          </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Card, bank, USSD & transfer payments via Flutterwave.
+            Card, bank transfer, USSD & mobile money — all in NGN. Pick whichever provider works best for you.
           </p>
+
 
           <div className="mt-4 flex flex-wrap gap-2">
             {METHODS.map((m) => (
@@ -202,14 +248,15 @@ function CreditsPage() {
                   <p className="text-sm text-emerald-500">Thanks — we received your report. The team will reach out shortly.</p>
                 ) : (
                   <>
-                    <div className="flex gap-1 text-xs">
-                      {(["flutterwave", "other"] as const).map((m) => (
+                    <div className="flex flex-wrap gap-1 text-xs">
+                      {(["flutterwave", "korapay", "other"] as const).map((m) => (
                         <button key={m} onClick={() => setIssueMethod(m)}
                           className={`px-3 py-1 rounded-md border capitalize ${issueMethod === m ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
                           {m}
                         </button>
                       ))}
                     </div>
+
                     <input
                       value={issueRef}
                       onChange={(e) => setIssueRef(e.target.value)}
