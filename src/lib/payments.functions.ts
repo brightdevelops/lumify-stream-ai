@@ -217,7 +217,7 @@ export const reportPaymentIssue = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
       .object({
-        method: z.enum(["flutterwave", "other"]),
+        method: z.enum(["flutterwave", "korapay", "other"]),
         message: z.string().min(5).max(2000),
         orderReference: z.string().max(200).optional().nullable(),
         packId: z.enum(["starter", "basic", "pro", "enterprise"]).optional().nullable(),
@@ -235,3 +235,178 @@ export const reportPaymentIssue = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Korapay (hosted checkout, NGN) — mirrors the Flutterwave pattern.
+// Flow: init → user redirected to Korapay checkout → returns to
+// `/credits?korapay=1&reference=<ref>` → we verify server-side and credit.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Initialize a Korapay hosted checkout and return the redirect URL.
+ */
+export const createKorapayCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        packId: z.enum(["starter", "basic", "pro", "enterprise"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertNotInMaintenance("purchase", { userId: context.userId });
+    const { userId } = context;
+    const pack = PACKS[data.packId];
+    const secret = process.env.KORAPAY_SECRET_KEY;
+    if (!secret) throw new Error("Payment provider not configured (missing KORAPAY_SECRET_KEY)");
+
+    const appUrl = (process.env.PUBLIC_APP_URL || "https://lumifylive.com").replace(/\/$/, "");
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const email = profile?.email;
+    if (!email) throw new Error("Missing account email");
+
+    // Bind reference to the caller (verify enforces the same rule).
+    const reference = `lumify_${data.packId}_${userId.slice(0, 8)}_${Date.now()}`;
+
+    const res = await fetch("https://api.korapay.com/merchant/api/v1/charges/initialize", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: pack.amountNgn,
+        redirect_url: `${appUrl}/credits?korapay=1`,
+        currency: "NGN",
+        reference,
+        narration: `Lumify ${pack.name} pack — ${pack.credits} credits`,
+        channels: ["card", "bank_transfer", "mobile_money"],
+        customer: {
+          email,
+          name: profile?.full_name || email,
+        },
+        metadata: {
+          user_id: userId,
+          pack_id: data.packId,
+          credits: pack.credits,
+          amount_ngn: pack.amountNgn,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Korapay init failed (${res.status}) ${text.slice(0, 200)}`);
+    }
+
+    const payload = (await res.json()) as {
+      status: boolean;
+      message?: string;
+      data?: { checkout_url?: string; reference?: string };
+    };
+    if (!payload.status || !payload.data?.checkout_url) {
+      throw new Error(payload.message || "Korapay returned no checkout URL");
+    }
+    return { checkoutUrl: payload.data.checkout_url, reference };
+  });
+
+/**
+ * Server-side verification of a Korapay checkout.
+ * Idempotent via the append-only `payment_receipts` table.
+ */
+export const verifyKorapayAndCredit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        reference: z.string().min(6).max(128).regex(/^[a-zA-Z0-9_\-\.]+$/),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const secret = process.env.KORAPAY_SECRET_KEY;
+    if (!secret) throw new Error("Payment provider not configured");
+
+    const expectedPrefix = userId.slice(0, 8).toLowerCase();
+    const refMatch = /^lumify_(starter|basic|pro|enterprise)_([a-f0-9]{8})_\d+$/.exec(
+      data.reference.toLowerCase(),
+    );
+    if (!refMatch || refMatch[2] !== expectedPrefix) {
+      throw new Error("Transaction reference does not belong to this account");
+    }
+    const packId = refMatch[1] as keyof typeof PACKS;
+    const pack = PACKS[packId];
+
+    const marker = `Korapay:${data.reference}`;
+    const { data: existingReceipt, error: existingReceiptErr } = await supabaseAdmin
+      .from("payment_receipts")
+      .select("id, user_id")
+      .eq("provider", "korapay")
+      .eq("reference", data.reference)
+      .maybeSingle();
+    if (existingReceiptErr) throw new Error(existingReceiptErr.message);
+    if (existingReceipt) {
+      if (existingReceipt.user_id === userId) return { ok: true, alreadyCredited: true, packId };
+      throw new Error("This payment reference has already been credited to another account");
+    }
+
+    const verifyUrl = `https://api.korapay.com/merchant/api/v1/charges/${encodeURIComponent(data.reference)}`;
+    const res = await fetch(verifyUrl, {
+      headers: { Authorization: `Bearer ${secret}` },
+    });
+    if (!res.ok) throw new Error(`Korapay verification failed (${res.status})`);
+
+    const payload = (await res.json()) as {
+      status: boolean;
+      message?: string;
+      data?: {
+        status?: string;
+        amount?: number | string;
+        currency?: string;
+        reference?: string;
+      };
+    };
+    const tx = payload?.data;
+    if (!payload.status || !tx) throw new Error("Payment could not be verified");
+    if ((tx.status || "").toLowerCase() !== "success") throw new Error("Payment was not successful");
+    if (tx.currency !== "NGN") throw new Error("Unexpected currency");
+    if (tx.reference !== data.reference) throw new Error("Reference mismatch");
+    if (Number(tx.amount) < pack.amountNgn) {
+      throw new Error("Payment amount does not match selected pack");
+    }
+
+    const { error: receiptErr } = await supabaseAdmin
+      .from("payment_receipts")
+      .insert({
+        provider: "korapay",
+        reference: data.reference,
+        user_id: userId,
+        credits: pack.credits,
+        amount_ngn: pack.amountNgn,
+        description: `Credit purchase — ${pack.name} pack (${marker})`,
+      });
+    if (receiptErr) {
+      if ((receiptErr as { code?: string }).code === "23505") {
+        return { ok: true, alreadyCredited: true, packId };
+      }
+      throw new Error(receiptErr.message);
+    }
+
+    const { error: rpcErr } = await supabaseAdmin.rpc("purchase_credits_for_user", {
+      p_user_id: userId,
+      p_credits: pack.credits,
+      p_amount: pack.amountNgn,
+      p_description: `Credit purchase — ${pack.name} pack (${marker})`,
+    });
+    if (rpcErr) throw new Error(rpcErr.message);
+
+    return { ok: true, alreadyCredited: false, packId };
+  });
+
