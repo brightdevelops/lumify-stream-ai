@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { SupportWidget } from "@/components/SupportWidget";
+import { AppTour } from "@/components/AppTour";
 import { supabase } from "@/integrations/supabase/client";
 
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -52,6 +53,7 @@ function AppLayout() {
         </main>
       </div>
       <SupportWidget />
+      <AppTour />
     </div>
   );
 }

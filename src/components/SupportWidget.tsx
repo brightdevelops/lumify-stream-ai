@@ -207,6 +207,7 @@ export function SupportWidget() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Open support chat"
+          data-tour="support"
           className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg grid place-items-center hover:opacity-90 transition"
         >
           <MessageCircle className="h-6 w-6" />

@@ -6,15 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 const items = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/stream", label: "Start Stream", icon: Video },
-  { to: "/credits", label: "Wallet", icon: Wallet },
-  { to: "/billing", label: "Billing", icon: Receipt },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tour: "dashboard" },
+  { to: "/stream", label: "Start Stream", icon: Video, tour: "stream" },
+  { to: "/credits", label: "Wallet", icon: Wallet, tour: "credits" },
+  { to: "/billing", label: "Billing", icon: Receipt, tour: "billing" },
 ] as const;
 
 const secondary = [
-  { to: "/settings", label: "Settings", icon: Settings },
-  { to: "/tutorial", label: "Tutorial", icon: GraduationCap },
+  { to: "/settings", label: "Settings", icon: Settings, tour: "settings" },
+  { to: "/tutorial", label: "Tutorial", icon: GraduationCap, tour: "tutorial" },
 ] as const;
 
 export function AppSidebar() {
@@ -42,13 +42,14 @@ export function AppSidebar() {
     ...(isInventor ? [{ to: "/inventor" as const, label: "Inventor", icon: Wrench }] : []),
   ];
 
-  const renderItem = (it: { to: string; label: string; icon: any }) => {
+  const renderItem = (it: { to: string; label: string; icon: any; tour?: string }) => {
     const active = path === it.to || path.startsWith(it.to + "/");
     const Icon = it.icon;
     return (
       <Link
         key={it.to}
         to={it.to}
+        data-tour={it.tour}
         className={`flex items-center gap-3 rounded-full px-3.5 py-2.5 text-[13.5px] transition-colors ${
           active
             ? "bg-primary text-primary-foreground font-semibold"
@@ -78,7 +79,7 @@ export function AppSidebar() {
         )}
       </nav>
       <div className="p-3 space-y-2">
-        <div className="rounded-2xl border border-[color:var(--border-soft)] bg-card p-3.5">
+        <div data-tour="balance" className="rounded-2xl border border-[color:var(--border-soft)] bg-card p-3.5">
           <div className="eyebrow text-[10px]">Balance</div>
           <div className="mt-1 font-display text-xl text-foreground">
             {balance === null ? "—" : balance.toLocaleString()} <span className="text-[11px] text-[color:var(--faint)]">credits</span>
