@@ -6,15 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 const items = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/stream", label: "Start Stream", icon: Video },
-  { to: "/credits", label: "Wallet", icon: Wallet },
-  { to: "/billing", label: "Billing", icon: Receipt },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tour: "dashboard" },
+  { to: "/stream", label: "Start Stream", icon: Video, tour: "stream" },
+  { to: "/credits", label: "Wallet", icon: Wallet, tour: "credits" },
+  { to: "/billing", label: "Billing", icon: Receipt, tour: "billing" },
 ] as const;
 
 const secondary = [
-  { to: "/settings", label: "Settings", icon: Settings },
-  { to: "/tutorial", label: "Tutorial", icon: GraduationCap },
+  { to: "/settings", label: "Settings", icon: Settings, tour: "settings" },
+  { to: "/tutorial", label: "Tutorial", icon: GraduationCap, tour: "tutorial" },
 ] as const;
 
 export function AppSidebar() {
