@@ -42,13 +42,14 @@ export function AppSidebar() {
     ...(isInventor ? [{ to: "/inventor" as const, label: "Inventor", icon: Wrench }] : []),
   ];
 
-  const renderItem = (it: { to: string; label: string; icon: any }) => {
+  const renderItem = (it: { to: string; label: string; icon: any; tour?: string }) => {
     const active = path === it.to || path.startsWith(it.to + "/");
     const Icon = it.icon;
     return (
       <Link
         key={it.to}
         to={it.to}
+        data-tour={it.tour}
         className={`flex items-center gap-3 rounded-full px-3.5 py-2.5 text-[13.5px] transition-colors ${
           active
             ? "bg-primary text-primary-foreground font-semibold"
