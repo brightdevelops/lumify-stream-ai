@@ -123,14 +123,14 @@ function Landing() {
               <span className="ml-3 text-[11px] text-[color:var(--faint)]">lumify.live/studio</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-6 p-6 md:p-10">
-              <DemoPanel label="Your camera" muted />
-              <div className="grid place-items-center">
+              <DemoPanel variant="camera" />
+              <div className="grid place-items-center rotate-90 md:rotate-0">
                 <div className="grid h-11 w-11 place-items-center rounded-full bg-primary text-[color:var(--primary-foreground)]"
                      style={{ boxShadow: "0 0 30px var(--accent-glow)" }}>
                   <ArrowRight size={18} />
                 </div>
               </div>
-              <DemoPanel label="Lumify output" glow />
+              <DemoPanel variant="output" />
             </div>
           </div>
 
