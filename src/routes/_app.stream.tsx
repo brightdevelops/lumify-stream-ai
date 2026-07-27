@@ -761,198 +761,115 @@ function StreamPage() {
   const preflightTime = formatTimeLeft(secondsLeft);
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl">Studio</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Upload a reference image and watch your camera transform in real time.</p>
+    <div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="font-display text-[38px] leading-tight">Start a stream</h1>
+          <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)]">
+            Turn your webcam into a live AI persona. Pick a mode, check your preview, and go live.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3.5 py-2 text-[12.5px] self-start">
+          <span className={`status-dot ${streaming ? "live" : ""}`} />
+          {streaming ? (
+            <span className="text-primary font-semibold">Live — {RATE} credits/sec</span>
+          ) : (
+            <span className="text-[color:var(--muted-foreground)]">Idle — not charging</span>
+          )}
+        </div>
       </div>
 
       {STREAMING_PAUSED && (
-        <div
-          role="status"
-          className="mb-6 rounded-xl border border-primary/30 bg-primary/10 px-5 py-4 text-sm leading-relaxed text-foreground whitespace-pre-line"
-        >
+        <div role="status" className="mb-6 rounded-2xl border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-5 py-4 text-[14px] whitespace-pre-line">
           {STREAMING_PAUSED_MESSAGE}
         </div>
       )}
 
-
-
-      {/* Prominent time-left banner */}
-      <div className={`mb-6 rounded-xl border p-5 ${
-        streaming
-          ? lowBalance
-            ? "border-amber-500/40 bg-amber-500/5"
-            : "border-primary/30 bg-primary/5"
-          : "border-border bg-card"
-      }`}>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className={`shrink-0 grid place-items-center h-12 w-12 rounded-lg ${
-              streaming ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
-            }`}>
-              <Clock className="h-6 w-6" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                {streaming ? "Stream time left" : "Stream time available"}
-              </div>
-              <div className="mt-1 text-3xl md:text-4xl font-display text-foreground leading-tight">
-                ≈ {timeLeftLabel}
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {credits.toLocaleString()} credits · {RATE} credits/sec while streaming
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-start md:items-end gap-2">
-            {streaming ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-                <Radio className="h-3.5 w-3.5 animate-pulse" />
-                Charging now · meter runs only while live
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
-                <Radio className="h-3.5 w-3.5" />
-                Not streaming — no credits being used
-              </span>
-            )}
-            {!streaming && credits > 0 && (
-              <span className="text-[11px] text-muted-foreground">
-                Your balance gives you about <span className="text-foreground font-medium">{preflightTime}</span> of streaming.
-              </span>
-            )}
-          </div>
-        </div>
-
-        {lowBalance && (
-          <div className="mt-4 flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200">
-            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              About 1 minute of streaming left — top up to keep going.
-            </div>
-            <Link
-              to="/credits"
-              className="shrink-0 inline-flex items-center gap-1 rounded-md bg-amber-500/20 border border-amber-500/40 px-2.5 py-1 text-xs font-medium text-amber-100 hover:bg-amber-500/30"
-            >
-              <Plus className="h-3 w-3" /> Top up
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Realistic vs Stylized mode toggle */}
-      <div className="mb-6 rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Output Mode</div>
-          <div className="inline-flex rounded-md border border-border bg-background/60 p-1">
-            <button
-              type="button"
-              onClick={() => setMode("realistic")}
-              className={`px-4 py-1.5 text-sm rounded ${mode === "realistic" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Realistic Mode
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("stylized")}
-              className={`px-4 py-1.5 text-sm rounded ${mode === "stylized" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Stylized Mode
-            </button>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground max-w-md">
-            {mode === "realistic"
-              ? "Keeps the person looking human and natural."
-              : "Allows cartoon, anime, and other stylized effects."}
-          </p>
-        </div>
-
-        {mode === "realistic" && (
-          <div className="sm:w-72">
-            <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground mb-2">
-              <span>Realism Strength</span>
-              <span className="text-primary font-mono">{realism}/10</span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              step={1}
-              value={realism}
-              onChange={(e) => setRealism(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>Subtle</span>
-              <span>Most realistic</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-
+        {/* LEFT */}
         <div className="space-y-5">
-
-          {cameras.length > 1 && (
-            <div>
-              <label htmlFor="camera-select" className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                Select Camera
-                <span
-                  tabIndex={0}
-                  role="img"
-                  aria-label="Any 1080p camera works great. Lighting matters most — face a window or lamp."
-                  title="Any 1080p camera works great. Lighting matters most — face a window or lamp."
-                  className="inline-flex items-center text-muted-foreground/70 hover:text-foreground cursor-help"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </span>
-              </label>
-              <select
-                id="camera-select"
-                value={selectedCameraId}
-                onChange={(e) => handleCameraChange(e.target.value)}
-                className="w-full sm:w-auto min-w-[260px] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary hover:border-primary/60 transition-colors"
-              >
-                {cameras.map((cam, i) => (
-                  <option key={cam.deviceId || i} value={cam.deviceId}>
-                    {cam.label || `Camera ${i + 1}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Panel label="Your Camera">
-              <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
-              {!streaming && <PanelEmpty hint="Camera off" tip="Tip: face a window or lamp for the best AI output" />}
-              {streaming && (
-                <div className="absolute top-3 right-3 z-10 rounded-md bg-background/80 backdrop-blur px-2 py-1 text-xs font-mono text-primary">
-                  {mmss(duration)}
-                </div>
-              )}
-            </Panel>
-            <Panel label="AI Output" accent>
-              <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
-              {!streaming && <PanelEmpty hint="Waiting for stream" />}
-              {connecting && (
-                <div className="absolute inset-0 grid place-items-center bg-black/60">
-                  <div className="text-center">
-                    <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
-                    <div className="mt-2 text-xs text-muted-foreground">Connecting to Lucy…</div>
+          {/* Live preview */}
+          <div className="card-surface p-0 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+              <Panel label="Your camera">
+                <video ref={inputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
+                {!streaming && <PanelEmpty icon={<CameraIcon size={22} />} title="Camera off" hint="Face a window or lamp for the best AI output" />}
+                {streaming && (
+                  <div className="absolute top-3 right-3 z-10 rounded-md bg-black/70 backdrop-blur px-2 py-1 text-[11px] font-mono text-primary">
+                    {mmss(duration)}
                   </div>
+                )}
+              </Panel>
+              <Panel label="AI output" accent>
+                <video ref={outputVideoRef} muted playsInline className="h-full w-full object-cover bg-black" />
+                {!streaming && <PanelEmpty icon={<Sparkles size={22} />} title="Waiting for stream" hint="Your transformed feed appears here in real time" accent />}
+                {connecting && (
+                  <div className="absolute inset-0 grid place-items-center bg-black/70">
+                    <div className="text-center">
+                      <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
+                      <div className="mt-2 text-[12px] text-[color:var(--muted-foreground)]">Connecting to Lucy…</div>
+                    </div>
+                  </div>
+                )}
+              </Panel>
+            </div>
+
+            {/* Control strip */}
+            <div className="border-t border-[color:var(--border-soft)] p-4 flex flex-wrap items-center gap-4">
+              {cameras.length > 0 && (
+                <label className="flex items-center gap-2">
+                  <span className="eyebrow" title="Any 1080p camera works. Lighting matters most.">Camera <Info size={12} className="inline text-[color:var(--faint)]" /></span>
+                  <select
+                    value={selectedCameraId}
+                    onChange={(e) => handleCameraChange(e.target.value)}
+                    className="rounded-lg border bg-[color:var(--sidebar)] px-3 py-1.5 text-[13px] focus:border-[color:var(--primary)]"
+                  >
+                    {cameras.map((cam, i) => (
+                      <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <div className="flex items-center gap-3">
+                <span className="eyebrow">Mode</span>
+                <div className="segmented">
+                  <button type="button" data-active={mode === "realistic"} onClick={() => setMode("realistic")}>Realistic</button>
+                  <button type="button" data-active={mode === "stylized"} onClick={() => setMode("stylized")}>Stylized</button>
+                </div>
+              </div>
+
+              {mode === "realistic" && (
+                <div className="flex items-center gap-3 min-w-[220px]">
+                  <span className="eyebrow">Realism</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    step={1}
+                    value={realism}
+                    onChange={(e) => setRealism(Number(e.target.value))}
+                    className="lime-range flex-1"
+                    style={{ ["--val" as any]: `${((realism - 1) / 9) * 100}%` }}
+                  />
+                  <span className="font-display text-[18px] text-primary min-w-[38px] text-right">{realism}/10</span>
                 </div>
               )}
-            </Panel>
+            </div>
+            <div className="px-4 pb-4 text-[12px] text-[color:var(--muted-foreground)]">
+              {mode === "realistic"
+                ? "Keeps the person looking human and natural — style presets are disabled."
+                : "Unlocks creative presets — anime, painterly, cinematic and more."}
+            </div>
           </div>
 
-          <CameraTips />
-
-          <div className="rounded-xl border border-border bg-card p-5">
-            <label className="block text-xs uppercase tracking-wide text-muted-foreground mb-2">Reference Image</label>
+          {/* Reference image */}
+          <div className="card-surface">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="eyebrow">Reference image</span>
+              <span className="text-[11px] text-[color:var(--faint)]">· optional</span>
+            </div>
 
             <input
               ref={fileInputRef}
@@ -967,200 +884,192 @@ function StreamPage() {
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  handleFile(e.dataTransfer.files?.[0] ?? null);
+                onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0] ?? null); }}
+                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-colors"
+                style={{
+                  borderColor: dragOver ? "var(--primary)" : "var(--border)",
+                  background: dragOver ? "var(--accent-soft)" : "transparent",
                 }}
-                className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-colors ${
-                  dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/60 hover:bg-secondary/40"
-                }`}
               >
-                <Upload className="h-8 w-8 text-muted-foreground" />
-                <div className="text-sm">Drag and drop or <span className="text-primary">click to upload</span></div>
-                <div className="text-xs text-muted-foreground">JPG or PNG</div>
+                <Upload className="h-7 w-7 text-primary" />
+                <div className="text-[14px] text-foreground">Drop an image here or <span className="text-primary">browse files</span></div>
+                <div className="text-[12px] text-[color:var(--faint)]">JPG or PNG · guides the AI toward a specific look</div>
               </div>
             ) : (
-              <div className="flex items-center gap-4 rounded-lg border border-border bg-background/50 p-3">
-                <img src={referenceUrl} alt="Reference" className="h-20 w-20 rounded-md object-cover border border-border" />
+              <div className="flex items-center gap-4 rounded-xl border bg-[color:var(--sidebar)] p-3">
+                <img src={referenceUrl} alt="Reference" className="h-20 w-20 rounded-md object-cover border" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium truncate">
-                    <ImageIcon className="h-4 w-4 text-primary shrink-0" />
+                  <div className="flex items-center gap-2 text-[14px] truncate">
+                    <ImageIcon size={14} className="text-primary shrink-0" />
                     <span className="truncate">{referenceImage?.name}</span>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
+                  <div className="text-[11.5px] text-[color:var(--faint)] mt-0.5">
                     {referenceImage ? `${(referenceImage.size / 1024).toFixed(0)} KB` : ""}
                     {streaming && <span className="ml-2 text-primary">• Live</span>}
                   </div>
                   <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="text-xs rounded border border-border px-2 py-1 hover:bg-secondary"
-                    >
-                      Change
-                    </button>
+                    <button onClick={() => fileInputRef.current?.click()} className="text-[11px] rounded border px-2 py-1 hover:bg-card">Change</button>
                     {!streaming && (
-                      <button
-                        onClick={clearReference}
-                        className="text-xs rounded border border-border px-2 py-1 hover:bg-secondary text-muted-foreground"
-                      >
-                        Remove
-                      </button>
+                      <button onClick={clearReference} className="text-[11px] rounded border px-2 py-1 hover:bg-card text-[color:var(--muted-foreground)]">Remove</button>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            {mode === "stylized" ? (
+            {mode === "stylized" && (
               <div className="mt-4">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Style (optional)</div>
+                <div className="eyebrow mb-2">Style (optional)</div>
                 <div className="flex flex-wrap gap-2">
                   {PRESETS.map((p) => (
                     <button
                       key={p}
                       onClick={() => selectPreset(p)}
-                      className={`rounded-full border px-3 py-1 text-xs ${selectedPreset === p ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground hover:text-foreground"}`}
+                      className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+                        selectedPreset === p
+                          ? "border-[color:var(--primary)] text-primary bg-[color:var(--accent-soft)]"
+                          : "border-[color:var(--border)] text-[color:var(--muted-foreground)] hover:text-foreground"
+                      }`}
                     >
                       {p}
                     </button>
                   ))}
                 </div>
               </div>
-            ) : (
-              <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-                Realistic Mode is on — style presets are disabled to keep the result natural and human.
-              </div>
             )}
+          </div>
 
+          {error && (
+            <div className="rounded-xl border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 px-4 py-3 text-[13px] text-[color:var(--destructive)]">
+              {error}
+            </div>
+          )}
 
-
-
-
-            {error && (
-              <div className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-            <div className="mt-5 flex gap-3">
+          {/* Action bar */}
+          <div className="card-surface flex flex-wrap items-center justify-between gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={start}
                 disabled={streaming || connecting || STREAMING_PAUSED}
-                title={STREAMING_PAUSED ? "Streaming is temporarily paused for maintenance" : undefined}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary"
               >
-                <Play className="h-4 w-4" /> {STREAMING_PAUSED ? "Streaming paused for maintenance" : connecting ? "Connecting…" : "Start Stream"}
+                {streaming ? <><Square size={14} /> Streaming…</> : <><Play size={14} /> Start stream</>}
               </button>
-              <button onClick={stop} disabled={!streaming} className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-5 py-2.5 text-sm text-foreground hover:bg-secondary disabled:opacity-50">
-                <Square className="h-4 w-4" /> Stop
+              <button onClick={stop} disabled={!streaming} className="btn-ghost disabled:opacity-50">
+                <Square size={14} /> Stop
               </button>
+            </div>
+            <div className="text-[12.5px] text-[color:var(--muted-foreground)]">
+              Costs <span className="text-foreground font-semibold">{RATE} credits/sec</span> · ≈ <span className="text-foreground">{timeLeftLabel}</span> on your balance
             </div>
           </div>
+
+          <CameraTips />
         </div>
 
+        {/* RIGHT RAIL */}
         <aside className="space-y-5">
-          <SidePanel title="Balance">
-            <div className="text-2xl font-display text-foreground">
-              ≈ {timeLeftLabel}
-              <span className="ml-2 text-xs uppercase tracking-wide text-muted-foreground">left</span>
+          {/* Balance */}
+          <div className="accent-card rounded-2xl p-5" style={{ boxShadow: "0 20px 60px -30px var(--accent-glow)" }}>
+            <div className="eyebrow">Balance</div>
+            <div className="mt-2 font-display text-[28px] leading-none text-foreground">
+              ≈ {timeLeftLabel} <span className="text-[12px] text-[color:var(--muted-foreground)] font-sans">LEFT</span>
             </div>
-            <div className="mt-3 h-2 rounded-full bg-secondary overflow-hidden">
-              <div className={`h-full transition-all duration-700 ease-linear ${lowBalance ? "bg-amber-500" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+            <div className="mt-4 h-1.5 rounded-full bg-[color:var(--border)] overflow-hidden">
+              <div
+                className="h-full transition-all duration-500"
+                style={{ width: `${pct}%`, background: lowBalance ? "var(--warning)" : "var(--primary)" }}
+              />
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">{credits.toLocaleString()} credits</div>
-          </SidePanel>
+            <div className="mt-2 text-[12px] text-[color:var(--muted-foreground)]">
+              {credits.toLocaleString()} credits · {RATE} credits/sec
+            </div>
+            {lowBalance && (
+              <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)]">
+                <AlertTriangle size={13} className="inline mr-1" />
+                Under 10 minutes of stream time left. Top up to avoid an interruption mid-stream.
+              </div>
+            )}
+            <Link to="/credits" className="btn-primary w-full mt-4">
+              <Plus size={14} /> Buy credits
+            </Link>
+          </div>
 
-          <SidePanel title="Session Info">
-            <Row k="Model" v="Lucy 2.5" />
-            <Row k="Rate" v={`${RATE} credits/sec`} />
-            <Row k="Quality" v="720p" />
+          {/* Session */}
+          <SidePanel title="Session">
             <Row k="Status" v={
-              <span className="inline-flex items-center gap-1.5 text-primary">
-                <span className={`h-1.5 w-1.5 rounded-full ${streaming ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
-                {streaming ? "Live · charging" : "Idle · not charging"}
+              <span className="inline-flex items-center gap-2 text-[13px]">
+                <span className={`status-dot ${streaming ? "live" : ""}`} />
+                {streaming ? "Live" : "Idle"}
               </span>
             } />
-          </SidePanel>
-
-          <SidePanel title="This Session">
+            <Row k="Model" v="Lucy 2.5" />
+            <Row k="Quality" v="720p" />
             <Row k="Duration" v={mmss(duration)} />
-            <Row k="Credits Used" v={used.toLocaleString()} />
+            <Row k="Credits used" v={used.toLocaleString()} />
             <Row k="Cost so far" v={`₦${cost.toLocaleString()}`} />
           </SidePanel>
 
-          <SidePanel title={
-            <span className="inline-flex items-center gap-1.5">
-              <Monitor className="h-3.5 w-3.5 text-primary" /> OBS Setup
-              <span className="ml-1 rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-primary">Live</span>
-            </span>
-          }>
-            <p className="text-xs text-muted-foreground -mt-1 mb-2">Pipe your AI face into OBS as a Browser Source.</p>
-            <ol className="text-xs text-foreground/90 space-y-1.5 list-decimal pl-4">
-              <li>Start your stream on Lumify</li>
-              <li>Open OBS</li>
-              <li>Click <span className="font-mono text-primary">+</span> under Sources</li>
-              <li>Select <span className="font-medium">Browser Source</span></li>
-              <li>Paste the URL below</li>
-              <li>Set width <span className="font-mono">1280</span> height <span className="font-mono">720</span></li>
-              <li>Click <span className="font-medium">OK</span> — your AI face is now in OBS</li>
+          {/* OBS */}
+          <div className="card-surface">
+            <div className="flex items-center gap-2 mb-3">
+              <Monitor size={14} className="text-primary" />
+              <span className="eyebrow">OBS Setup</span>
+              <span className="badge badge-success">Live</span>
+            </div>
+            <ol className="space-y-2 text-[13px]">
+              {[
+                "Start your stream on Lumify",
+                "In OBS, add a Browser Source",
+                "Paste the URL below, set 1280 × 720",
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded bg-primary text-[color:var(--primary-foreground)] text-[11px] font-bold">{i + 1}</span>
+                  <span className="text-foreground">{step}</span>
+                </li>
+              ))}
             </ol>
-            <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-background/60 p-2">
-              <code className="flex-1 truncate text-[11px] font-mono text-muted-foreground">
-                {obsUrl || "Loading your unique URL…"}
+            <div className="mt-3 flex items-center gap-2 rounded-lg border bg-[color:var(--sidebar)] p-2">
+              <code className="flex-1 truncate text-[11px] font-mono text-[color:var(--muted-foreground)]">
+                {obsUrl || "Loading…"}
               </code>
               <button
                 onClick={copyObsUrl}
                 disabled={!obsUrl}
-                className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[11px] hover:bg-secondary disabled:opacity-50"
-                title="Copy OBS URL"
+                className="inline-flex items-center gap-1 rounded border bg-card px-2 py-1 text-[11px] font-semibold text-primary hover:bg-[color:var(--accent-soft)] disabled:opacity-50"
               >
-                {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
-                {copied ? "Copied" : "Copy"}
+                {copied ? <><Check size={12} /> Copied ✓</> : <><Copy size={12} /> Copy</>}
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              This URL is private to you and permanent. Regenerate it from Settings if you ever need to revoke OBS access.
+            <p className="mt-2 text-[11px] text-[color:var(--faint)]">
+              This URL is private and permanent. Regenerate it in Settings to revoke OBS access.
             </p>
             {obsUrl && (
-              <a
-                href={obsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" /> Open output preview
+              <a href={obsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-primary hover:underline">
+                <ExternalLink size={11} /> Open output preview
               </a>
             )}
-          </SidePanel>
-
-          <Link to="/credits" className="flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90">
-            <Plus className="h-4 w-4" /> Top Up Credits
-          </Link>
+          </div>
         </aside>
       </div>
 
       {showOutOfCredits && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur p-4">
-          <div className="relative w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
+          <div className="relative w-full max-w-md card-surface">
             <button
               onClick={() => setShowOutOfCredits(false)}
-              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+              className="absolute top-3 right-3 text-[color:var(--muted-foreground)] hover:text-foreground"
               aria-label="Close"
             >
-              <X className="h-4 w-4" />
+              <X size={16} />
             </button>
-            <h2 className="text-xl font-display">Credits finished</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Top up to continue streaming.
-            </p>
+            <h2 className="font-display text-2xl">Credits finished</h2>
+            <p className="mt-2 text-[13.5px] text-[color:var(--muted-foreground)]">Top up to continue streaming.</p>
             <button
-              onClick={() => {
-                setShowOutOfCredits(false);
-                navigate({ to: "/credits" });
-              }}
-              className="mt-5 inline-flex items-center justify-center gap-2 w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+              onClick={() => { setShowOutOfCredits(false); navigate({ to: "/credits" }); }}
+              className="btn-primary w-full mt-5"
             >
-              <Plus className="h-4 w-4" /> Top Up Credits
+              <Plus size={14} /> Top up credits
             </button>
           </div>
         </div>
@@ -1171,18 +1080,24 @@ function StreamPage() {
 
 function Panel({ label, accent, children }: { label: string; accent?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`relative rounded-xl border ${accent ? "border-primary/40" : "border-border"} bg-card overflow-hidden aspect-video`}>
-      <div className="absolute top-3 left-3 z-10 rounded-md bg-background/70 backdrop-blur px-2 py-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div className={`relative overflow-hidden aspect-[16/10] ${accent ? "md:border-l" : ""}`}>
+      <div className="absolute top-3 left-3 z-10 rounded-md bg-black/60 backdrop-blur px-2 py-0.5 text-[10px] uppercase tracking-widest font-semibold text-[color:var(--muted-foreground)]">
+        {label}
+      </div>
       {children}
     </div>
   );
 }
-function PanelEmpty({ hint, tip }: { hint: string; tip?: string }) {
+
+function PanelEmpty({ icon, title, hint, accent }: { icon: React.ReactNode; title: string; hint?: string; accent?: boolean }) {
   return (
-    <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground p-4">
-      <div className="text-center space-y-2 max-w-[240px]">
-        <div>{hint}</div>
-        {tip && <div className="text-[11px] text-muted-foreground/80 leading-relaxed">{tip}</div>}
+    <div className="absolute inset-0 grid place-items-center p-6 text-center">
+      <div className="max-w-[240px]">
+        <div className={`mx-auto grid h-11 w-11 place-items-center rounded-xl ${accent ? "bg-[color:var(--accent-soft)] text-primary" : "bg-[color:var(--sidebar)] text-[color:var(--muted-foreground)]"}`}>
+          {icon}
+        </div>
+        <div className="mt-3 text-[13.5px] text-foreground">{title}</div>
+        {hint && <div className="mt-1 text-[11.5px] text-[color:var(--faint)] leading-relaxed">{hint}</div>}
       </div>
     </div>
   );
@@ -1190,12 +1105,11 @@ function PanelEmpty({ hint, tip }: { hint: string; tip?: string }) {
 
 function CameraTips() {
   const STORAGE_KEY = "lumify_tips_collapsed";
-  const [collapsed, setCollapsed] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState<boolean>(true);
   useEffect(() => {
     try {
       const v = localStorage.getItem(STORAGE_KEY);
-      if (v === "1") setCollapsed(true);
-      else if (v === null && typeof window !== "undefined" && window.innerWidth < 640) setCollapsed(true);
+      if (v === "0") setCollapsed(false);
     } catch {}
   }, []);
   const toggle = () => {
@@ -1206,42 +1120,51 @@ function CameraTips() {
     });
   };
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className="card-surface p-0 overflow-hidden">
       <button
         type="button"
         onClick={toggle}
         aria-expanded={!collapsed}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left"
       >
-        <span className="flex items-center gap-2 text-sm font-medium">
-          <CameraIcon className="h-4 w-4 text-primary" />
+        <span className="flex items-center gap-2 text-[13.5px] font-semibold">
+          <CameraIcon size={15} className="text-primary" />
           Best quality tips
         </span>
-        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? "" : "rotate-180"}`} />
+        <ChevronDown size={15} className={`text-[color:var(--muted-foreground)] transition-transform ${collapsed ? "" : "rotate-180"}`} />
       </button>
       {!collapsed && (
-        <ul className="px-4 pb-4 space-y-2 text-xs text-muted-foreground list-disc pl-8">
-          <li>Face a light source — good lighting improves AI output more than an expensive camera.</li>
-          <li>Any 1080p webcam or phone camera works great. 4K adds nothing — Lumify processes video at an optimized resolution.</li>
-          <li>Keep some distance between you and your background for cleaner transformations.</li>
-        </ul>
+        <div className="grid gap-3 sm:grid-cols-3 px-5 pb-5">
+          {[
+            { t: "Light your face", d: "Face a window or lamp. Lighting matters more than the camera." },
+            { t: "1080p is plenty", d: "Any 1080p webcam works. 4K adds nothing — output is optimized." },
+            { t: "Step off the wall", d: "A little distance from the background gives cleaner transformations." },
+          ].map((tip) => (
+            <div key={tip.t} className="rounded-xl border bg-[color:var(--sidebar)] p-3">
+              <div className="text-[13px] text-foreground">{tip.t}</div>
+              <div className="mt-1 text-[11.5px] text-[color:var(--muted-foreground)]">{tip.d}</div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
 }
+
 function SidePanel({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-3">{title}</div>
+    <div className="card-surface">
+      <div className="eyebrow mb-3">{title}</div>
       <div className="space-y-2">{children}</div>
     </div>
   );
 }
+
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-muted-foreground">{k}</span>
-      <span className="font-medium">{v}</span>
+    <div className="flex items-center justify-between text-[13px]">
+      <span className="text-[color:var(--muted-foreground)]">{k}</span>
+      <span className="font-medium text-foreground">{v}</span>
     </div>
   );
 }
