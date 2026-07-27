@@ -125,7 +125,7 @@ function CreditsPage() {
     }
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (provider: "flutterwave" | "korapay") => {
     if (purchasesPaused) return;
     if (!user?.email) {
       setError("You must be logged in.");
@@ -134,15 +134,18 @@ function CreditsPage() {
     setError(null);
     setProcessing(true);
     try {
-      const { checkoutUrl } = await createFlutterwaveCheckout({
-        data: { packId: pack.id as "starter" | "basic" | "pro" | "enterprise" },
-      });
+      const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
+      const { checkoutUrl } =
+        provider === "korapay"
+          ? await createKorapayCheckout({ data: { packId } })
+          : await createFlutterwaveCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Could not start payment");
     }
   };
+
 
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
