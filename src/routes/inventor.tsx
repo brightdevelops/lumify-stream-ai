@@ -30,6 +30,7 @@ const TABS = [
   { to: "/inventor/purchases", label: "Purchases" },
   { to: "/inventor/history", label: "History" },
   { to: "/inventor/support", label: "Support" },
+  { to: "/inventor/tutorials", label: "Tutorials" },
 ] as const;
 
 function InventorLayout() {

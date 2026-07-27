@@ -25,6 +25,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorUsersRouteImport } from './routes/inventor.users'
+import { Route as InventorTutorialsRouteImport } from './routes/inventor.tutorials'
 import { Route as InventorSupportRouteImport } from './routes/inventor.support'
 import { Route as InventorRecordingsRouteImport } from './routes/inventor.recordings'
 import { Route as InventorPurchasesRouteImport } from './routes/inventor.purchases'
@@ -127,6 +128,11 @@ const InventorIndexRoute = InventorIndexRouteImport.update({
 const InventorUsersRoute = InventorUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => InventorRoute,
+} as any)
+const InventorTutorialsRoute = InventorTutorialsRouteImport.update({
+  id: '/tutorials',
+  path: '/tutorials',
   getParentRoute: () => InventorRoute,
 } as any)
 const InventorSupportRoute = InventorSupportRouteImport.update({
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/inventor/purchases': typeof InventorPurchasesRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
+  '/inventor/tutorials': typeof InventorTutorialsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/inventor/purchases': typeof InventorPurchasesRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
+  '/inventor/tutorials': typeof InventorTutorialsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor': typeof InventorIndexRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
@@ -367,6 +375,7 @@ export interface FileRoutesById {
   '/inventor/purchases': typeof InventorPurchasesRoute
   '/inventor/recordings': typeof InventorRecordingsRoute
   '/inventor/support': typeof InventorSupportRoute
+  '/inventor/tutorials': typeof InventorTutorialsRoute
   '/inventor/users': typeof InventorUsersRoute
   '/inventor/': typeof InventorIndexRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
     | '/inventor/purchases'
     | '/inventor/recordings'
     | '/inventor/support'
+    | '/inventor/tutorials'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/resolve-stream-token'
@@ -450,6 +460,7 @@ export interface FileRouteTypes {
     | '/inventor/purchases'
     | '/inventor/recordings'
     | '/inventor/support'
+    | '/inventor/tutorials'
     | '/inventor/users'
     | '/inventor'
     | '/api/public/resolve-stream-token'
@@ -492,6 +503,7 @@ export interface FileRouteTypes {
     | '/inventor/purchases'
     | '/inventor/recordings'
     | '/inventor/support'
+    | '/inventor/tutorials'
     | '/inventor/users'
     | '/inventor/'
     | '/api/public/resolve-stream-token'
@@ -642,6 +654,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/inventor/users'
       preLoaderRoute: typeof InventorUsersRouteImport
+      parentRoute: typeof InventorRoute
+    }
+    '/inventor/tutorials': {
+      id: '/inventor/tutorials'
+      path: '/tutorials'
+      fullPath: '/inventor/tutorials'
+      preLoaderRoute: typeof InventorTutorialsRouteImport
       parentRoute: typeof InventorRoute
     }
     '/inventor/support': {
@@ -846,6 +865,7 @@ interface InventorRouteChildren {
   InventorPurchasesRoute: typeof InventorPurchasesRoute
   InventorRecordingsRoute: typeof InventorRecordingsRoute
   InventorSupportRoute: typeof InventorSupportRoute
+  InventorTutorialsRoute: typeof InventorTutorialsRoute
   InventorUsersRoute: typeof InventorUsersRoute
   InventorIndexRoute: typeof InventorIndexRoute
 }
@@ -859,6 +879,7 @@ const InventorRouteChildren: InventorRouteChildren = {
   InventorPurchasesRoute: InventorPurchasesRoute,
   InventorRecordingsRoute: InventorRecordingsRoute,
   InventorSupportRoute: InventorSupportRoute,
+  InventorTutorialsRoute: InventorTutorialsRoute,
   InventorUsersRoute: InventorUsersRoute,
   InventorIndexRoute: InventorIndexRoute,
 }
