@@ -72,7 +72,9 @@ function Landing() {
   if (!authChecked || hasSession) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+      <LandingBackground />
+      <div className="relative z-10">
       {/* NAV */}
       <header className={`sticky top-0 z-50 transition-colors ${scrolled ? "backdrop-blur border-b" : ""}`} style={{ background: scrolled ? "rgba(11,13,10,0.7)" : "transparent" }}>
         <div className="mx-auto max-w-[1160px] px-6 h-[68px] flex items-center justify-between">
