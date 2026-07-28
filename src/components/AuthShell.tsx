@@ -98,7 +98,7 @@ export function AuthShell({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}${nextParam ?? "/dashboard"}`,
             data: { full_name: name },
             ...(captchaToken ? { captchaToken } : {}),
           },
@@ -113,7 +113,7 @@ export function AuthShell({
         if (error) throw error;
         (supabase.rpc as any)("record_login").then(() => {}, () => {});
       }
-      navigate({ to: "/dashboard" });
+      postAuthRedirect();
     } catch (err: any) {
       setError(err?.message ?? "Something went wrong");
       resetCaptcha();
