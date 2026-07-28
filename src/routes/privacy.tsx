@@ -52,7 +52,7 @@ function PrivacyPage() {
             <h2 className="text-xl text-foreground">2. Information we collect</h2>
             <ul className="mt-3 list-disc pl-6 space-y-2">
               <li><span className="text-foreground">Account data:</span> email address, password hash, display name, and (if you sign in with Google) the basic profile information Google shares with us.</li>
-              <li><span className="text-foreground">Billing data:</span> the amount, currency, pack purchased, and a payment reference returned by Korapay. We do not receive or store card numbers.</li>
+              <li><span className="text-foreground">Billing data:</span> the amount, currency, pack purchased, and a payment reference returned by Flutterwave. We do not receive or store card numbers.</li>
               <li><span className="text-foreground">Usage data:</span> credit balance, transaction history, stream sessions (start/end time, credits consumed), prompts you submit, and support messages you send us.</li>
               
             </ul>
@@ -62,7 +62,7 @@ function PrivacyPage() {
             <h2 className="text-xl text-foreground">3. How we use it</h2>
             <ul className="mt-3 list-disc pl-6 space-y-2">
               <li>Providing the Service — authenticating you, running transformations, tracking credits, and delivering your output stream.</li>
-              <li>Processing payments and issuing credits via Korapay.</li>
+              <li>Processing payments and issuing credits via Flutterwave.</li>
               <li>Preventing fraud, abuse, and violations of our Terms of Service.</li>
               <li>Responding to your support requests.</li>
               <li>Improving reliability and performance of the Service.</li>
