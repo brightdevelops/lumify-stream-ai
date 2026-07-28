@@ -49,13 +49,20 @@ function AppLayout() {
       <div className="flex-1 min-w-0 flex flex-col relative z-10">
         <MobileNav />
         <main className="flex-1 min-w-0">
-          <div className="mx-auto w-full max-w-[1220px] px-5 md:px-[34px] py-8 md:py-10">
-            <Outlet />
-          </div>
+          <PageShell />
         </main>
       </div>
       <SupportWidget />
       <AppTour />
+    </div>
+  );
+}
+
+function PageShell() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <div key={pathname} className="mx-auto w-full max-w-[1220px] px-5 md:px-[34px] py-8 md:py-10 app-page-enter">
+      <Outlet />
     </div>
   );
 }
