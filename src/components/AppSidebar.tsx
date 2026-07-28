@@ -63,7 +63,7 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="hidden md:flex h-screen sticky top-0 w-[225px] shrink-0 flex-col border-r bg-[color:var(--sidebar)]">
+    <aside className="hidden md:flex h-screen sticky top-0 w-[225px] shrink-0 flex-col border-r bg-[color:var(--sidebar)] relative z-10">
       <div className="px-6 py-6">
         <Logo />
       </div>

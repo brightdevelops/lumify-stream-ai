@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { SupportWidget } from "@/components/SupportWidget";
 import { AppTour } from "@/components/AppTour";
+import { AppBackground } from "@/components/app/AppBackground";
 import { supabase } from "@/integrations/supabase/client";
 
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -42,9 +43,10 @@ function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="min-h-screen flex w-full bg-background relative">
+      <AppBackground />
       <AppSidebar />
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col relative z-10">
         <MobileNav />
         <main className="flex-1 min-w-0">
           <div className="mx-auto w-full max-w-[1220px] px-5 md:px-[34px] py-8 md:py-10">
