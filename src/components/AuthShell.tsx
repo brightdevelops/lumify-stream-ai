@@ -51,10 +51,29 @@ export function AuthShell({
     (window.location.hostname === "lumifylive.com" ||
       window.location.hostname === "www.lumifylive.com");
 
+  // Preserve a same-origin relative `next` (e.g. OAuth consent URL) through
+  // every sign-in path so the user returns to the original destination.
+  const nextParam = (() => {
+    if (typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("next");
+    if (!raw) return null;
+    // Only allow same-origin relative paths.
+    if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+    return raw;
+  })();
+  const postAuthRedirect = () => {
+    if (nextParam) {
+      window.location.href = nextParam;
+    } else {
+      navigate({ to: "/dashboard" });
+    }
+  };
+
   const resetCaptcha = () => {
     setCaptchaToken(null);
     turnstileRef.current?.reset();
   };
+
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
