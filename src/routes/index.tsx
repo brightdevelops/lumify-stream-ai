@@ -35,7 +35,7 @@ const FAQS = [
   { q: "How much does it cost?", a: "Streaming costs 2 credits per second (₦46/sec). You only pay while you're live — there's no monthly fee and credits never expire." },
   { q: "Does it work with Twitch, YouTube, TikTok?", a: "Yes. Lumify gives you a private OBS Browser Source URL. Once it's in OBS, you can push to any platform OBS supports." },
   { q: "Is my camera feed stored?", a: "No. Your camera stream is processed in real time and not retained. Only your session metadata (duration, credits used) is stored for billing." },
-  { q: "How do I pay?", a: "Top-ups are handled by Korapay — card, bank transfer, and mobile money in NGN. Payments are processed securely and credits are added the moment payment confirms." },
+  { q: "How do I pay?", a: "Top-ups are handled by Flutterwave — card, bank transfer, and mobile money in NGN. Payments are processed securely and credits are added the moment payment confirms." },
 ];
 
 const PLATFORMS = ["STREAMS EVERYWHERE OBS GOES", "TWITCH", "YOUTUBE LIVE", "TIKTOK LIVE", "KICK", "FACEBOOK LIVE", "TROVO"];

@@ -82,7 +82,7 @@ function TermsPage() {
           <section>
             <h2 className="text-xl text-foreground">5. Payments &amp; Credits</h2>
             <p className="mt-3">
-              Credits are sold in fixed packs in Nigerian Naira (NGN) and processed by Korapay.
+              Credits are sold in fixed packs in Nigerian Naira (NGN) and processed by Flutterwave.
               Lumify never sees or stores your full card details. Credits never expire but are
               non-refundable except where required by law — see our{" "}
               <Link to="/refunds" className="text-primary hover:underline">Refund Policy</Link> for
