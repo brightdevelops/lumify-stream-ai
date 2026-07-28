@@ -197,7 +197,7 @@ function WalletPage() {
             className="btn-primary w-full mt-6"
           >
             <WalletIcon size={15} />
-            {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Korapay`}
+            {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Flutterwave`}
           </button>
           <p className="mt-3 text-center text-[12px] text-[color:var(--faint)]">
             Card · Bank transfer · Mobile money
