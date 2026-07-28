@@ -95,18 +95,19 @@ function WalletPage() {
   useEffect(() => {
     if (typeof window === "undefined" || !user) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("korapay") === "1") {
-      const reference = params.get("reference");
+    if (params.get("flutterwave") === "1") {
+      const txRef = params.get("tx_ref");
+      const transactionId = params.get("transaction_id");
       const status = params.get("status");
       window.history.replaceState({}, "", "/credits");
-      if (!reference) {
-        if (status && status !== "success" && status !== "successful") setError("Payment was cancelled or did not complete.");
+      if (!txRef || !transactionId) {
+        if (status && status !== "successful" && status !== "completed") setError("Payment was cancelled or did not complete.");
         return;
       }
       setProcessing(true);
       (async () => {
         try {
-          await verifyKorapayAndCredit({ data: { reference } });
+          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
           navigate({ to: "/dashboard" });
         } catch (e: any) {
           setProcessing(false);
@@ -122,7 +123,7 @@ function WalletPage() {
     setProcessing(true);
     try {
       const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
-      const { checkoutUrl } = await createKorapayCheckout({ data: { packId } });
+      const { checkoutUrl } = await createFlutterwaveCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
