@@ -377,6 +377,14 @@ function StreamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streaming]);
 
+  // Pause the calm app background animations while live so the GPU is dedicated to the stream.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (streaming) document.body.classList.add("stream-live");
+    else document.body.classList.remove("stream-live");
+    return () => document.body.classList.remove("stream-live");
+  }, [streaming]);
+
   const teardownStream = () => {
     try {
       broadcasterStopRef.current?.();
