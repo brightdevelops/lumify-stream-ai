@@ -51,10 +51,29 @@ export function AuthShell({
     (window.location.hostname === "lumifylive.com" ||
       window.location.hostname === "www.lumifylive.com");
 
+  // Preserve a same-origin relative `next` (e.g. OAuth consent URL) through
+  // every sign-in path so the user returns to the original destination.
+  const nextParam = (() => {
+    if (typeof window === "undefined") return null;
+    const raw = new URLSearchParams(window.location.search).get("next");
+    if (!raw) return null;
+    // Only allow same-origin relative paths.
+    if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+    return raw;
+  })();
+  const postAuthRedirect = () => {
+    if (nextParam) {
+      window.location.href = nextParam;
+    } else {
+      navigate({ to: "/dashboard" });
+    }
+  };
+
   const resetCaptcha = () => {
     setCaptchaToken(null);
     turnstileRef.current?.reset();
   };
+
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,7 +98,7 @@ export function AuthShell({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}${nextParam ?? "/dashboard"}`,
             data: { full_name: name },
             ...(captchaToken ? { captchaToken } : {}),
           },
@@ -94,7 +113,7 @@ export function AuthShell({
         if (error) throw error;
         (supabase.rpc as any)("record_login").then(() => {}, () => {});
       }
-      navigate({ to: "/dashboard" });
+      postAuthRedirect();
     } catch (err: any) {
       setError(err?.message ?? "Something went wrong");
       resetCaptcha();
@@ -201,11 +220,11 @@ export function AuthShell({
               setLoading(true);
               try {
                 const result = await lovable.auth.signInWithOAuth("google", {
-                  redirect_uri: window.location.origin,
+                  redirect_uri: `${window.location.origin}${nextParam ?? ""}`,
                 });
                 if (result.error) throw result.error;
                 if (result.redirected) return;
-                navigate({ to: "/dashboard" });
+                postAuthRedirect();
               } catch (err: any) {
                 setError(err?.message ?? "Google sign-in failed");
                 setLoading(false);
