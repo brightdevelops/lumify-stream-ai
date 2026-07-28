@@ -136,7 +136,7 @@ function WalletPage() {
       <div className="mb-8">
         <h1 className="font-display text-[38px] leading-tight">Wallet</h1>
         <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)] flex items-center gap-2">
-          Top up your balance — payments secured by <span className="text-foreground font-semibold">Korapay</span>.
+          Top up your balance — payments secured by <span className="text-foreground font-semibold">Flutterwave</span>.
           <ShieldCheck size={14} className="text-primary" />
         </p>
       </div>
