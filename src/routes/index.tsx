@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LandingBackground } from "@/components/landing/LandingBackground";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,32 @@ const FAQS = [
   { q: "Is my camera feed stored?", a: "No. Your camera stream is processed in real time and not retained. Only your session metadata (duration, credits used) is stored for billing." },
   { q: "How do I pay?", a: "Top-ups are handled by Korapay — card, bank transfer, and mobile money in NGN. Payments are processed securely and credits are added the moment payment confirms." },
 ];
+
+const PLATFORMS = ["STREAMS EVERYWHERE OBS GOES", "TWITCH", "YOUTUBE LIVE", "TIKTOK LIVE", "KICK", "FACEBOOK LIVE", "TROVO"];
+
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          e.target.classList.add("reveal-in");
+          io.unobserve(e.target);
+        }
+      }
+    }, { threshold: 0.1 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
+function Reveal({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useReveal<HTMLDivElement>();
+  return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
+}
 
 function Landing() {
   const [scrolled, setScrolled] = useState(false);
@@ -79,7 +105,7 @@ function Landing() {
       <header className={`sticky top-0 z-50 transition-colors ${scrolled ? "backdrop-blur border-b" : ""}`} style={{ background: scrolled ? "rgba(11,13,10,0.7)" : "transparent" }}>
         <div className="mx-auto max-w-[1160px] px-6 h-[68px] flex items-center justify-between">
           <Logo />
-          <nav className="hidden md:flex items-center gap-8 text-[13px] text-[color:var(--muted-foreground)]">
+          <nav className="hidden min-[820px]:flex items-center gap-8 text-[13px] text-[color:var(--muted-foreground)]">
             <a href="#how" className="hover:text-foreground">How it works</a>
             <a href="#features" className="hover:text-foreground">Features</a>
             <a href="#pricing" className="hover:text-foreground">Pricing</a>
@@ -104,7 +130,7 @@ function Landing() {
           </span>
           <h1 className="mt-6 font-display text-5xl md:text-[68px] leading-[1.05] tracking-tight">
             Transform your stream with{" "}
-            <em className="not-italic italic text-primary">intelligent light</em>
+            <em className="not-italic italic shimmer-text">intelligent light</em>
           </h1>
           <p className="mx-auto mt-6 max-w-[640px] text-[16px] text-[color:var(--muted-foreground)]">
             Lumify turns your webcam into a real-time AI persona. Go live as a sharper, styled, or entirely new version of you — no green screen, no GPU, no editing.
@@ -116,46 +142,58 @@ function Landing() {
           <p className="mt-5 text-[12px] text-[color:var(--faint)]">Pay as you stream · from ₦23 per credit · no subscription</p>
         </div>
 
-        {/* Hero demo */}
-        <div className="mx-auto max-w-[1080px] px-6 pb-20">
-          <div className="rounded-2xl border bg-card overflow-hidden shadow-[0_40px_80px_-40px_rgba(0,0,0,0.7)]">
-            <div className="flex items-center gap-1.5 border-b px-4 py-2.5 bg-[color:var(--sidebar)]">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
-              <span className="ml-3 text-[11px] text-[color:var(--faint)]">lumify.live/studio</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-6 p-6 md:p-10">
-              <DemoPanel variant="camera" />
-              <div className="grid place-items-center rotate-90 md:rotate-0">
-                <div className="grid h-11 w-11 place-items-center rounded-full bg-primary text-[color:var(--primary-foreground)]"
-                     style={{ boxShadow: "0 0 30px var(--accent-glow)" }}>
-                  <ArrowRight size={18} />
-                </div>
+        {/* Hero demo — before/after comparator */}
+        <div className="mx-auto max-w-[1080px] px-6 pb-14">
+          <Reveal>
+            <div className="rounded-2xl border bg-card overflow-hidden shadow-[0_40px_80px_-40px_rgba(0,0,0,0.7)]">
+              <div className="flex items-center gap-1.5 border-b px-4 py-2.5 bg-[color:var(--sidebar)]">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
+                <span className="ml-3 text-[11px] text-[color:var(--faint)]">lumify.live/studio</span>
               </div>
-              <DemoPanel variant="output" />
+              <Comparator />
+              <div className="border-t px-5 py-3 text-center text-[12px] text-[color:var(--muted-foreground)]">
+                Drag the slider — plain webcam on the left, Lumify output on the right
+              </div>
             </div>
-          </div>
+          </Reveal>
 
           {/* Stat strip */}
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { big: "< 120 ms", small: "added latency" },
-              { big: "720p", small: "optimized output" },
-              { big: "2 cr/sec", small: "simple usage pricing" },
-              { big: "OBS-ready", small: "one URL, any platform" },
-            ].map((s) => (
-              <div key={s.small} className="card-surface text-center">
-                <div className="font-display text-2xl text-foreground">{s.big}</div>
-                <div className="mt-1 text-[12px] text-[color:var(--muted-foreground)]">{s.small}</div>
+          <Reveal className="mt-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { big: "< 120 ms", small: "added latency" },
+                { big: "720p", small: "optimized output" },
+                { big: "2 cr/sec", small: "simple usage pricing" },
+                { big: "OBS-ready", small: "one URL, any platform" },
+              ].map((s) => (
+                <div key={s.small} className="card-surface text-center">
+                  <div className="font-display text-2xl text-foreground">{s.big}</div>
+                  <div className="mt-1 text-[12px] text-[color:var(--muted-foreground)]">{s.small}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+
+          {/* Platform marquee */}
+          <Reveal className="mt-10">
+            <div className="marquee-mask overflow-hidden">
+              <div className="marquee-track text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--faint)] py-2">
+                {[...PLATFORMS, ...PLATFORMS, ...PLATFORMS, ...PLATFORMS].map((p, i) => (
+                  <span key={i} className="flex items-center gap-12 shrink-0">
+                    {p}
+                    <span className="text-primary/60">✦</span>
+                  </span>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how" className="mx-auto max-w-[1080px] px-6 py-20">
+      <Reveal><section id="how" className="mx-auto max-w-[1080px] px-6 py-20">
         <SectionHead eyebrow="How it works" title="Three steps to a new you on stream" />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {[
@@ -172,10 +210,10 @@ function Landing() {
             </div>
           ))}
         </div>
-      </section>
+      </section></Reveal>
 
       {/* FEATURES */}
-      <section id="features" className="mx-auto max-w-[1080px] px-6 py-20">
+      <Reveal><section id="features" className="mx-auto max-w-[1080px] px-6 py-20">
         <SectionHead eyebrow="Features" title="Built for creators who go live" />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
@@ -195,10 +233,10 @@ function Landing() {
             </div>
           ))}
         </div>
-      </section>
+      </section></Reveal>
 
       {/* PRICING */}
-      <section id="pricing" className="mx-auto max-w-[1080px] px-6 py-20">
+      <Reveal><section id="pricing" className="mx-auto max-w-[1080px] px-6 py-20">
         <SectionHead eyebrow="Pricing" title="Top up, stream, come back later" />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {PACKS.map((p) => {
@@ -234,29 +272,29 @@ function Landing() {
         <p className="mt-6 text-center text-[12px] text-[color:var(--faint)]">
           Streaming costs 2 credits/second. Credits never expire.
         </p>
-      </section>
+      </section></Reveal>
 
       {/* FAQ */}
-      <section id="faq" className="mx-auto max-w-[780px] px-6 py-20">
+      <Reveal><section id="faq" className="mx-auto max-w-[780px] px-6 py-20">
         <SectionHead eyebrow="FAQ" title="Answers before you ask" />
         <div className="mt-10 divide-y divide-[color:var(--border-soft)] rounded-2xl border bg-card">
           {FAQS.map((f, i) => <FaqRow key={i} q={f.q} a={f.a} />)}
         </div>
-      </section>
+      </section></Reveal>
 
       {/* CTA */}
-      <section className="mx-auto max-w-[1080px] px-6 pb-24">
+      <Reveal><section className="mx-auto max-w-[1080px] px-6 pb-24">
         <div className="accent-card rounded-2xl p-10 md:p-14 text-center" style={{ boxShadow: "0 30px 80px -40px var(--accent-glow)" }}>
           <Sparkles size={22} className="mx-auto text-primary" />
           <h2 className="mt-4 font-display text-4xl md:text-5xl">
-            Your next stream, in a <em className="not-italic italic text-primary">new light</em>
+            Your next stream, in a <em className="not-italic italic shimmer-text">new light</em>
           </h2>
           <p className="mt-3 text-[15px] text-[color:var(--muted-foreground)]">
             Sign up, top up a starter pack, and be live in under five minutes.
           </p>
           <Link to="/signup" className="btn-primary mt-7"><Play size={15} /> Start streaming free</Link>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* FOOTER */}
       <footer className="border-t">
@@ -291,114 +329,113 @@ function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
   );
 }
 
-function DemoPanel({ variant }: { variant: "camera" | "output" }) {
-  const isOutput = variant === "output";
+/* ─────── Before/after comparator ─────── */
+function Comparator() {
+  const [pos, setPos] = useState(50);
   return (
-    <div className="space-y-3">
+    <div className="relative overflow-hidden" style={{ aspectRatio: "21 / 9" }}>
+      {/* BOTTOM: plain webcam */}
+      <SilhouetteLayer variant="camera" />
+      {/* Camera HUD chips */}
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5">
+        <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[color:var(--muted-foreground)]">
+          Your camera
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[#ff7a6b]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a6b] animate-pulse" /> Rec
+        </span>
+      </div>
+
+      {/* TOP: lumify output, clipped */}
       <div
-        className={`relative rounded-xl border overflow-hidden ${isOutput ? "border-[color:var(--primary)]" : ""}`}
-        style={{
-          aspectRatio: "16 / 11",
-          ...(isOutput
-            ? { boxShadow: "0 0 40px -10px var(--accent-glow), inset 0 0 40px -20px var(--accent-glow)" }
-            : {}),
-        }}
+        className="absolute inset-0 z-10"
+        style={{ clipPath: `inset(0 0 0 ${pos}%)` }}
       >
-        {/* backdrop */}
+        <SilhouetteLayer variant="output" />
+      </div>
+      {/* Output HUD chips (right) */}
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+        <span className="rounded-md border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-primary">
+          Lumify output
+        </span>
+        <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-semibold text-[color:var(--muted-foreground)]">
+          &lt; 120 ms
+        </span>
+      </div>
+
+      {/* Divider */}
+      <div
+        className="absolute top-0 bottom-0 z-20 pointer-events-none"
+        style={{ left: `${pos}%`, width: "2px", background: "var(--primary)", boxShadow: "0 0 20px var(--accent-glow)" }}
+      >
         <div
-          className="absolute inset-0"
-          style={{
-            background: isOutput
-              ? "radial-gradient(70% 70% at 50% 45%, rgba(198,242,78,0.18), #0b0d0a 82%)"
-              : "radial-gradient(70% 70% at 50% 45%, #1c2016 0%, #0b0d0a 85%)",
-          }}
-        />
-
-        {/* silhouette */}
-        <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
-          <defs>
-            <linearGradient id={`sil-${variant}`} x1="0" x2="0" y1="0" y2="1">
-              {isOutput ? (
-                <>
-                  <stop offset="0%" stopColor="#c6f24e" stopOpacity="0.85" />
-                  <stop offset="100%" stopColor="#3a5a12" stopOpacity="0.55" />
-                </>
-              ) : (
-                <>
-                  <stop offset="0%" stopColor="#4a5240" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.9" />
-                </>
-              )}
-            </linearGradient>
-          </defs>
-          {/* head */}
-          <circle cx="80" cy="46" r="20" fill={`url(#sil-${variant})`} stroke={isOutput ? "#c6f24e" : "none"} strokeWidth={isOutput ? 0.6 : 0} />
-          {/* shoulders */}
-          <path
-            d="M40 110 C46 82, 68 70, 80 70 C92 70, 114 82, 120 110 Z"
-            fill={`url(#sil-${variant})`}
-            stroke={isOutput ? "#c6f24e" : "none"}
-            strokeWidth={isOutput ? 0.6 : 0}
-          />
-          {isOutput && (
-            <>
-              <circle cx="55" cy="30" r="0.7" fill="#c6f24e" />
-              <circle cx="120" cy="38" r="0.9" fill="#c6f24e" />
-              <circle cx="112" cy="20" r="0.6" fill="#c6f24e" />
-              <circle cx="42" cy="60" r="0.7" fill="#c6f24e" />
-              <circle cx="135" cy="72" r="0.8" fill="#c6f24e" />
-            </>
-          )}
-        </svg>
-
-        {/* scanline overlay for camera */}
-        {!isOutput && (
-          <div
-            className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)",
-            }}
-          />
-        )}
-
-        {/* corner label */}
-        <div
-          className={`absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${
-            isOutput
-              ? "border border-[color:var(--primary)] bg-[color:var(--accent-soft)] text-primary"
-              : "border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 text-[color:var(--muted-foreground)]"
-          }`}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center rounded-full bg-primary text-[color:var(--primary-foreground)]"
+          style={{ width: 36, height: 36, boxShadow: "0 0 24px var(--accent-glow)" }}
         >
-          {isOutput ? "Lumify output" : "Your camera"}
-        </div>
-
-        {/* HUD chips */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5">
-          {isOutput ? (
-            <>
-              <span className="rounded-md border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-primary">
-                Lucy 2.5
-              </span>
-              <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-semibold text-[color:var(--muted-foreground)]">
-                &lt; 120 ms
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[#ff7a6b]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a6b] animate-pulse" /> Rec
-              </span>
-              <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-semibold text-[color:var(--muted-foreground)]">
-                720p
-              </span>
-            </>
-          )}
+          <ArrowRight size={16} />
         </div>
       </div>
-      <p className="text-center text-[11.5px] text-[color:var(--faint)]">
-        {isOutput ? "AI-enhanced, in real time" : "Plain webcam feed"}
-      </p>
+
+      {/* Invisible drag range covering full stage */}
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={0.1}
+        value={pos}
+        onChange={(e) => setPos(Number(e.target.value))}
+        aria-label="Drag to compare before and after"
+        className="absolute inset-0 z-30 w-full h-full opacity-0 cursor-ew-resize"
+      />
+    </div>
+  );
+}
+
+function SilhouetteLayer({ variant }: { variant: "camera" | "output" }) {
+  const isOutput = variant === "output";
+  return (
+    <div className="absolute inset-0">
+      <div
+        className="absolute inset-0"
+        style={{
+          background: isOutput
+            ? "radial-gradient(60% 70% at 50% 45%, rgba(198,242,78,0.18), #0b0d0a 82%)"
+            : "radial-gradient(60% 70% at 50% 45%, #1c2016 0%, #0b0d0a 85%)",
+        }}
+      />
+      <svg viewBox="0 0 160 68" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
+        <defs>
+          <linearGradient id={`sil-cmp-${variant}`} x1="0" x2="0" y1="0" y2="1">
+            {isOutput ? (
+              <>
+                <stop offset="0%" stopColor="#c6f24e" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="#3a5a12" stopOpacity="0.55" />
+              </>
+            ) : (
+              <>
+                <stop offset="0%" stopColor="#4a5240" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.9" />
+              </>
+            )}
+          </linearGradient>
+        </defs>
+        <circle cx="80" cy="28" r="14" fill={`url(#sil-cmp-${variant})`} stroke={isOutput ? "#c6f24e" : "none"} strokeWidth={isOutput ? 0.5 : 0} />
+        <path d="M50 68 C56 50, 68 42, 80 42 C92 42, 104 50, 110 68 Z" fill={`url(#sil-cmp-${variant})`} stroke={isOutput ? "#c6f24e" : "none"} strokeWidth={isOutput ? 0.5 : 0} />
+        {isOutput && (
+          <>
+            <circle cx="55" cy="18" r="0.6" fill="#c6f24e" />
+            <circle cx="112" cy="22" r="0.7" fill="#c6f24e" />
+            <circle cx="42" cy="36" r="0.6" fill="#c6f24e" />
+            <circle cx="130" cy="40" r="0.7" fill="#c6f24e" />
+          </>
+        )}
+      </svg>
+      {!isOutput && (
+        <div
+          className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay"
+          style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)" }}
+        />
+      )}
     </div>
   );
 }
