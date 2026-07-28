@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_app/credits")({
   head: () => ({
     meta: [
       { title: "Wallet — Lumify" },
-      { name: "description", content: "Top up your Lumify balance with Korapay. Card, bank transfer, mobile money." },
+      { name: "description", content: "Top up your Lumify balance with Flutterwave. Card, bank transfer, mobile money." },
     ],
   }),
 });
