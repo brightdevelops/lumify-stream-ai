@@ -5,8 +5,8 @@ import { Check, Wallet as WalletIcon, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  createKorapayCheckout,
-  verifyKorapayAndCredit,
+  createFlutterwaveCheckout,
+  verifyFlutterwaveAndCredit,
 } from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 import { StatusBadge } from "./_app.dashboard";
