@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { SupportWidget } from "@/components/SupportWidget";
 import { AppTour } from "@/components/AppTour";
+import { AppBackground } from "@/components/app/AppBackground";
 import { supabase } from "@/integrations/supabase/client";
 
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
