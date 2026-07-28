@@ -119,16 +119,17 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklab, var(--foreground) 15%, transparent) transparent;
+    scrollbar-color: var(--border) #0b0d0a;
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-track { background: #0b0d0a; }
   ::-webkit-scrollbar-thumb {
-    background: color-mix(in oklab, var(--foreground) 12%, transparent);
+    background: var(--border);
     border-radius: 999px;
-    border: 2px solid transparent;
+    border: 2px solid #0b0d0a;
     background-clip: padding-box;
   }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4227; background-clip: padding-box; }
 }
 
 @layer components {
