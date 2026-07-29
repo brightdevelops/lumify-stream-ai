@@ -55,6 +55,8 @@ function AppLayout() {
       </div>
       <SupportWidget />
       <AppTour />
+      <AutoRefresh />
+
     </div>
   );
 }
