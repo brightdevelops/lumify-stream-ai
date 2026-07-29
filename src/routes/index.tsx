@@ -22,6 +22,10 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: "https://lumifylive.com/og-image.png" },
     ],
+    links: [
+      { rel: "preload", as: "image", href: "/__l5e/assets-v1/a0d98886-35ec-4f55-89bf-d048fc273fc1/site-camera-poster.jpg", fetchpriority: "high" },
+      { rel: "preload", as: "image", href: "/__l5e/assets-v1/966a269a-3b37-4453-b5d6-90793c2e80b1/site-characters-poster.jpg", fetchpriority: "high" },
+    ],
   }),
 });
 
