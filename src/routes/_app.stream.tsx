@@ -1033,7 +1033,35 @@ function StreamPage() {
 
             {/* Control strip */}
             <div className="border-t border-[color:var(--border-soft)] p-4 flex flex-wrap items-center gap-4">
-              {cameras.length > 0 && (
+              {/* Input source */}
+              <div
+                className="flex items-center gap-3"
+                title={streaming ? "Stop your stream to change input" : undefined}
+              >
+                <span className="eyebrow">Input</span>
+                <div className="segmented">
+                  <button
+                    type="button"
+                    disabled={streaming}
+                    data-active={inputSource === "camera"}
+                    onClick={() => changeInputSource("camera")}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CameraIcon size={12} className="inline mr-1 -mt-0.5" /> Camera
+                  </button>
+                  <button
+                    type="button"
+                    disabled={streaming}
+                    data-active={inputSource === "file"}
+                    onClick={() => changeInputSource("file")}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Film size={12} className="inline mr-1 -mt-0.5" /> Video file
+                  </button>
+                </div>
+              </div>
+
+              {inputSource === "camera" && cameras.length > 0 && (
                 <label className="flex items-center gap-2">
                   <span className="eyebrow" title="Any 1080p camera works. Lighting matters most.">Camera <Info size={12} className="inline text-[color:var(--faint)]" /></span>
                   <select
