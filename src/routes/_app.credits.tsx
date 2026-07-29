@@ -28,10 +28,9 @@ const PURCHASES_PAUSED_MESSAGE =
 const RATE = 2;
 
 const PACKS = [
-  { id: "starter", name: "Starter",  credits: 500,  price: 11500 },
-  { id: "basic",   name: "Basic",    credits: 1000, price: 23000, save: 0 },
-  { id: "pro",     name: "Pro",      credits: 2000, price: 46000, save: 0 },
-  { id: "enterprise", name: "Enterprise", credits: 5000, price: 115000 },
+  { id: "starter", name: "Starter", credits: 500,  price: 11500 },
+  { id: "basic",   name: "Basic",   credits: 1000, price: 23000, save: 0 },
+  { id: "pro",     name: "Pro",     credits: 2000, price: 46000, save: 0 },
 ];
 
 type Txn = {
@@ -122,7 +121,7 @@ function WalletPage() {
     setError(null);
     setProcessing(true);
     try {
-      const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
+      const packId = pack.id as "starter" | "basic" | "pro";
       const { checkoutUrl } = await createFlutterwaveCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
