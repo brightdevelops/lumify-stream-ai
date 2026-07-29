@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { ArrowRight } from "lucide-react";
-import cameraVideo from "@/assets/site-camera-loop.mp4.asset.json";
-import charactersVideo from "@/assets/site-characters-loop.mp4.asset.json";
+import cameraVideo from "@/assets/site-camera-loop.webm.asset.json";
+import charactersVideo from "@/assets/site-characters-loop.webm.asset.json";
 import cameraPoster from "@/assets/site-camera-poster.jpg.asset.json";
 import charactersPoster from "@/assets/site-characters-poster.jpg.asset.json";
 
