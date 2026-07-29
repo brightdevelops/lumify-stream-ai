@@ -129,7 +129,7 @@ export function HeroDemo() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-[1360px] px-4">
+    <div ref={rootRef} className="mx-auto w-full max-w-[1360px] px-4">
       <div className="rounded-[20px] border bg-card overflow-hidden shadow-[0_40px_80px_-40px_rgba(0,0,0,0.7)]">
         {/* Browser chrome */}
         <div className="flex items-center gap-1.5 border-b px-4 py-2.5 bg-[color:var(--sidebar)]">
