@@ -142,22 +142,13 @@ function Landing() {
           <p className="mt-5 text-[12px] text-[color:var(--faint)]">Pay as you stream · from ₦23 per credit · no subscription</p>
         </div>
 
-        {/* Hero demo — before/after comparator */}
-        <div className="mx-auto max-w-[1080px] px-6 pb-14">
+        {/* Hero demo — dual live previews */}
+        <div className="pb-14">
           <Reveal>
-            <div className="rounded-2xl border bg-card overflow-hidden shadow-[0_40px_80px_-40px_rgba(0,0,0,0.7)]">
-              <div className="flex items-center gap-1.5 border-b px-4 py-2.5 bg-[color:var(--sidebar)]">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#3a3f2b]" />
-                <span className="ml-3 text-[11px] text-[color:var(--faint)]">lumify.live/studio</span>
-              </div>
-              <Comparator />
-              <div className="border-t px-5 py-3 text-center text-[12px] text-[color:var(--muted-foreground)]">
-                Drag the slider — plain webcam on the left, Lumify output on the right
-              </div>
-            </div>
+            <HeroDemo />
           </Reveal>
+
+          <div className="mx-auto max-w-[1080px] px-6">
 
           {/* Stat strip */}
           <Reveal className="mt-8">
