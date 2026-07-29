@@ -1331,27 +1331,36 @@ function StreamPage() {
         {/* RIGHT RAIL */}
         <aside className="space-y-5">
           {/* Balance */}
-          <div className="accent-card rounded-2xl p-5" style={{ boxShadow: "0 20px 60px -30px var(--accent-glow)" }}>
-            <div className="eyebrow">Balance</div>
+          <div className="accent-card rounded-2xl p-5" style={{ boxShadow: "0 10px 30px -20px var(--accent-glow)" }}>
+            <div className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#9aa08c" }}>Balance</div>
             <div className="mt-2 font-display text-[28px] leading-none text-foreground">
               ≈ {timeLeftLabel} <span className="text-[12px] text-[color:var(--muted-foreground)] font-sans">LEFT</span>
             </div>
             <div className="mt-4 h-1.5 rounded-full bg-[color:var(--border)] overflow-hidden">
               <div
-                className="h-full transition-all duration-500"
-                style={{ width: `${pct}%`, background: lowBalance ? "var(--warning)" : "var(--primary)" }}
+                className="h-full transition-all duration-500 rounded-full"
+                style={{
+                  width: `${bufferPct}%`,
+                  background: underTenMin
+                    ? "linear-gradient(90deg, #ffb75a, #ffd98a)"
+                    : "var(--primary)",
+                }}
               />
             </div>
             <div className="mt-2 text-[12px] text-[color:var(--muted-foreground)]">
               {credits.toLocaleString()} credits · {RATE} credits/sec
             </div>
-            {lowBalance && (
-              <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)]">
-                <AlertTriangle size={13} className="inline mr-1" />
-                Under 10 minutes of stream time left. Top up to avoid an interruption mid-stream.
+            {underTenMin && (
+              <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)] flex items-start gap-2">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                <span>Under 10 minutes of stream time left. Top up to avoid an interruption mid-stream.</span>
               </div>
             )}
-            <Link to="/credits" className="btn-primary w-full mt-4">
+            <Link
+              to="/credits"
+              className="btn-primary w-full mt-4"
+              style={{ boxShadow: "0 3px 12px -4px var(--accent-glow)" }}
+            >
               <Plus size={14} /> Buy credits
             </Link>
           </div>
