@@ -15,11 +15,13 @@ import charactersPoster from "@/assets/site-characters-poster.jpg.asset.json";
 export function HeroDemo() {
   const leftCanvas = useRef<HTMLCanvasElement | null>(null);
   const rightCanvas = useRef<HTMLCanvasElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const leftC = leftCanvas.current;
     const rightC = rightCanvas.current;
-    if (!leftC || !rightC) return;
+    const root = rootRef.current;
+    if (!leftC || !rightC || !root) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -33,10 +35,10 @@ export function HeroDemo() {
       v.playsInline = true;
       v.autoplay = true;
       v.crossOrigin = "anonymous";
-      v.preload = "auto";
+      // Only metadata upfront — actual bytes stream when we assign src after visible.
+      v.preload = "metadata";
     }
-    left.src = cameraVideo.url;
-    right.src = charactersVideo.url;
+
 
     const lctx = leftC.getContext("2d");
     const rctx = rightC.getContext("2d");
@@ -73,20 +75,41 @@ export function HeroDemo() {
       raf = requestAnimationFrame(draw);
     };
 
-    if (reduced) {
-      left.pause();
-      right.pause();
-      // draw one frame from poster fallback happens via canvas background CSS
-    } else {
-      left.play().catch(() => {});
-      right.play().catch(() => {});
-      raf = requestAnimationFrame(draw);
-    }
+    // Defer assigning video src (and starting playback) until the hero enters
+    // the viewport. This keeps the initial page load fast — the poster JPG is
+    // shown immediately from CSS background, and video bytes only start
+    // streaming when the user actually sees the panel.
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      left.src = cameraVideo.url;
+      right.src = charactersVideo.url;
+      if (reduced) {
+        left.pause();
+        right.pause();
+      } else {
+        left.play().catch(() => {});
+        right.play().catch(() => {});
+        raf = requestAnimationFrame(draw);
+      }
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          start();
+          io.disconnect();
+          break;
+        }
+      }
+    }, { rootMargin: "200px" });
+    io.observe(root);
 
     // Sync guard: right is master clock.
     const LEFT_DURATION = 8.48;
     const interval = window.setInterval(() => {
-      if (reduced) return;
+      if (reduced || !started) return;
       if (!left.duration || !right.duration) return;
       const target = right.currentTime % LEFT_DURATION;
       if (Math.abs(left.currentTime - target) > 0.15) {
@@ -95,6 +118,7 @@ export function HeroDemo() {
     }, 2000);
 
     return () => {
+      io.disconnect();
       cancelAnimationFrame(raf);
       window.clearInterval(interval);
       left.pause();
@@ -105,7 +129,7 @@ export function HeroDemo() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-[1360px] px-4">
+    <div ref={rootRef} className="mx-auto w-full max-w-[1360px] px-4">
       <div className="rounded-[20px] border bg-card overflow-hidden shadow-[0_40px_80px_-40px_rgba(0,0,0,0.7)]">
         {/* Browser chrome */}
         <div className="flex items-center gap-1.5 border-b px-4 py-2.5 bg-[color:var(--sidebar)]">
