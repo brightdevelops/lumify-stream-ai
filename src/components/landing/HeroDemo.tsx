@@ -61,9 +61,14 @@ export function HeroDemo() {
               loop
               playsInline
               preload="auto"
-              className="absolute inset-0 h-full w-full object-cover"
+              disablePictureInPicture
+              disableRemotePlayback
+              controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+              onContextMenu={(e) => e.preventDefault()}
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
               style={{ objectPosition: "center" }}
             />
+
             {/* Scanlines */}
             <div
               className="pointer-events-none absolute inset-0"
