@@ -435,8 +435,74 @@ function StreamPage() {
     decartClientRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
-    if (inputVideoRef.current) inputVideoRef.current.srcObject = null;
+    // Cancel the file->canvas paint loop and pause the file preview so the
+    // hidden <video> stops decoding when the stream ends.
+    if (canvasRafRef.current != null) {
+      cancelAnimationFrame(canvasRafRef.current);
+      canvasRafRef.current = null;
+    }
+    canvasRef.current = null;
+    if (inputSourceRef.current === "file" && inputVideoRef.current) {
+      try { inputVideoRef.current.pause(); } catch {}
+    } else if (inputVideoRef.current) {
+      inputVideoRef.current.srcObject = null;
+    }
     if (outputVideoRef.current) outputVideoRef.current.srcObject = null;
+  };
+
+  // ── Video-file helpers ──────────────────────────────────────────────────
+  const clearVideoFile = () => {
+    if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
+    setVideoFile(null);
+    setVideoFileUrl(null);
+    setVideoDuration(0);
+    setVideoFileError(null);
+    if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+    if (inputVideoRef.current) {
+      try {
+        inputVideoRef.current.pause();
+        inputVideoRef.current.removeAttribute("src");
+        inputVideoRef.current.load();
+      } catch {}
+    }
+  };
+
+  const handleVideoFile = (file: File | null) => {
+    if (!file) return;
+    if (streaming) return;
+    if (!/video\/(mp4|webm|quicktime)/i.test(file.type)) {
+      setVideoFileError("Unsupported format — please use MP4, WebM, or MOV.");
+      return;
+    }
+    if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
+    const url = URL.createObjectURL(file);
+    setVideoFile(file);
+    setVideoFileUrl(url);
+    setVideoDuration(0);
+    setVideoFileError(null);
+    setError(null);
+    const v = inputVideoRef.current;
+    if (v) {
+      v.srcObject = null;
+      v.loop = loopVideoRef.current;
+      v.muted = true;
+      v.playsInline = true;
+      v.src = url;
+      v.load();
+    }
+  };
+
+  const changeInputSource = (src: "camera" | "file") => {
+    if (streaming) return;
+    setInputSource(src);
+    inputSourceRef.current = src;
+    setError(null);
+    if (src === "camera") {
+      clearVideoFile();
+    } else if (inputVideoRef.current) {
+      // Detach any camera preview stream so switching back-and-forth is clean.
+      inputVideoRef.current.srcObject = null;
+    }
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
