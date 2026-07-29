@@ -15,11 +15,13 @@ import charactersPoster from "@/assets/site-characters-poster.jpg.asset.json";
 export function HeroDemo() {
   const leftCanvas = useRef<HTMLCanvasElement | null>(null);
   const rightCanvas = useRef<HTMLCanvasElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const leftC = leftCanvas.current;
     const rightC = rightCanvas.current;
-    if (!leftC || !rightC) return;
+    const root = rootRef.current;
+    if (!leftC || !rightC || !root) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -33,10 +35,10 @@ export function HeroDemo() {
       v.playsInline = true;
       v.autoplay = true;
       v.crossOrigin = "anonymous";
-      v.preload = "auto";
+      // Only metadata upfront — actual bytes stream when we assign src after visible.
+      v.preload = "metadata";
     }
-    left.src = cameraVideo.url;
-    right.src = charactersVideo.url;
+
 
     const lctx = leftC.getContext("2d");
     const rctx = rightC.getContext("2d");
