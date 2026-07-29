@@ -122,7 +122,7 @@ function WalletPage() {
     setError(null);
     setProcessing(true);
     try {
-      const packId = pack.id as "starter" | "basic" | "pro";
+      const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
       const { checkoutUrl } = await createFlutterwaveCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
