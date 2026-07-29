@@ -5,25 +5,88 @@ import charactersVideo from "@/assets/site-characters-loop.mp4.asset.json";
 import cameraPoster from "@/assets/site-camera-poster.jpg.asset.json";
 import charactersPoster from "@/assets/site-characters-poster.jpg.asset.json";
 
+/**
+ * Videos are drawn to <canvas> instead of using visible <video> elements so
+ * that download-manager browser extensions (IDM, Video DownloadHelper, etc.)
+ * don't attach their "download this video" overlays. The <video> elements
+ * are created off-DOM (never appended to document.body) and used purely as
+ * a frame source.
+ */
 export function HeroDemo() {
-  const leftRef = useRef<HTMLVideoElement | null>(null);
-  const rightRef = useRef<HTMLVideoElement | null>(null);
+  const leftCanvas = useRef<HTMLCanvasElement | null>(null);
+  const rightCanvas = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const left = leftRef.current;
-    const right = rightRef.current;
-    if (!left || !right) return;
+    const leftC = leftCanvas.current;
+    const rightC = rightCanvas.current;
+    if (!leftC || !rightC) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Off-DOM video elements — never appended to the document, so extension
+    // content scripts scanning document.querySelectorAll('video') won't find them.
+    const left = document.createElement("video");
+    const right = document.createElement("video");
+    for (const v of [left, right]) {
+      v.muted = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.autoplay = true;
+      v.crossOrigin = "anonymous";
+      v.preload = "auto";
+    }
+    left.src = cameraVideo.url;
+    right.src = charactersVideo.url;
+
+    const lctx = leftC.getContext("2d");
+    const rctx = rightC.getContext("2d");
+    if (!lctx || !rctx) return;
+
+    let raf = 0;
+    const draw = () => {
+      // Match canvas backing store to displayed size for crispness.
+      const fit = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, video: HTMLVideoElement) => {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(1, Math.round(rect.width * dpr));
+        const h = Math.max(1, Math.round(rect.height * dpr));
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+        if (!video.videoWidth || !video.videoHeight) return;
+        // object-fit: cover math
+        const cRatio = w / h;
+        const vRatio = video.videoWidth / video.videoHeight;
+        let sx = 0, sy = 0, sw = video.videoWidth, sh = video.videoHeight;
+        if (vRatio > cRatio) {
+          sw = video.videoHeight * cRatio;
+          sx = (video.videoWidth - sw) / 2;
+        } else {
+          sh = video.videoWidth / cRatio;
+          sy = (video.videoHeight - sh) / 2;
+        }
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+      };
+      fit(leftC, lctx, left);
+      fit(rightC, rctx, right);
+      raf = requestAnimationFrame(draw);
+    };
+
     if (reduced) {
       left.pause();
       right.pause();
-      return;
+      // draw one frame from poster fallback happens via canvas background CSS
+    } else {
+      left.play().catch(() => {});
+      right.play().catch(() => {});
+      raf = requestAnimationFrame(draw);
     }
 
-    // Right is master clock; left cycles once per right-loop segment.
-    const LEFT_DURATION = 8.48; // seconds, matches one loop of the camera clip
+    // Sync guard: right is master clock.
+    const LEFT_DURATION = 8.48;
     const interval = window.setInterval(() => {
+      if (reduced) return;
       if (!left.duration || !right.duration) return;
       const target = right.currentTime % LEFT_DURATION;
       if (Math.abs(left.currentTime - target) > 0.15) {
@@ -31,10 +94,14 @@ export function HeroDemo() {
       }
     }, 2000);
 
-    const kick = () => { left.play().catch(() => {}); right.play().catch(() => {}); };
-    kick();
-
-    return () => window.clearInterval(interval);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearInterval(interval);
+      left.pause();
+      right.pause();
+      left.src = "";
+      right.src = "";
+    };
   }, []);
 
   return (
@@ -51,24 +118,22 @@ export function HeroDemo() {
         {/* Two-panel grid */}
         <div className="relative grid grid-cols-1 min-[720px]:grid-cols-2">
           {/* Left panel */}
-          <div className="relative min-[720px]:border-r border-b min-[720px]:border-b-0" style={{ aspectRatio: "16 / 11" }}>
-            <video
-              ref={leftRef}
-              src={cameraVideo.url}
-              poster={cameraPoster.url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              disablePictureInPicture
-              disableRemotePlayback
-              controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+          <div
+            className="relative min-[720px]:border-r border-b min-[720px]:border-b-0"
+            style={{
+              aspectRatio: "16 / 11",
+              backgroundImage: `url(${cameraPoster.url})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <canvas
+              ref={leftCanvas}
+              className="absolute inset-0 h-full w-full block"
               onContextMenu={(e) => e.preventDefault()}
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-              style={{ objectPosition: "center" }}
+              aria-label="Live camera preview"
+              role="img"
             />
-
             {/* Scanlines */}
             <div
               className="pointer-events-none absolute inset-0"
@@ -90,25 +155,21 @@ export function HeroDemo() {
           {/* Right panel */}
           <div
             className="relative"
-            style={{ aspectRatio: "16 / 11", boxShadow: "inset 0 0 0 1.5px rgba(198,242,78,0.35)" }}
+            style={{
+              aspectRatio: "16 / 11",
+              boxShadow: "inset 0 0 0 1.5px rgba(198,242,78,0.35)",
+              backgroundImage: `url(${charactersPoster.url})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
           >
-            <video
-              ref={rightRef}
-              src={charactersVideo.url}
-              poster={charactersPoster.url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              disablePictureInPicture
-              disableRemotePlayback
-              controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+            <canvas
+              ref={rightCanvas}
+              className="absolute inset-0 h-full w-full block"
               onContextMenu={(e) => e.preventDefault()}
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-              style={{ objectPosition: "center" }}
+              aria-label="Live Lumify output preview"
+              role="img"
             />
-
             <div className="absolute top-3 left-3 z-10"><Chip lime>LUMIFY OUTPUT</Chip></div>
             <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
               <Chip lime>LUCY 2.5</Chip>
