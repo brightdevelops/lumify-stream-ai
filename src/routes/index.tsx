@@ -232,7 +232,7 @@ function Landing() {
       {/* PRICING */}
       <Reveal><section id="pricing" className="mx-auto max-w-[1080px] px-6 py-20">
         <SectionHead eyebrow="Pricing" title="Top up, stream, come back later" />
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {PACKS.map((p) => {
             const mins = Math.round(p.credits / 2 / 60);
             const highlighted = "popular" in p && p.popular;
