@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LandingBackground } from "@/components/landing/LandingBackground";
+import { HeroDemo } from "@/components/landing/HeroDemo";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Play, ArrowRight, Sparkles, Zap, Palette, Monitor, CreditCard, Lock,
