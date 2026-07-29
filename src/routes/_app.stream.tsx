@@ -962,10 +962,40 @@ function StreamPage() {
           {/* Live preview */}
           <div className="card-surface p-0 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-              <Panel label="Your camera" streaming={streaming}>
-                {!streaming && <SilhouetteBg variant="camera" />}
-                <video ref={inputVideoRef} muted playsInline className="relative z-[1] h-full w-full object-cover" />
-                {!streaming && <PanelEmpty icon={<CameraIcon size={22} />} title="Camera off" hint="Face a window or lamp for the best AI output" />}
+              <Panel label={inputSource === "file" ? "Your video" : "Your camera"} streaming={streaming}>
+                {!streaming && inputSource === "camera" && <SilhouetteBg variant="camera" />}
+                {!streaming && inputSource === "file" && !videoFileUrl && <SilhouetteBg variant="camera" />}
+                <video
+                  ref={inputVideoRef}
+                  muted
+                  playsInline
+                  className="relative z-[1] h-full w-full object-contain bg-black"
+                  onLoadedMetadata={(e) => {
+                    if (inputSourceRef.current === "file") {
+                      setVideoDuration(e.currentTarget.duration || 0);
+                    }
+                  }}
+                  onError={() => {
+                    if (inputSourceRef.current === "file" && videoFileUrl) {
+                      setVideoFileError("This video can't play in the browser — try MP4 (H.264).");
+                    }
+                  }}
+                  onEnded={() => {
+                    if (
+                      inputSourceRef.current === "file" &&
+                      streamingRef.current &&
+                      !loopVideoRef.current
+                    ) {
+                      endStream(false).catch(() => {});
+                    }
+                  }}
+                />
+                {!streaming && inputSource === "camera" && (
+                  <PanelEmpty icon={<CameraIcon size={22} />} title="Camera off" hint="Face a window or lamp for the best AI output" />
+                )}
+                {!streaming && inputSource === "file" && !videoFileUrl && (
+                  <PanelEmpty icon={<Film size={22} />} title="No video selected" hint="Pick a local MP4/WebM/MOV to stream instead of your camera" />
+                )}
               </Panel>
               <Panel label="AI output" accent streaming={streaming}>
                 {!streaming && <SilhouetteBg variant="output" />}
