@@ -1114,6 +1114,115 @@ function StreamPage() {
             </div>
           </div>
 
+          {/* Video file picker (only in file input mode) */}
+          {inputSource === "file" && (
+            <div className="card-surface">
+              <div className="flex items-center gap-2 mb-3">
+                <Film size={14} className="text-primary" />
+                <span className="eyebrow">Video file</span>
+                <span className="text-[11px] text-[color:var(--faint)]">· plays locally, never uploaded</span>
+              </div>
+
+              <input
+                ref={videoFileInputRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                className="hidden"
+                onChange={(e) => handleVideoFile(e.target.files?.[0] ?? null)}
+              />
+
+              {!videoFileUrl ? (
+                <div
+                  onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }}
+                  onDragOver={(e) => { if (streaming) return; e.preventDefault(); setDragVideoOver(true); }}
+                  onDragLeave={() => setDragVideoOver(false)}
+                  onDrop={(e) => {
+                    if (streaming) return;
+                    e.preventDefault();
+                    setDragVideoOver(false);
+                    handleVideoFile(e.dataTransfer.files?.[0] ?? null);
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${streaming ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                  style={{
+                    borderColor: dragVideoOver ? "var(--primary)" : "var(--border)",
+                    background: dragVideoOver ? "var(--accent-soft)" : "transparent",
+                  }}
+                >
+                  <Upload className="h-7 w-7 text-primary" />
+                  <div className="text-[14px] text-foreground">
+                    Drop a video here or <span className="text-primary">browse files</span>
+                  </div>
+                  <div className="text-[12px] text-[color:var(--faint)]">MP4, WebM, or MOV · played from your device, never uploaded</div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 rounded-xl border bg-[color:var(--sidebar)] p-3">
+                  <div className="grid h-20 w-20 place-items-center rounded-md border bg-black text-primary">
+                    <Film size={28} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-[14px] truncate">
+                      <span className="truncate">{videoFile?.name}</span>
+                    </div>
+                    <div className="text-[11.5px] text-[color:var(--muted-foreground)] mt-0.5">
+                      {videoDuration > 0
+                        ? `${mmss(Math.floor(videoDuration))} · ≈ ${videoCredits.toLocaleString()} credits`
+                        : "Reading duration…"}
+                      {streaming && <span className="ml-2 text-primary">• Live</span>}
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }}
+                        disabled={streaming}
+                        className="text-[11px] rounded border px-2 py-1 hover:bg-card disabled:opacity-50"
+                      >
+                        Change
+                      </button>
+                      {!streaming && (
+                        <button
+                          onClick={clearVideoFile}
+                          className="text-[11px] rounded border px-2 py-1 hover:bg-card text-[color:var(--muted-foreground)]"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {videoOverBudget && (
+                <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)]">
+                  <AlertTriangle size={13} className="inline mr-1" />
+                  Your balance covers about {mmss(Math.max(0, videoAffordSec))} of this video.
+                </div>
+              )}
+
+              {videoFileError && (
+                <div className="mt-3 rounded-lg border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 p-3 text-[12.5px] text-[color:var(--destructive)]">
+                  {videoFileError}
+                </div>
+              )}
+
+              {/* Loop toggle */}
+              <label className="mt-4 flex items-start gap-3 rounded-xl border bg-[color:var(--sidebar)] p-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={loopVideo}
+                  onChange={(e) => setLoopVideo(e.target.checked)}
+                  className="mt-1 accent-[color:var(--primary)]"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5 text-[13px] text-foreground">
+                    <Repeat size={12} className="text-primary" /> Loop video
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-[color:var(--muted-foreground)]">
+                    When off, your stream stops automatically when the video ends.
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
+
           {/* Reference image */}
           <div className="card-surface">
             <div className="flex items-center gap-2 mb-3">
