@@ -968,8 +968,8 @@ function StreamPage() {
         {/* LEFT */}
         <div className="space-y-5">
           {/* Live preview */}
-          <div className="card-surface p-0 overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+          <div className="card-surface p-3 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Panel label={inputSource === "file" ? "Your video" : "Your camera"} streaming={streaming}>
                 {!streaming && inputSource === "camera" && <SilhouetteBg variant="camera" />}
                 {!streaming && inputSource === "file" && !videoFileUrl && <SilhouetteBg variant="camera" />}
