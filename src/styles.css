@@ -396,6 +396,13 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Pause decorative background animations while a stream is live */
+body.stream-live *,
+body.stream-live *::before,
+body.stream-live *::after {
+  animation-play-state: paused !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
