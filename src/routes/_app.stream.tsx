@@ -177,6 +177,7 @@ function StreamPage() {
         teardownStream();
       }
       if (referenceUrl) URL.revokeObjectURL(referenceUrl);
+      if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
