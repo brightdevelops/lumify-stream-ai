@@ -109,6 +109,27 @@ function StreamPage() {
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
 
+  // ── Video-file input mode ───────────────────────────────────────────────
+  const [inputSource, setInputSource] = useState<"camera" | "file">("camera");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoFileUrl, setVideoFileUrl] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [loopVideo, setLoopVideo] = useState(false);
+  const [videoFileError, setVideoFileError] = useState<string | null>(null);
+  const [dragVideoOver, setDragVideoOver] = useState(false);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRafRef = useRef<number | null>(null);
+  const inputSourceRef = useRef<"camera" | "file">("camera");
+  const loopVideoRef = useRef(false);
+  useEffect(() => { inputSourceRef.current = inputSource; }, [inputSource]);
+  useEffect(() => {
+    loopVideoRef.current = loopVideo;
+    if (inputSourceRef.current === "file" && inputVideoRef.current) {
+      inputVideoRef.current.loop = loopVideo;
+    }
+  }, [loopVideo]);
+
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
   const durationRef = useRef(0);
