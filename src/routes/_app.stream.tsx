@@ -938,7 +938,7 @@ function StreamPage() {
   const videoOverBudget =
     inputSource === "file" && videoDuration > 0 && videoCredits > credits;
 
-  return <FilmSet
+  return <StudioLayout
     user={user}
     streaming={streaming}
     connecting={connecting}
