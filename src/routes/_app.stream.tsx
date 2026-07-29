@@ -1246,15 +1246,26 @@ function StreamPage() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0] ?? null); }}
-                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-colors"
+                className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 cursor-pointer transition-colors"
                 style={{
-                  borderColor: dragOver ? "var(--primary)" : "var(--border)",
-                  background: dragOver ? "var(--accent-soft)" : "transparent",
+                  maxHeight: 96,
+                  border: "1.5px dashed",
+                  borderColor: dragOver ? "var(--primary)" : "#333a24",
+                  background: dragOver ? "rgba(198,242,78,.06)" : "transparent",
                 }}
               >
-                <Upload className="h-7 w-7 text-primary" />
-                <div className="text-[14px] text-foreground">Drop an image here or <span className="text-primary">browse files</span></div>
-                <div className="text-[12px] text-[color:var(--faint)]">JPG or PNG · guides the AI toward a specific look</div>
+                <div
+                  className="grid place-items-center shrink-0 rounded-[8px]"
+                  style={{ width: 42, height: 42, background: "var(--accent-soft)" }}
+                >
+                  <Upload className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] text-foreground leading-tight">
+                    <span className="font-semibold">Drop an image here</span> <span className="text-[color:var(--muted-foreground)]">or</span> <span className="text-primary">browse files</span>
+                  </div>
+                  <div className="text-[11.5px] text-[color:var(--faint)] mt-0.5">JPG or PNG · guides the AI toward a specific look</div>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-4 rounded-xl border bg-[color:var(--sidebar)] p-3">
