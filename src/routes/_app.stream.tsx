@@ -930,6 +930,12 @@ function StreamPage() {
   const lowBalance = streaming && secondsLeft > 0 && secondsLeft <= LOW_BALANCE_SECONDS;
   const preflightTime = formatTimeLeft(secondsLeft);
 
+  // Video-file cost/duration derived values.
+  const videoCredits = Math.max(0, Math.ceil(videoDuration * RATE));
+  const videoAffordSec = Math.floor(credits / RATE);
+  const videoOverBudget =
+    inputSource === "file" && videoDuration > 0 && videoCredits > credits;
+
   return (
     <div>
       {/* Header */}
