@@ -75,20 +75,41 @@ export function HeroDemo() {
       raf = requestAnimationFrame(draw);
     };
 
-    if (reduced) {
-      left.pause();
-      right.pause();
-      // draw one frame from poster fallback happens via canvas background CSS
-    } else {
-      left.play().catch(() => {});
-      right.play().catch(() => {});
-      raf = requestAnimationFrame(draw);
-    }
+    // Defer assigning video src (and starting playback) until the hero enters
+    // the viewport. This keeps the initial page load fast — the poster JPG is
+    // shown immediately from CSS background, and video bytes only start
+    // streaming when the user actually sees the panel.
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      left.src = cameraVideo.url;
+      right.src = charactersVideo.url;
+      if (reduced) {
+        left.pause();
+        right.pause();
+      } else {
+        left.play().catch(() => {});
+        right.play().catch(() => {});
+        raf = requestAnimationFrame(draw);
+      }
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          start();
+          io.disconnect();
+          break;
+        }
+      }
+    }, { rootMargin: "200px" });
+    io.observe(root);
 
     // Sync guard: right is master clock.
     const LEFT_DURATION = 8.48;
     const interval = window.setInterval(() => {
-      if (reduced) return;
+      if (reduced || !started) return;
       if (!left.duration || !right.duration) return;
       const target = right.currentTime % LEFT_DURATION;
       if (Math.abs(left.currentTime - target) > 0.15) {
@@ -97,6 +118,7 @@ export function HeroDemo() {
     }, 2000);
 
     return () => {
+      io.disconnect();
       cancelAnimationFrame(raf);
       window.clearInterval(interval);
       left.pause();
