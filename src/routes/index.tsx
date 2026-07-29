@@ -26,9 +26,10 @@ export const Route = createFileRoute("/")({
 });
 
 const PACKS = [
-  { id: "starter",  name: "Starter",  credits: 500,  price: 11500, save: null },
-  { id: "basic",    name: "Basic",    credits: 1000, price: 23000, save: null, popular: true },
-  { id: "pro",      name: "Pro",      credits: 2000, price: 46000, save: null },
+  { id: "starter",    name: "Starter",    credits: 500,  price: 11500, save: null },
+  { id: "basic",      name: "Basic",      credits: 1000, price: 23000, save: null, popular: true },
+  { id: "pro",        name: "Pro",        credits: 2000, price: 46000, save: null },
+  { id: "enterprise", name: "Enterprise", credits: 5000, price: 115000, save: null },
 ];
 
 const FAQS = [
