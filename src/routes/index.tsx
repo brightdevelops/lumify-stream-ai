@@ -138,7 +138,7 @@ function Landing() {
             Lumify turns your webcam into a real-time AI persona. Go live as a sharper, styled, or entirely new version of you — no green screen, no GPU, no editing.
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
-            <Link to="/signup" className="btn-primary"><Play size={15} /> Start streaming free</Link>
+            <Link to="/signup" className="btn-primary"><Play size={15} /> Start streaming</Link>
             <a href="#how" className="btn-ghost">See how it works</a>
           </div>
           <p className="mt-5 text-[12px] text-[color:var(--faint)]">Pay as you stream · from ₦23 per credit · no subscription</p>
@@ -286,7 +286,7 @@ function Landing() {
           <p className="mt-3 text-[15px] text-[color:var(--muted-foreground)]">
             Sign up, top up a starter pack, and be live in under five minutes.
           </p>
-          <Link to="/signup" className="btn-primary mt-7"><Play size={15} /> Start streaming free</Link>
+          <Link to="/signup" className="btn-primary mt-7"><Play size={15} /> Start streaming</Link>
         </div>
       </section></Reveal>
 
