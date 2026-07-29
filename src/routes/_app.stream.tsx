@@ -966,7 +966,7 @@ function StreamPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* LEFT */}
-        <div className="space-y-5">
+        <div className="space-y-[18px]">
           {/* Live preview */}
           <div className="card-surface p-0 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
@@ -1351,7 +1351,7 @@ function StreamPage() {
         </div>
 
         {/* RIGHT RAIL */}
-        <aside className="space-y-5">
+        <aside className="space-y-[18px]">
           {/* Balance */}
           <div className="accent-card rounded-2xl p-5" style={{ boxShadow: "0 10px 30px -20px var(--accent-glow)" }}>
             <div className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#9aa08c" }}>Balance</div>
