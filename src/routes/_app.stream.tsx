@@ -1309,7 +1309,7 @@ function StreamPage() {
             <div className="flex gap-3">
               <button
                 onClick={start}
-                disabled={streaming || connecting || STREAMING_PAUSED}
+                disabled={streaming || connecting || STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))}
                 className="btn-primary"
               >
                 {streaming ? <><Square size={14} /> Streaming…</> : <><Play size={14} /> Start stream</>}
