@@ -180,6 +180,7 @@ function Landing() {
               </div>
             </div>
           </Reveal>
+          </div>
         </div>
       </section>
 
