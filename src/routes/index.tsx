@@ -5,7 +5,7 @@ import { LandingBackground } from "@/components/landing/LandingBackground";
 import { HeroDemo } from "@/components/landing/HeroDemo";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Play, ArrowRight, Sparkles, Zap, Palette, Monitor, CreditCard, Lock,
+  Play, Sparkles, Zap, Palette, Monitor, CreditCard, Lock,
   Camera, Check, Plus, Minus,
 } from "lucide-react";
 
