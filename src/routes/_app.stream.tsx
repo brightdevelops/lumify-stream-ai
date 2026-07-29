@@ -922,11 +922,13 @@ function StreamPage() {
 
   const mmss = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-  const pct = startingCredits > 0 ? Math.max(0, Math.min(100, (credits / startingCredits) * 100)) : 0;
   const cost = used * NAIRA_PER_CREDIT;
 
   const secondsLeft = Math.floor(credits / RATE);
   const timeLeftLabel = formatTimeLeft(secondsLeft);
+  // Meter represents how much of a 10-minute comfortable buffer remains.
+  const bufferPct = Math.max(0, Math.min(100, (secondsLeft / 600) * 100));
+  const underTenMin = secondsLeft > 0 && secondsLeft < 600;
   const lowBalance = streaming && secondsLeft > 0 && secondsLeft <= LOW_BALANCE_SECONDS;
   const preflightTime = formatTimeLeft(secondsLeft);
 
