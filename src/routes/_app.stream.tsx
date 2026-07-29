@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle, Info, ChevronDown, Camera as CameraIcon, PictureInPicture2 } from "lucide-react";
+import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle, Info, ChevronDown, Camera as CameraIcon, PictureInPicture2, Film, Repeat } from "lucide-react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -109,6 +109,27 @@ function StreamPage() {
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
 
+  // ── Video-file input mode ───────────────────────────────────────────────
+  const [inputSource, setInputSource] = useState<"camera" | "file">("camera");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoFileUrl, setVideoFileUrl] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [loopVideo, setLoopVideo] = useState(false);
+  const [videoFileError, setVideoFileError] = useState<string | null>(null);
+  const [dragVideoOver, setDragVideoOver] = useState(false);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRafRef = useRef<number | null>(null);
+  const inputSourceRef = useRef<"camera" | "file">("camera");
+  const loopVideoRef = useRef(false);
+  useEffect(() => { inputSourceRef.current = inputSource; }, [inputSource]);
+  useEffect(() => {
+    loopVideoRef.current = loopVideo;
+    if (inputSourceRef.current === "file" && inputVideoRef.current) {
+      inputVideoRef.current.loop = loopVideo;
+    }
+  }, [loopVideo]);
+
   const creditsRef = useRef(0);
   const usedRef = useRef(0);
   const durationRef = useRef(0);
@@ -156,6 +177,7 @@ function StreamPage() {
         teardownStream();
       }
       if (referenceUrl) URL.revokeObjectURL(referenceUrl);
+      if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -413,8 +435,74 @@ function StreamPage() {
     decartClientRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
-    if (inputVideoRef.current) inputVideoRef.current.srcObject = null;
+    // Cancel the file->canvas paint loop and pause the file preview so the
+    // hidden <video> stops decoding when the stream ends.
+    if (canvasRafRef.current != null) {
+      cancelAnimationFrame(canvasRafRef.current);
+      canvasRafRef.current = null;
+    }
+    canvasRef.current = null;
+    if (inputSourceRef.current === "file" && inputVideoRef.current) {
+      try { inputVideoRef.current.pause(); } catch {}
+    } else if (inputVideoRef.current) {
+      inputVideoRef.current.srcObject = null;
+    }
     if (outputVideoRef.current) outputVideoRef.current.srcObject = null;
+  };
+
+  // ── Video-file helpers ──────────────────────────────────────────────────
+  const clearVideoFile = () => {
+    if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
+    setVideoFile(null);
+    setVideoFileUrl(null);
+    setVideoDuration(0);
+    setVideoFileError(null);
+    if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+    if (inputVideoRef.current) {
+      try {
+        inputVideoRef.current.pause();
+        inputVideoRef.current.removeAttribute("src");
+        inputVideoRef.current.load();
+      } catch {}
+    }
+  };
+
+  const handleVideoFile = (file: File | null) => {
+    if (!file) return;
+    if (streaming) return;
+    if (!/video\/(mp4|webm|quicktime)/i.test(file.type)) {
+      setVideoFileError("Unsupported format — please use MP4, WebM, or MOV.");
+      return;
+    }
+    if (videoFileUrl) URL.revokeObjectURL(videoFileUrl);
+    const url = URL.createObjectURL(file);
+    setVideoFile(file);
+    setVideoFileUrl(url);
+    setVideoDuration(0);
+    setVideoFileError(null);
+    setError(null);
+    const v = inputVideoRef.current;
+    if (v) {
+      v.srcObject = null;
+      v.loop = loopVideoRef.current;
+      v.muted = true;
+      v.playsInline = true;
+      v.src = url;
+      v.load();
+    }
+  };
+
+  const changeInputSource = (src: "camera" | "file") => {
+    if (streaming) return;
+    setInputSource(src);
+    inputSourceRef.current = src;
+    setError(null);
+    if (src === "camera") {
+      clearVideoFile();
+    } else if (inputVideoRef.current) {
+      // Detach any camera preview stream so switching back-and-forth is clean.
+      inputVideoRef.current.srcObject = null;
+    }
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
@@ -507,52 +595,126 @@ function StreamPage() {
 
 
     let stream: MediaStream;
-    try {
-      await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
-      const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
-      const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
-      const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
-      const baseVideo: MediaTrackConstraints = {
-        ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
-        frameRate: { ideal: fps },
-        width: { ideal: width },
-        height: { ideal: height },
-      };
+    // Resolve the model dims/fps up-front — used by both branches so the
+    // canvas-captured file stream matches the camera path exactly.
+    await refreshLucyModelId();
+    const model = models.realtime("lucy-2.1" as any);
+    const modelFps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
+    const modelWidth = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
+    const modelHeight = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
 
+    if (inputSource === "file") {
+      // ── Video-file path ────────────────────────────────────────────────
+      if (!videoFile || !videoFileUrl) {
+        setError("Please pick a video file first.");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
+      if (videoFileError) {
+        setError(videoFileError);
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
+      const vid = inputVideoRef.current;
+      if (!vid) {
+        setError("Preview element not ready — try again.");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: baseVideo, audio: false });
-      } catch (inner: any) {
-        // OverconstrainedError / NotReadableError — retry with permissive constraints
-        if (inner?.name === "OverconstrainedError" || inner?.name === "NotReadableError" || inner?.name === "AbortError") {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        } else {
-          throw inner;
+        vid.loop = loopVideoRef.current;
+        vid.muted = true;
+        vid.currentTime = 0;
+        // Same click gesture — autoplay is allowed here.
+        await vid.play();
+      } catch (e: any) {
+        console.error("Video file play failed", e);
+        setError("Could not play this video — try MP4 (H.264).");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = modelWidth;
+      canvas.height = modelHeight;
+      const ctx = canvas.getContext("2d");
+      canvasRef.current = canvas;
+      const draw = () => {
+        if (!canvasRef.current || !ctx) return;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, modelWidth, modelHeight);
+        const vw = vid.videoWidth;
+        const vh = vid.videoHeight;
+        if (vw > 0 && vh > 0) {
+          const sc = Math.min(modelWidth / vw, modelHeight / vh);
+          const dw = vw * sc;
+          const dh = vh * sc;
+          const dx = (modelWidth - dw) / 2;
+          const dy = (modelHeight - dh) / 2;
+          try { ctx.drawImage(vid, dx, dy, dw, dh); } catch {}
         }
+        canvasRafRef.current = requestAnimationFrame(draw);
+      };
+      draw();
+      try {
+        stream = (canvas as unknown as HTMLCanvasElement).captureStream(modelFps);
+      } catch (e: any) {
+        console.error("canvas.captureStream failed", e);
+        if (canvasRafRef.current != null) cancelAnimationFrame(canvasRafRef.current);
+        canvasRafRef.current = null;
+        canvasRef.current = null;
+        setError("Your browser can't capture the video for streaming. Try the latest Chrome.");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
       }
-    } catch (e: any) {
-      console.error("getUserMedia failed", e?.name, e?.message, e);
-      setConnecting(false);
-      startingRef.current = false;
-      const name = e?.name || "";
-      if (name === "NotAllowedError" || name === "SecurityError") {
+    } else {
+      // ── Camera path (unchanged behaviour) ──────────────────────────────
+      try {
+        const baseVideo: MediaTrackConstraints = {
+          ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
+          frameRate: { ideal: modelFps },
+          width: { ideal: modelWidth },
+          height: { ideal: modelHeight },
+        };
 
-        setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
-      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
-        setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
-      } else if (name === "NotReadableError") {
-        setError("Your camera is already in use by another app (Zoom, OBS, Teams, etc.). Close it and try again.");
-      } else {
-        setError(`Could not start camera: ${e?.message || name || "unknown error"}. Try reloading the page.`);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: baseVideo, audio: false });
+        } catch (inner: any) {
+          if (inner?.name === "OverconstrainedError" || inner?.name === "NotReadableError" || inner?.name === "AbortError") {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          } else {
+            throw inner;
+          }
+        }
+      } catch (e: any) {
+        console.error("getUserMedia failed", e?.name, e?.message, e);
+        setConnecting(false);
+        startingRef.current = false;
+        const name = e?.name || "";
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
+        } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+          setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
+        } else if (name === "NotReadableError") {
+          setError("Your camera is already in use by another app (Zoom, OBS, Teams, etc.). Close it and try again.");
+        } else {
+          setError(`Could not start camera: ${e?.message || name || "unknown error"}. Try reloading the page.`);
+        }
+        return;
       }
-      return;
     }
 
     mediaStreamRef.current = stream;
-    if (inputVideoRef.current) {
+    if (inputSource === "camera" && inputVideoRef.current) {
       inputVideoRef.current.srcObject = stream;
       inputVideoRef.current.play().catch(() => {});
     }
+
+
 
     try {
       const { apiKey } = await getDecartKey();
@@ -768,6 +930,12 @@ function StreamPage() {
   const lowBalance = streaming && secondsLeft > 0 && secondsLeft <= LOW_BALANCE_SECONDS;
   const preflightTime = formatTimeLeft(secondsLeft);
 
+  // Video-file cost/duration derived values.
+  const videoCredits = Math.max(0, Math.ceil(videoDuration * RATE));
+  const videoAffordSec = Math.floor(credits / RATE);
+  const videoOverBudget =
+    inputSource === "file" && videoDuration > 0 && videoCredits > credits;
+
   return (
     <div>
       {/* Header */}
@@ -800,10 +968,40 @@ function StreamPage() {
           {/* Live preview */}
           <div className="card-surface p-0 overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-              <Panel label="Your camera" streaming={streaming}>
-                {!streaming && <SilhouetteBg variant="camera" />}
-                <video ref={inputVideoRef} muted playsInline className="relative z-[1] h-full w-full object-cover" />
-                {!streaming && <PanelEmpty icon={<CameraIcon size={22} />} title="Camera off" hint="Face a window or lamp for the best AI output" />}
+              <Panel label={inputSource === "file" ? "Your video" : "Your camera"} streaming={streaming}>
+                {!streaming && inputSource === "camera" && <SilhouetteBg variant="camera" />}
+                {!streaming && inputSource === "file" && !videoFileUrl && <SilhouetteBg variant="camera" />}
+                <video
+                  ref={inputVideoRef}
+                  muted
+                  playsInline
+                  className="relative z-[1] h-full w-full object-contain bg-black"
+                  onLoadedMetadata={(e) => {
+                    if (inputSourceRef.current === "file") {
+                      setVideoDuration(e.currentTarget.duration || 0);
+                    }
+                  }}
+                  onError={() => {
+                    if (inputSourceRef.current === "file" && videoFileUrl) {
+                      setVideoFileError("This video can't play in the browser — try MP4 (H.264).");
+                    }
+                  }}
+                  onEnded={() => {
+                    if (
+                      inputSourceRef.current === "file" &&
+                      streamingRef.current &&
+                      !loopVideoRef.current
+                    ) {
+                      endStream(false).catch(() => {});
+                    }
+                  }}
+                />
+                {!streaming && inputSource === "camera" && (
+                  <PanelEmpty icon={<CameraIcon size={22} />} title="Camera off" hint="Face a window or lamp for the best AI output" />
+                )}
+                {!streaming && inputSource === "file" && !videoFileUrl && (
+                  <PanelEmpty icon={<Film size={22} />} title="No video selected" hint="Pick a local MP4/WebM/MOV to stream instead of your camera" />
+                )}
               </Panel>
               <Panel label="AI output" accent streaming={streaming}>
                 {!streaming && <SilhouetteBg variant="output" />}
@@ -841,7 +1039,35 @@ function StreamPage() {
 
             {/* Control strip */}
             <div className="border-t border-[color:var(--border-soft)] p-4 flex flex-wrap items-center gap-4">
-              {cameras.length > 0 && (
+              {/* Input source */}
+              <div
+                className="flex items-center gap-3"
+                title={streaming ? "Stop your stream to change input" : undefined}
+              >
+                <span className="eyebrow">Input</span>
+                <div className="segmented">
+                  <button
+                    type="button"
+                    disabled={streaming}
+                    data-active={inputSource === "camera"}
+                    onClick={() => changeInputSource("camera")}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CameraIcon size={12} className="inline mr-1 -mt-0.5" /> Camera
+                  </button>
+                  <button
+                    type="button"
+                    disabled={streaming}
+                    data-active={inputSource === "file"}
+                    onClick={() => changeInputSource("file")}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Film size={12} className="inline mr-1 -mt-0.5" /> Video file
+                  </button>
+                </div>
+              </div>
+
+              {inputSource === "camera" && cameras.length > 0 && (
                 <label className="flex items-center gap-2">
                   <span className="eyebrow" title="Any 1080p camera works. Lighting matters most.">Camera <Info size={12} className="inline text-[color:var(--faint)]" /></span>
                   <select
@@ -887,6 +1113,115 @@ function StreamPage() {
                 : "Unlocks creative presets — anime, painterly, cinematic and more."}
             </div>
           </div>
+
+          {/* Video file picker (only in file input mode) */}
+          {inputSource === "file" && (
+            <div className="card-surface">
+              <div className="flex items-center gap-2 mb-3">
+                <Film size={14} className="text-primary" />
+                <span className="eyebrow">Video file</span>
+                <span className="text-[11px] text-[color:var(--faint)]">· plays locally, never uploaded</span>
+              </div>
+
+              <input
+                ref={videoFileInputRef}
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                className="hidden"
+                onChange={(e) => handleVideoFile(e.target.files?.[0] ?? null)}
+              />
+
+              {!videoFileUrl ? (
+                <div
+                  onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }}
+                  onDragOver={(e) => { if (streaming) return; e.preventDefault(); setDragVideoOver(true); }}
+                  onDragLeave={() => setDragVideoOver(false)}
+                  onDrop={(e) => {
+                    if (streaming) return;
+                    e.preventDefault();
+                    setDragVideoOver(false);
+                    handleVideoFile(e.dataTransfer.files?.[0] ?? null);
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${streaming ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                  style={{
+                    borderColor: dragVideoOver ? "var(--primary)" : "var(--border)",
+                    background: dragVideoOver ? "var(--accent-soft)" : "transparent",
+                  }}
+                >
+                  <Upload className="h-7 w-7 text-primary" />
+                  <div className="text-[14px] text-foreground">
+                    Drop a video here or <span className="text-primary">browse files</span>
+                  </div>
+                  <div className="text-[12px] text-[color:var(--faint)]">MP4, WebM, or MOV · played from your device, never uploaded</div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 rounded-xl border bg-[color:var(--sidebar)] p-3">
+                  <div className="grid h-20 w-20 place-items-center rounded-md border bg-black text-primary">
+                    <Film size={28} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-[14px] truncate">
+                      <span className="truncate">{videoFile?.name}</span>
+                    </div>
+                    <div className="text-[11.5px] text-[color:var(--muted-foreground)] mt-0.5">
+                      {videoDuration > 0
+                        ? `${mmss(Math.floor(videoDuration))} · ≈ ${videoCredits.toLocaleString()} credits`
+                        : "Reading duration…"}
+                      {streaming && <span className="ml-2 text-primary">• Live</span>}
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }}
+                        disabled={streaming}
+                        className="text-[11px] rounded border px-2 py-1 hover:bg-card disabled:opacity-50"
+                      >
+                        Change
+                      </button>
+                      {!streaming && (
+                        <button
+                          onClick={clearVideoFile}
+                          className="text-[11px] rounded border px-2 py-1 hover:bg-card text-[color:var(--muted-foreground)]"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {videoOverBudget && (
+                <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)]">
+                  <AlertTriangle size={13} className="inline mr-1" />
+                  Your balance covers about {mmss(Math.max(0, videoAffordSec))} of this video.
+                </div>
+              )}
+
+              {videoFileError && (
+                <div className="mt-3 rounded-lg border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 p-3 text-[12.5px] text-[color:var(--destructive)]">
+                  {videoFileError}
+                </div>
+              )}
+
+              {/* Loop toggle */}
+              <label className="mt-4 flex items-start gap-3 rounded-xl border bg-[color:var(--sidebar)] p-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={loopVideo}
+                  onChange={(e) => setLoopVideo(e.target.checked)}
+                  className="mt-1 accent-[color:var(--primary)]"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5 text-[13px] text-foreground">
+                    <Repeat size={12} className="text-primary" /> Loop video
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-[color:var(--muted-foreground)]">
+                    When off, your stream stops automatically when the video ends.
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Reference image */}
           <div className="card-surface">
@@ -974,7 +1309,7 @@ function StreamPage() {
             <div className="flex gap-3">
               <button
                 onClick={start}
-                disabled={streaming || connecting || STREAMING_PAUSED}
+                disabled={streaming || connecting || STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))}
                 className="btn-primary"
               >
                 {streaming ? <><Square size={14} /> Streaming…</> : <><Play size={14} /> Start stream</>}
