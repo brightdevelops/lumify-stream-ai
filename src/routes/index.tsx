@@ -26,9 +26,10 @@ export const Route = createFileRoute("/")({
 });
 
 const PACKS = [
-  { id: "starter",  name: "Starter",  credits: 500,  price: 11500, save: null },
-  { id: "basic",    name: "Basic",    credits: 1000, price: 23000, save: null, popular: true },
-  { id: "pro",      name: "Pro",      credits: 2000, price: 46000, save: null },
+  { id: "starter",    name: "Starter",    credits: 500,  price: 11500, save: null },
+  { id: "basic",      name: "Basic",      credits: 1000, price: 23000, save: null, popular: true },
+  { id: "pro",        name: "Pro",        credits: 2000, price: 46000, save: null },
+  { id: "enterprise", name: "Enterprise", credits: 5000, price: 115000, save: null },
 ];
 
 const FAQS = [
@@ -231,7 +232,7 @@ function Landing() {
       {/* PRICING */}
       <Reveal><section id="pricing" className="mx-auto max-w-[1080px] px-6 py-20">
         <SectionHead eyebrow="Pricing" title="Top up, stream, come back later" />
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {PACKS.map((p) => {
             const mins = Math.round(p.credits / 2 / 60);
             const highlighted = "popular" in p && p.popular;
