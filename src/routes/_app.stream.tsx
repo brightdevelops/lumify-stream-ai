@@ -938,600 +938,67 @@ function StreamPage() {
   const videoOverBudget =
     inputSource === "file" && videoDuration > 0 && videoCredits > credits;
 
-  return (
-    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 28px" }}>
-      {/* ── Header row ─────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-4 mb-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display" style={{ fontSize: 26, fontWeight: 400, lineHeight: 1.15 }}>Studio</h1>
-          <p style={{ fontSize: 13, color: "#6b7160", marginTop: 2 }}>Your character goes live from here.</p>
-        </div>
-
-        <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-[12px] shrink-0">
-          <span className={`status-dot ${streaming ? "live" : ""}`} />
-          {streaming ? (
-            <span className="text-primary font-semibold">Live — {RATE} credits/sec</span>
-          ) : (
-            <span className="text-[color:var(--muted-foreground)]">Idle — not charging</span>
-          )}
-        </div>
-
-        {/* Compact balance chip */}
-        <div
-          className="shrink-0"
-          style={{
-            background: "linear-gradient(150deg,#1a2010,#14170f 60%)",
-            border: "1px solid #2c3519",
-            borderRadius: 12,
-            padding: "9px 14px",
-            minWidth: 190,
-          }}
-        >
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>Balance</div>
-          <div className="font-display" style={{ fontSize: 17, color: "var(--foreground)", marginTop: 2, lineHeight: 1.1 }}>
-            ≈ {timeLeftLabel}
-          </div>
-          <div style={{ width: 90, height: 5, borderRadius: 999, background: "var(--border)", overflow: "hidden", marginTop: 6 }}>
-            <div
-              style={{
-                height: "100%",
-                width: `${bufferPct}%`,
-                background: underTenMin
-                  ? "linear-gradient(90deg,#ffb75a,#ffd98a)"
-                  : "linear-gradient(90deg,#8fc233,#c6f24e)",
-                transition: "width 400ms ease",
-              }}
-            />
-          </div>
-          {underTenMin && (
-            <div style={{ fontSize: 10.5, color: "var(--warning)", marginTop: 4 }}>⚠ under 10 min</div>
-          )}
-          <Link
-            to="/credits"
-            className="mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1"
-            style={{ fontSize: 11, fontWeight: 700, background: "var(--primary)", color: "var(--primary-foreground)" }}
-          >
-            <Plus size={11} /> Top up
-          </Link>
-        </div>
-      </div>
-
-      {STREAMING_PAUSED && (
-        <div role="status" className="mb-4 rounded-2xl border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-5 py-4 text-[14px] whitespace-pre-line">
-          {STREAMING_PAUSED_MESSAGE}
-        </div>
-      )}
-
-      {/* ── The stage ─────────────────────────────────────────────────── */}
-      <div
-        className="relative w-full overflow-hidden"
-        style={{
-          aspectRatio: "21 / 9",
-          borderRadius: 16,
-          border: "1px solid #2e3520",
-          boxShadow: "inset 0 0 0 1.5px rgba(198,242,78,.14)",
-          background: "radial-gradient(80% 70% at 50% 40%, #1b220f 0%, #0e1108 85%)",
-        }}
-      >
-        {!streaming && <SilhouetteBg variant="output" />}
-
-        {/* AI output video (fills stage when live) */}
-        <video
-          ref={outputVideoRef}
-          muted
-          playsInline
-          className="absolute inset-0 z-[1] h-full w-full"
-          style={{ objectFit: "cover", background: "transparent" }}
-        />
-
-        {/* Chips top-left */}
-        <div className="absolute top-3 left-3 z-[4] flex items-center gap-1.5">
-          <span
-            className="rounded-md border border-[color:var(--primary)] px-1.5 py-0.5 text-primary"
-            style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "rgba(0,0,0,.55)", backdropFilter: "blur(6px)", fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace" }}
-          >
-            AI Output
-          </span>
-          <span
-            className="rounded-md border border-[color:var(--border)] px-1.5 py-0.5 text-[color:var(--muted-foreground)]"
-            style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "rgba(0,0,0,.55)", backdropFilter: "blur(6px)", fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace" }}
-          >
-            Lucy 2.5
-          </span>
-        </div>
-
-        {/* Chips top-right */}
-        <div className="absolute top-3 right-3 z-[4] flex items-center gap-1.5">
-          <span
-            className="rounded-md border border-[color:var(--border)] px-1.5 py-0.5 text-[color:var(--muted-foreground)]"
-            style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "rgba(0,0,0,.55)", backdropFilter: "blur(6px)", fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace" }}
-          >
-            720p
-          </span>
-          <span
-            className="rounded-md border border-[color:var(--border)] px-1.5 py-0.5 text-[color:var(--muted-foreground)]"
-            style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "rgba(0,0,0,.55)", backdropFilter: "blur(6px)", fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace" }}
-          >
-            &lt; 120 ms
-          </span>
-        </div>
-
-        {/* Empty state (before streaming) */}
-        {!streaming && (
-          <div className="absolute inset-0 z-[2] grid place-items-center p-6 text-center">
-            <div className="flex flex-col items-center" style={{ gap: 10 }}>
-              <div
-                className="grid place-items-center rounded-xl text-primary"
-                style={{ width: 52, height: 52, background: "var(--accent-soft)" }}
-              >
-                <Sparkles size={22} />
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--foreground)" }}>Your character appears here</div>
-              <div style={{ fontSize: 12.5, color: "#6b7160", maxWidth: 340, lineHeight: 1.5 }}>
-                Start the stream and Lucy 2.5 transforms your camera feed in real time
-              </div>
-            </div>
-          </div>
-        )}
-
-        {connecting && (
-          <div className="absolute inset-0 z-[5] grid place-items-center bg-black/70">
-            <div className="text-center">
-              <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
-              <div className="mt-2 text-[12px] text-[color:var(--muted-foreground)]">Connecting to Lucy…</div>
-            </div>
-          </div>
-        )}
-
-        {streaming && user?.email === "brightsolutionslab@gmail.com" && (
-          <button
-            type="button"
-            onClick={() => {
-              if (!obsUrl) return;
-              window.open(
-                obsUrl,
-                "lumify-ai-output",
-                "popup=yes,width=1280,height=720,menubar=no,toolbar=no,location=no,status=no,noopener,noreferrer",
-              );
-            }}
-            disabled={!obsUrl}
-            title="Open AI output in a new window (for OBS window capture)"
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-[6] inline-flex items-center gap-1.5 rounded-md border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary hover:bg-[color:var(--primary)]/20 transition disabled:opacity-50"
-          >
-            <ExternalLink size={12} /> Pop out
-          </button>
-        )}
-
-        {/* Picture-in-picture: user's camera */}
-        <div
-          className="absolute z-[5] overflow-hidden"
-          style={{
-            bottom: 16,
-            right: 16,
-            width: 236,
-            aspectRatio: "16 / 10",
-            borderRadius: 12,
-            border: "1px solid #262b1c",
-            background: "#0b0d0a",
-            boxShadow: "0 18px 40px -18px rgba(0,0,0,.85)",
-          }}
-        >
-          <video
-            ref={inputVideoRef}
-            muted
-            playsInline
-            className="absolute inset-0 h-full w-full"
-            style={{ objectFit: "cover", background: "#000" }}
-            onLoadedMetadata={(e) => {
-              if (inputSourceRef.current === "file") {
-                setVideoDuration(e.currentTarget.duration || 0);
-              }
-            }}
-            onError={() => {
-              if (inputSourceRef.current === "file" && videoFileUrl) {
-                setVideoFileError("This video can't play in the browser — try MP4 (H.264).");
-              }
-            }}
-            onEnded={() => {
-              if (
-                inputSourceRef.current === "file" &&
-                streamingRef.current &&
-                !loopVideoRef.current
-              ) {
-                endStream(false).catch(() => {});
-              }
-            }}
-          />
-          {/* Scanline overlay */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-20 mix-blend-overlay"
-            style={{
-              backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 3px)",
-            }}
-          />
-          {/* Tag top-left */}
-          <span
-            className="absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[color:var(--muted-foreground)]"
-            style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "rgba(0,0,0,.6)", fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace" }}
-          >
-            {inputSource === "file" ? "Your video" : "Your camera"}
-          </span>
-          {/* REC top-right */}
-          <span
-            className="absolute top-1.5 right-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5"
-            style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "rgba(0,0,0,.6)", color: "var(--destructive)", fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace" }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: "var(--destructive)" }} /> Rec
-          </span>
-          {/* Empty state */}
-          {!streaming && inputSource === "camera" && (
-            <div className="absolute inset-0 grid place-items-center text-center pointer-events-none">
-              <div className="flex flex-col items-center gap-1 text-[color:var(--muted-foreground)]">
-                <CameraIcon size={18} />
-                <div style={{ fontSize: 11 }}>Camera off</div>
-              </div>
-            </div>
-          )}
-          {!streaming && inputSource === "file" && !videoFileUrl && (
-            <div className="absolute inset-0 grid place-items-center text-center pointer-events-none">
-              <div className="flex flex-col items-center gap-1 text-[color:var(--muted-foreground)]">
-                <Film size={18} />
-                <div style={{ fontSize: 11 }}>No video</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Control dock ──────────────────────────────────────────────── */}
-      <div className="card-surface mt-4" style={{ padding: 20 }}>
-        <div className="flex flex-wrap items-end gap-4">
-          {/* Input source (kept from existing controls) */}
-          <div className="flex flex-col" style={{ gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>Input</span>
-            <div className="segmented" style={{ height: 40 }}>
-              <button type="button" disabled={streaming} data-active={inputSource === "camera"} onClick={() => changeInputSource("camera")} className="disabled:opacity-50 disabled:cursor-not-allowed">
-                <CameraIcon size={12} className="inline mr-1 -mt-0.5" /> Camera
-              </button>
-              <button type="button" disabled={streaming} data-active={inputSource === "file"} onClick={() => changeInputSource("file")} className="disabled:opacity-50 disabled:cursor-not-allowed">
-                <Film size={12} className="inline mr-1 -mt-0.5" /> Video file
-              </button>
-            </div>
-          </div>
-
-          {/* Camera select */}
-          {inputSource === "camera" && (
-            <div className="flex flex-col" style={{ gap: 6, minWidth: 230 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>Camera</span>
-              <select
-                value={selectedCameraId}
-                onChange={(e) => handleCameraChange(e.target.value)}
-                className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
-                style={{ height: 40, minWidth: 230 }}
-              >
-                {cameras.length === 0 && <option value="">No camera detected</option>}
-                {cameras.map((cam, i) => (
-                  <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Mode segmented */}
-          <div className="flex flex-col" style={{ gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>Mode</span>
-            <div className="segmented" style={{ height: 40 }}>
-              <button type="button" data-active={mode === "realistic"} onClick={() => setMode("realistic")}>Realistic</button>
-              <button type="button" data-active={mode === "stylized"} onClick={() => setMode("stylized")}>Stylized</button>
-            </div>
-          </div>
-
-          {/* Realism slider */}
-          {mode === "realistic" && (
-            <div className="flex flex-col flex-1" style={{ gap: 6, minWidth: 220 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>Realism</span>
-              <div className="flex items-center gap-3" style={{ height: 40 }}>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  step={1}
-                  value={realism}
-                  onChange={(e) => setRealism(Number(e.target.value))}
-                  className="lime-range flex-1"
-                  style={{ ["--val" as any]: `${((realism - 1) / 9) * 100}%`, minWidth: 200 }}
-                />
-                <span className="font-display text-primary text-right" style={{ width: 38, flexShrink: 0, fontSize: 15 }}>
-                  {realism}/10
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Divider */}
-          <div style={{ width: 1, alignSelf: "stretch", background: "var(--border)", minHeight: 40 }} />
-
-          {/* Reference image ghost button */}
-          <div className="flex flex-col" style={{ gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>Reference</span>
-            <div className="flex items-center gap-2" style={{ height: 40 }}>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/jpg"
-                className="hidden"
-                onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-lg border bg-transparent px-3 text-[color:var(--muted-foreground)] hover:text-foreground hover:border-[color:var(--primary)] transition"
-                style={{ height: 40, fontSize: 12.5 }}
-              >
-                <Upload size={13} /> {referenceUrl ? "Change image" : "Add image"}
-              </button>
-              {referenceUrl && (
-                <div className="inline-flex items-center gap-1.5 rounded-md border bg-[color:var(--sidebar)] pl-1 pr-2 py-1" style={{ maxWidth: 160 }}>
-                  <img src={referenceUrl} alt="ref" className="h-6 w-6 rounded object-cover" />
-                  <span className="truncate text-[11px] text-[color:var(--muted-foreground)]">{referenceImage?.name}</span>
-                  {!streaming && (
-                    <button onClick={clearReference} className="text-[color:var(--faint)] hover:text-[color:var(--destructive)]" aria-label="Remove">
-                      <X size={11} />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Mode helper line */}
-        <div className="mt-3" style={{ fontSize: 12, color: "#6b7160" }}>
-          {mode === "realistic"
-            ? "Keeps the person looking human and natural — style presets are disabled."
-            : "Unlocks creative presets — anime, painterly, cinematic and more."}
-        </div>
-
-        {/* Stylized presets (kept) */}
-        {mode === "stylized" && (
-          <div className="mt-3">
-            <div className="flex flex-wrap gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => selectPreset(p)}
-                  className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
-                    selectedPreset === p
-                      ? "border-[color:var(--primary)] text-primary bg-[color:var(--accent-soft)]"
-                      : "border-[color:var(--border)] text-[color:var(--muted-foreground)] hover:text-foreground"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Video file picker card — only in file mode (kept, unchanged logic) */}
-      {inputSource === "file" && (
-        <div className="card-surface mt-4" style={{ padding: 20 }}>
-          <div className="flex items-center gap-2 mb-3">
-            <Film size={14} className="text-primary" />
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>Video file</span>
-            <span className="text-[11px] text-[color:var(--faint)]">· plays locally, never uploaded</span>
-          </div>
-
-          <input
-            ref={videoFileInputRef}
-            type="file"
-            accept="video/mp4,video/webm,video/quicktime"
-            className="hidden"
-            onChange={(e) => handleVideoFile(e.target.files?.[0] ?? null)}
-          />
-
-          {!videoFileUrl ? (
-            <div
-              onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }}
-              onDragOver={(e) => { if (streaming) return; e.preventDefault(); setDragVideoOver(true); }}
-              onDragLeave={() => setDragVideoOver(false)}
-              onDrop={(e) => {
-                if (streaming) return;
-                e.preventDefault();
-                setDragVideoOver(false);
-                handleVideoFile(e.dataTransfer.files?.[0] ?? null);
-              }}
-              className={`flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-3 transition-colors ${streaming ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-              style={{
-                borderColor: dragVideoOver ? "var(--primary)" : "var(--border)",
-                background: dragVideoOver ? "var(--accent-soft)" : "transparent",
-              }}
-            >
-              <Upload className="h-6 w-6 text-primary shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[13.5px] text-foreground">
-                  Drop a video here or <span className="text-primary">browse files</span>
-                </div>
-                <div className="text-[11.5px] text-[color:var(--faint)]">MP4, WebM, or MOV · played from your device</div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4 rounded-xl border bg-[color:var(--sidebar)] p-3">
-              <div className="grid h-16 w-16 place-items-center rounded-md border bg-black text-primary shrink-0">
-                <Film size={22} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 text-[13.5px] truncate">
-                  <span className="truncate">{videoFile?.name}</span>
-                </div>
-                <div className="text-[11.5px] text-[color:var(--muted-foreground)] mt-0.5">
-                  {videoDuration > 0
-                    ? `${mmss(Math.floor(videoDuration))} · ≈ ${videoCredits.toLocaleString()} credits`
-                    : "Reading duration…"}
-                  {streaming && <span className="ml-2 text-primary">• Live</span>}
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }} disabled={streaming} className="text-[11px] rounded border px-2 py-1 hover:bg-card disabled:opacity-50">Change</button>
-                  {!streaming && (
-                    <button onClick={clearVideoFile} className="text-[11px] rounded border px-2 py-1 hover:bg-card text-[color:var(--muted-foreground)]">Remove</button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {videoOverBudget && (
-            <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)]">
-              <AlertTriangle size={13} className="inline mr-1" />
-              Your balance covers about {mmss(Math.max(0, videoAffordSec))} of this video.
-            </div>
-          )}
-
-          {videoFileError && (
-            <div className="mt-3 rounded-lg border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 p-3 text-[12.5px] text-[color:var(--destructive)]">
-              {videoFileError}
-            </div>
-          )}
-
-          <label className="mt-4 flex items-start gap-3 rounded-xl border bg-[color:var(--sidebar)] p-3 cursor-pointer">
-            <input type="checkbox" checked={loopVideo} onChange={(e) => setLoopVideo(e.target.checked)} className="mt-1 accent-[color:var(--primary)]" />
-            <div className="flex-1">
-              <div className="flex items-center gap-1.5 text-[13px] text-foreground">
-                <Repeat size={12} className="text-primary" /> Loop video
-              </div>
-              <div className="mt-0.5 text-[11.5px] text-[color:var(--muted-foreground)]">
-                When off, your stream stops automatically when the video ends.
-              </div>
-            </div>
-          </label>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-4 rounded-xl border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 px-4 py-3 text-[13px] text-[color:var(--destructive)]">
-          {error}
-        </div>
-      )}
-
-      {/* ── Action row ────────────────────────────────────────────────── */}
-      <div className="card-surface mt-4 flex flex-wrap items-center justify-between gap-4" style={{ padding: 20 }}>
-        <div className="flex gap-3">
-          <button
-            onClick={start}
-            disabled={streaming || connecting || STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))}
-            className="btn-primary"
-            style={{ padding: "14px 30px", fontSize: 15 }}
-          >
-            {streaming ? <><Square size={15} /> Streaming…</> : <><Play size={15} /> Start stream</>}
-          </button>
-          <button onClick={stop} disabled={!streaming} className="btn-ghost disabled:opacity-50">
-            <Square size={14} /> Stop
-          </button>
-        </div>
-        <div className="text-[12.5px] text-[color:var(--muted-foreground)]">
-          Costs <span className="text-foreground font-semibold">{RATE} credits/sec</span> · ≈ <span className="text-foreground">{timeLeftLabel}</span> on your balance
-        </div>
-      </div>
-
-      {/* ── Bottom row: 3 equal cards ─────────────────────────────────── */}
-      <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-        {/* Session */}
-        <div className="card-surface" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c", marginBottom: 12 }}>Session</div>
-          <div className="space-y-2">
-            <Row k="Status" v={
-              <span className="inline-flex items-center gap-2 text-[13px]">
-                <span className={`status-dot ${streaming ? "live" : ""}`} />
-                {streaming ? "Live" : "Idle"}
-              </span>
-            } />
-            <Row k="Duration" v={mmss(duration)} />
-            <Row k="Credits used" v={used.toLocaleString()} />
-            <Row k="Cost so far" v={`₦${cost.toLocaleString()}`} />
-          </div>
-        </div>
-
-        {/* OBS setup */}
-        <div className="card-surface" style={{ padding: 20 }}>
-          <div className="flex items-center gap-2 mb-3">
-            <Monitor size={14} className="text-primary" />
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c" }}>OBS Setup</span>
-            <span className="badge badge-success">Live</span>
-          </div>
-          <ol className="space-y-2 text-[13px]">
-            {[
-              "Start your stream on Lumify",
-              "In OBS, add a Browser Source",
-              "Paste the URL below, set 1280 × 720",
-            ].map((step, i) => (
-              <li key={i} className="flex items-start gap-2.5">
-                <span className="grid shrink-0 place-items-center rounded bg-primary text-[color:var(--primary-foreground)] font-bold" style={{ width: 18, height: 18, fontSize: 11 }}>{i + 1}</span>
-                <span className="text-foreground">{step}</span>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-3 flex items-center gap-2 rounded-lg border bg-[color:var(--sidebar)] p-2">
-            <code className="flex-1 truncate text-[11px] font-mono text-[color:var(--muted-foreground)]">
-              {obsUrl || "Loading…"}
-            </code>
-            <button
-              onClick={copyObsUrl}
-              disabled={!obsUrl}
-              className="inline-flex items-center gap-1 rounded border bg-card px-2 py-1 text-[11px] font-semibold text-primary hover:bg-[color:var(--accent-soft)] disabled:opacity-50"
-            >
-              {copied ? <><Check size={12} /> Copied ✓</> : <><Copy size={12} /> Copy</>}
-            </button>
-          </div>
-          <p className="mt-2 text-[11px] text-[color:var(--faint)]">
-            This URL is private and permanent. Regenerate it in Settings to revoke OBS access.
-          </p>
-        </div>
-
-        {/* Best quality tips */}
-        <div className="card-surface" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9aa08c", marginBottom: 12 }}>Best quality tips</div>
-          <ul className="space-y-2">
-            {[
-              { t: "Light your face", d: "Face a window or lamp. Lighting matters more than the camera." },
-              { t: "1080p is plenty", d: "Any 1080p webcam works. 4K adds nothing — output is optimized." },
-              { t: "Step off the wall", d: "A little distance from the background gives cleaner transformations." },
-            ].map((tip) => (
-              <li key={tip.t} className="flex items-start gap-2">
-                <span className="text-primary" style={{ fontSize: 13, lineHeight: 1.3 }}>✦</span>
-                <div>
-                  <div className="text-[13px] text-foreground">{tip.t}</div>
-                  <div className="text-[11.5px] text-[color:var(--muted-foreground)]">{tip.d}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {showOutOfCredits && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur p-4">
-          <div className="relative w-full max-w-md card-surface">
-            <button
-              onClick={() => setShowOutOfCredits(false)}
-              className="absolute top-3 right-3 text-[color:var(--muted-foreground)] hover:text-foreground"
-              aria-label="Close"
-            >
-              <X size={16} />
-            </button>
-            <h2 className="font-display text-2xl">Credits finished</h2>
-            <p className="mt-2 text-[13.5px] text-[color:var(--muted-foreground)]">Top up to continue streaming.</p>
-            <button
-              onClick={() => { setShowOutOfCredits(false); navigate({ to: "/credits" }); }}
-              className="btn-primary w-full mt-5"
-            >
-              <Plus size={14} /> Top up credits
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <FilmSet
+    user={user}
+    streaming={streaming}
+    connecting={connecting}
+    inputSource={inputSource}
+    changeInputSource={changeInputSource}
+    cameras={cameras}
+    selectedCameraId={selectedCameraId}
+    handleCameraChange={handleCameraChange}
+    mode={mode}
+    setMode={setMode}
+    realism={realism}
+    setRealism={setRealism}
+    referenceImage={referenceImage}
+    referenceUrl={referenceUrl}
+    fileInputRef={fileInputRef}
+    handleFile={handleFile}
+    clearReference={clearReference}
+    selectedPreset={selectedPreset}
+    selectPreset={selectPreset}
+    videoFile={videoFile}
+    videoFileUrl={videoFileUrl}
+    videoFileInputRef={videoFileInputRef}
+    handleVideoFile={handleVideoFile}
+    clearVideoFile={clearVideoFile}
+    videoDuration={videoDuration}
+    videoCredits={videoCredits}
+    videoOverBudget={videoOverBudget}
+    videoAffordSec={videoAffordSec}
+    videoFileError={videoFileError}
+    loopVideo={loopVideo}
+    setLoopVideo={setLoopVideo}
+    dragVideoOver={dragVideoOver}
+    setDragVideoOver={setDragVideoOver}
+    error={error}
+    credits={credits}
+    used={used}
+    cost={cost}
+    secondsLeft={secondsLeft}
+    bufferPct={bufferPct}
+    underTenMin={underTenMin}
+    timeLeftLabel={timeLeftLabel}
+    mmss={mmss}
+    duration={duration}
+    inputVideoRef={inputVideoRef}
+    outputVideoRef={outputVideoRef}
+    setVideoDuration={setVideoDuration}
+    setVideoFileError={setVideoFileError}
+    streamingRef={streamingRef}
+    inputSourceRef={inputSourceRef}
+    loopVideoRef={loopVideoRef}
+    endStream={endStream}
+    start={start}
+    stop={stop}
+    obsUrl={obsUrl}
+    copyObsUrl={copyObsUrl}
+    copied={copied}
+    showOutOfCredits={showOutOfCredits}
+    setShowOutOfCredits={setShowOutOfCredits}
+    navigate={navigate}
+  />;
 }
 
 function Panel({ label, accent, streaming, children }: { label: string; accent?: boolean; streaming?: boolean; children: React.ReactNode }) {
@@ -1746,6 +1213,752 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
     <div className="flex items-center justify-between text-[13px]">
       <span className="text-[color:var(--muted-foreground)]">{k}</span>
       <span className="font-medium text-foreground">{v}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILM-SET LAYOUT
+// ─────────────────────────────────────────────────────────────────────────────
+type FilmSetProps = any;
+
+function FilmSet(p: FilmSetProps) {
+  const {
+    user, streaming, connecting,
+    inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
+    mode, setMode, realism, setRealism,
+    referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
+    selectedPreset, selectPreset,
+    videoFile, videoFileUrl, videoFileInputRef, handleVideoFile, clearVideoFile,
+    videoDuration, videoCredits, videoOverBudget, videoAffordSec, videoFileError,
+    loopVideo, setLoopVideo, dragVideoOver, setDragVideoOver,
+    error, credits, used, cost, secondsLeft, bufferPct, underTenMin, timeLeftLabel,
+    mmss, duration,
+    inputVideoRef, outputVideoRef,
+    setVideoDuration, setVideoFileError,
+    streamingRef, inputSourceRef, loopVideoRef,
+    endStream, start, stop,
+    obsUrl, copyObsUrl, copied,
+    showOutOfCredits, setShowOutOfCredits, navigate,
+  } = p;
+
+  // TAKE + SCENE tracking (persisted per user; SCENE resets daily)
+  const [takeCount, setTakeCount] = useState(0);
+  const [sceneCount, setSceneCount] = useState(1);
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const rawT = localStorage.getItem(`lumi_take_${user.id}`);
+      if (rawT) setTakeCount(parseInt(rawT, 10) || 0);
+      const rawS = localStorage.getItem(`lumi_scene_${user.id}`);
+      if (rawS) {
+        const [d, n] = rawS.split("|");
+        if (d === today) setSceneCount(parseInt(n, 10) || 1);
+        else { setSceneCount(1); localStorage.setItem(`lumi_scene_${user.id}`, `${today}|1`); }
+      } else {
+        localStorage.setItem(`lumi_scene_${user.id}`, `${today}|1`);
+      }
+    } catch {}
+  }, [user]);
+
+  // Timecode HH:MM:SS:FF at 25fps — ticks while streaming, frozen at zero otherwise.
+  const [timecode, setTimecode] = useState("00:00:00:00");
+  useEffect(() => {
+    if (!streaming) { setTimecode("00:00:00:00"); return; }
+    const t0 = Date.now();
+    let raf = 0;
+    const FPS = 25;
+    const tick = () => {
+      const el = (Date.now() - t0) / 1000;
+      const h = Math.floor(el / 3600);
+      const m = Math.floor((el % 3600) / 60);
+      const s = Math.floor(el % 60);
+      const f = Math.floor((el - Math.floor(el)) * FPS);
+      setTimecode(
+        `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}:${String(f).padStart(2, "0")}`,
+      );
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [streaming]);
+
+  const handleAction = () => {
+    if (streaming) { stop(); return; }
+    // increment TAKE + SCENE on start (before the async start begins)
+    if (user) {
+      const nextTake = takeCount + 1;
+      setTakeCount(nextTake);
+      try { localStorage.setItem(`lumi_take_${user.id}`, String(nextTake)); } catch {}
+      const today = new Date().toISOString().slice(0, 10);
+      try {
+        const rawS = localStorage.getItem(`lumi_scene_${user.id}`);
+        const [d, n] = (rawS ?? "").split("|");
+        const nextScene = d === today ? (parseInt(n, 10) || 0) + 1 : 1;
+        setSceneCount(nextScene);
+        localStorage.setItem(`lumi_scene_${user.id}`, `${today}|${nextScene}`);
+      } catch {}
+    }
+    start();
+  };
+
+  const mono: React.CSSProperties = { fontFamily: "ui-monospace,SFMono-Regular,Menlo,monospace" };
+  const cellLabel: React.CSSProperties = {
+    ...mono,
+    fontSize: 9,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    color: "#6b7160",
+    lineHeight: 1,
+  };
+  const cellValue: React.CSSProperties = {
+    fontFamily: "var(--font-display)",
+    fontSize: 17,
+    lineHeight: 1,
+    color: "var(--foreground)",
+    marginTop: 6,
+  };
+  const controlLabel: React.CSSProperties = {
+    ...mono,
+    fontSize: 10,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    color: "#6b7160",
+  };
+
+  return (
+    <div style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "0 28px" }}>
+      {/* Key-light glow (paused with body.stream-live) */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: -120,
+          left: -160,
+          width: 640,
+          height: 460,
+          background: "radial-gradient(closest-side, rgba(198,242,78,0.05), transparent 70%)",
+          filter: "blur(30px)",
+          transform: "rotate(-15deg)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="relative z-[1] flex flex-wrap items-start justify-between gap-4" style={{ marginBottom: 24 }}>
+        {/* Production slate */}
+        <div
+          className="flex flex-wrap"
+          style={{ border: "1px solid #262b1c", borderRadius: 12, overflow: "hidden", background: "#14170f" }}
+        >
+          {[
+            { l: "Production", v: <>Lum<em style={{ color: "var(--primary)", fontStyle: "italic" }}>ify</em></> },
+            { l: "Scene", v: String(sceneCount).padStart(2, "0") },
+            { l: "Take", v: String(takeCount).padStart(2, "0") },
+            { l: "Camera", v: "Lucy 2.5" },
+          ].map((c, i) => (
+            <div
+              key={c.l}
+              style={{
+                padding: "10px 16px",
+                borderLeft: i === 0 ? "none" : "1px solid #1e2316",
+                minWidth: 108,
+              }}
+            >
+              <div style={cellLabel}>{c.l}</div>
+              <div style={cellValue}>{c.v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Film reel meter */}
+        <div style={{ minWidth: 220 }}>
+          <div style={{ ...mono, fontSize: 10, letterSpacing: "0.16em", textTransform: "uppercase", color: "#9aa08c", display: "flex", alignItems: "center", gap: 6 }}>
+            <span>Film remaining</span>
+            <span>·</span>
+            <span style={{ color: "var(--foreground)" }}>≈ {timeLeftLabel}</span>
+            {underTenMin && (
+              <span style={{ color: "var(--warning)", marginLeft: 4 }}>⚠ Short reel</span>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+            <div
+              style={{
+                width: 190,
+                height: 8,
+                borderRadius: 999,
+                background: "#1e2316",
+                overflow: "hidden",
+                border: "1px solid #262b1c",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${bufferPct}%`,
+                  background: underTenMin
+                    ? "repeating-linear-gradient(90deg,#ffb75a 0 6px,#e79a3e 6px 8px)"
+                    : "linear-gradient(90deg,#8fc233,#c6f24e)",
+                  transition: "width 400ms ease",
+                }}
+              />
+            </div>
+            <Link
+              to="/credits"
+              style={{
+                ...mono,
+                fontSize: 10.5,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--muted-foreground)",
+                border: "1px solid var(--border)",
+                borderRadius: 999,
+                padding: "6px 12px",
+              }}
+            >
+              + More film
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {STREAMING_PAUSED && (
+        <div role="status" className="mb-4 rounded-2xl border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-5 py-4 text-[14px] whitespace-pre-line relative z-[1]">
+          {STREAMING_PAUSED_MESSAGE}
+        </div>
+      )}
+
+      {/* ── Viewfinder ─────────────────────────────────────────── */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{
+          aspectRatio: "16 / 8.4",
+          borderRadius: 14,
+          border: "1px solid #2e3520",
+          boxShadow: "inset 0 0 0 1.5px rgba(198,242,78,.12)",
+          background: "radial-gradient(80% 70% at 50% 45%, #191e0e 0%, #0c0e08 85%)",
+        }}
+      >
+        {/* AI output video (fills when live) */}
+        <video
+          ref={outputVideoRef}
+          muted
+          playsInline
+          className="absolute inset-0 z-[1] h-full w-full"
+          style={{ objectFit: "cover" }}
+        />
+
+        {/* Rule-of-thirds grid */}
+        <svg aria-hidden className="absolute inset-0 z-[3] h-full w-full pointer-events-none">
+          <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="rgba(198,242,78,.07)" strokeWidth="1" />
+          <line x1="66.66%" y1="0" x2="66.66%" y2="100%" stroke="rgba(198,242,78,.07)" strokeWidth="1" />
+          <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="rgba(198,242,78,.07)" strokeWidth="1" />
+          <line x1="0" y1="66.66%" x2="100%" y2="66.66%" stroke="rgba(198,242,78,.07)" strokeWidth="1" />
+        </svg>
+
+        {/* Corner brackets */}
+        {[
+          { top: 14, left: 14, borders: { borderTop: 1, borderLeft: 1 } },
+          { top: 14, right: 14, borders: { borderTop: 1, borderRight: 1 } },
+          { bottom: 14, left: 14, borders: { borderBottom: 1, borderLeft: 1 } },
+          { bottom: 14, right: 14, borders: { borderBottom: 1, borderRight: 1 } },
+        ].map((c, i) => (
+          <div
+            key={i}
+            aria-hidden
+            className="absolute z-[3] pointer-events-none"
+            style={{
+              width: 30, height: 30,
+              top: (c as any).top, left: (c as any).left,
+              right: (c as any).right, bottom: (c as any).bottom,
+              borderTopWidth: (c.borders as any).borderTop ? 1.5 : 0,
+              borderRightWidth: (c.borders as any).borderRight ? 1.5 : 0,
+              borderBottomWidth: (c.borders as any).borderBottom ? 1.5 : 0,
+              borderLeftWidth: (c.borders as any).borderLeft ? 1.5 : 0,
+              borderStyle: "solid",
+              borderColor: "rgba(198,242,78,.4)",
+            }}
+          />
+        ))}
+
+        {/* Center crosshair */}
+        <div
+          aria-hidden
+          className="absolute z-[3] pointer-events-none"
+          style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 26, height: 26 }}
+        >
+          <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 1, background: "rgba(198,242,78,.5)" }} />
+          <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "rgba(198,242,78,.5)" }} />
+        </div>
+
+        {/* Top-left A-CAM */}
+        <div className="absolute top-3 left-3 z-[5]" style={{ ...mono, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--muted-foreground)" }}>
+          A-CAM ▸ AI Output
+        </div>
+
+        {/* Top-right STANDBY / REC */}
+        <div className="absolute top-3 right-3 z-[5]" style={{ ...mono, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" }}>
+          {streaming ? (
+            <span style={{ color: "var(--destructive)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span className="animate-pulse" style={{ width: 8, height: 8, borderRadius: 999, background: "var(--destructive)" }} />
+              REC
+            </span>
+          ) : (
+            <span style={{ color: "#6b7160" }}>Standby</span>
+          )}
+        </div>
+
+        {/* Timecode top-center */}
+        <div
+          className="absolute z-[5]"
+          style={{
+            top: 12, left: "50%", transform: "translateX(-50%)",
+            padding: "6px 14px",
+            borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(6px)",
+            ...mono,
+            fontSize: 15,
+            letterSpacing: "0.18em",
+            color: "var(--foreground)",
+          }}
+        >
+          {timecode.slice(0, 8)}
+          <span style={{ color: "var(--primary)" }}>{timecode.slice(8)}</span>
+        </div>
+
+        {/* Empty state */}
+        {!streaming && (
+          <>
+            {/* silhouette low in frame */}
+            <div
+              aria-hidden
+              className="absolute inset-x-0 bottom-0 z-[1] pointer-events-none"
+              style={{ height: "55%", opacity: 0.35 }}
+            >
+              <svg viewBox="0 0 200 110" preserveAspectRatio="xMidYMax meet" className="h-full w-full">
+                <defs>
+                  <linearGradient id="fs-sil" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#4a5240" stopOpacity="0.9" />
+                    <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.9" />
+                  </linearGradient>
+                </defs>
+                <g transform="translate(100 90) scale(0.55) translate(-100 -90)">
+                  <circle cx="100" cy="55" r="22" fill="url(#fs-sil)" />
+                  <path d="M55 130 C63 100, 85 88, 100 88 C115 88, 137 100, 145 130 Z" fill="url(#fs-sil)" />
+                </g>
+              </svg>
+            </div>
+            <div aria-hidden className="absolute inset-0 z-[2] pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(5,6,4,0.1), rgba(5,6,4,0.5))" }} />
+            <div className="absolute inset-0 z-[4] grid place-items-center text-center pointer-events-none px-4">
+              <div>
+                <div className="font-display" style={{ fontSize: 22, lineHeight: 1.2, color: "var(--foreground)" }}>Quiet on set</div>
+                <div style={{ fontSize: 12.5, color: "#9aa08c", marginTop: 8 }}>
+                  Press ACTION and Lucy 2.5 puts your character in frame
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {connecting && (
+          <div className="absolute inset-0 z-[6] grid place-items-center bg-black/70">
+            <div className="text-center">
+              <Sparkles className="h-10 w-10 mx-auto text-primary animate-pulse" />
+              <div className="mt-2 text-[12px] text-[color:var(--muted-foreground)]">Connecting to Lucy…</div>
+            </div>
+          </div>
+        )}
+
+        {/* Pop-out (admin only, kept) */}
+        {streaming && user?.email === "brightsolutionslab@gmail.com" && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!obsUrl) return;
+              window.open(obsUrl, "lumify-ai-output",
+                "popup=yes,width=1280,height=720,menubar=no,toolbar=no,location=no,status=no,noopener,noreferrer");
+            }}
+            disabled={!obsUrl}
+            title="Open AI output in a new window"
+            className="absolute bottom-3 right-3 z-[6] inline-flex items-center gap-1.5 rounded-md border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary hover:bg-[color:var(--primary)]/20 transition disabled:opacity-50"
+            style={mono}
+          >
+            <ExternalLink size={12} /> Pop out
+          </button>
+        )}
+
+        {/* Behind the scenes PiP */}
+        <div
+          className="absolute z-[5] overflow-hidden"
+          style={{
+            bottom: 16, left: 16, width: 186, aspectRatio: "16 / 10",
+            borderRadius: 10, border: "1px solid #262b1c",
+            background: "#0b0d0a",
+            boxShadow: "0 18px 40px -18px rgba(0,0,0,.85)",
+          }}
+        >
+          <video
+            ref={inputVideoRef}
+            muted playsInline
+            className="absolute inset-0 h-full w-full"
+            style={{ objectFit: "cover", background: "#000" }}
+            onLoadedMetadata={(e) => {
+              if (inputSourceRef.current === "file") setVideoDuration(e.currentTarget.duration || 0);
+            }}
+            onError={() => {
+              if (inputSourceRef.current === "file" && videoFileUrl) {
+                setVideoFileError("This video can't play in the browser — try MP4 (H.264).");
+              }
+            }}
+            onEnded={() => {
+              if (inputSourceRef.current === "file" && streamingRef.current && !loopVideoRef.current) {
+                endStream(false).catch(() => {});
+              }
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none opacity-20 mix-blend-overlay"
+            style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 3px)" }}
+          />
+          <span
+            className="absolute top-1.5 left-1.5 rounded px-1.5 py-0.5"
+            style={{ ...mono, fontSize: 9, letterSpacing: "0.16em", textTransform: "uppercase", background: "rgba(0,0,0,.6)", color: "var(--muted-foreground)" }}
+          >
+            Behind the scenes · You
+          </span>
+          {!streaming && (
+            <div className="absolute inset-0 grid place-items-center pointer-events-none">
+              <div style={{ ...mono, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6b7160" }}>Camera off</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Control slate ──────────────────────────────────────── */}
+      <div
+        className="relative z-[1]"
+        style={{
+          marginTop: 24, padding: 20, background: "#14170f",
+          border: "1px solid #262b1c", borderRadius: 14,
+        }}
+      >
+        <div className="flex flex-wrap" style={{ gap: 16, alignItems: "flex-end" }}>
+          {/* CAMERA */}
+          <div className="flex flex-col" style={{ gap: 8, minWidth: 205 }}>
+            <span style={controlLabel}>Camera</span>
+            {inputSource === "camera" ? (
+              <select
+                value={selectedCameraId}
+                onChange={(e) => handleCameraChange(e.target.value)}
+                className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
+                style={{ height: 38, minWidth: 205 }}
+              >
+                {cameras.length === 0 && <option value="">No camera detected</option>}
+                {cameras.map((cam: MediaDeviceInfo, i: number) => (
+                  <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="segmented" style={{ height: 38 }}>
+                <button type="button" disabled={streaming} data-active={false} onClick={() => changeInputSource("camera")}>
+                  <CameraIcon size={12} className="inline mr-1 -mt-0.5" /> Camera
+                </button>
+                <button type="button" disabled={streaming} data-active={true} onClick={() => changeInputSource("file")}>
+                  <Film size={12} className="inline mr-1 -mt-0.5" /> Video file
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* INPUT source toggle (kept, shown only in camera mode) */}
+          {inputSource === "camera" && (
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              <span style={controlLabel}>Source</span>
+              <div className="segmented" style={{ height: 38 }}>
+                <button type="button" disabled={streaming} data-active={true} onClick={() => changeInputSource("camera")}>
+                  <CameraIcon size={12} className="inline mr-1 -mt-0.5" /> Camera
+                </button>
+                <button type="button" disabled={streaming} data-active={false} onClick={() => changeInputSource("file")}>
+                  <Film size={12} className="inline mr-1 -mt-0.5" /> Video
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* LOOK */}
+          <div className="flex flex-col" style={{ gap: 8 }}>
+            <span style={controlLabel}>Look</span>
+            <div className="segmented" style={{ height: 38 }}>
+              <button type="button" data-active={mode === "realistic"} onClick={() => setMode("realistic")}>Realistic</button>
+              <button type="button" data-active={mode === "stylized"} onClick={() => setMode("stylized")}>Stylized</button>
+            </div>
+          </div>
+
+          {/* REALISM */}
+          {mode === "realistic" && (
+            <div className="flex flex-col flex-1" style={{ gap: 8, minWidth: 190 }}>
+              <span style={controlLabel}>Realism</span>
+              <div className="flex items-center gap-3" style={{ height: 38 }}>
+                <input
+                  type="range" min={1} max={10} step={1}
+                  value={realism}
+                  onChange={(e) => setRealism(Number(e.target.value))}
+                  className="lime-range flex-1"
+                  style={{ ["--val" as any]: `${((realism - 1) / 9) * 100}%`, minWidth: 190 }}
+                />
+                <span className="font-display text-primary text-right" style={{ width: 34, flexShrink: 0, fontSize: 15 }}>
+                  {realism}/10
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* WARDROBE */}
+          <div className="flex flex-col" style={{ gap: 8 }}>
+            <span style={controlLabel}>Wardrobe</span>
+            <div className="flex items-center gap-2" style={{ height: 38 }}>
+              <input
+                ref={fileInputRef} type="file"
+                accept="image/jpeg,image/png,image/jpg"
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg border bg-transparent px-3 text-[color:var(--muted-foreground)] hover:text-foreground hover:border-[color:var(--primary)] transition"
+                style={{ height: 38, fontSize: 12.5 }}
+              >
+                <Upload size={13} /> {referenceUrl ? "Change reference" : "⬆ Reference image"}
+              </button>
+              {referenceUrl && (
+                <div className="inline-flex items-center gap-1.5 rounded-md border bg-[color:var(--sidebar)] pl-1 pr-2 py-1" style={{ maxWidth: 160 }}>
+                  <img src={referenceUrl} alt="ref" className="h-6 w-6 rounded object-cover" />
+                  <span className="truncate text-[11px] text-[color:var(--muted-foreground)]">{referenceImage?.name}</span>
+                  {!streaming && (
+                    <button onClick={clearReference} className="text-[color:var(--faint)] hover:text-[color:var(--destructive)]" aria-label="Remove">
+                      <X size={11} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Stylized presets */}
+        {mode === "stylized" && (
+          <div className="mt-4">
+            <div className="flex flex-wrap gap-2">
+              {PRESETS.map((pr) => (
+                <button
+                  key={pr}
+                  onClick={() => selectPreset(pr)}
+                  className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+                    selectedPreset === pr
+                      ? "border-[color:var(--primary)] text-primary bg-[color:var(--accent-soft)]"
+                      : "border-[color:var(--border)] text-[color:var(--muted-foreground)] hover:text-foreground"
+                  }`}
+                >
+                  {pr}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Video file card (kept when file mode) */}
+      {inputSource === "file" && (
+        <div className="card-surface relative z-[1]" style={{ padding: 20, marginTop: 16 }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Film size={14} className="text-primary" />
+            <span style={controlLabel}>Video file</span>
+            <span className="text-[11px] text-[color:var(--faint)]">· plays locally, never uploaded</span>
+          </div>
+          <input
+            ref={videoFileInputRef} type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            className="hidden"
+            onChange={(e) => handleVideoFile(e.target.files?.[0] ?? null)}
+          />
+          {!videoFileUrl ? (
+            <div
+              onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }}
+              onDragOver={(e) => { if (streaming) return; e.preventDefault(); setDragVideoOver(true); }}
+              onDragLeave={() => setDragVideoOver(false)}
+              onDrop={(e) => {
+                if (streaming) return;
+                e.preventDefault(); setDragVideoOver(false);
+                handleVideoFile(e.dataTransfer.files?.[0] ?? null);
+              }}
+              className={`flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-3 transition-colors ${streaming ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+              style={{
+                borderColor: dragVideoOver ? "var(--primary)" : "var(--border)",
+                background: dragVideoOver ? "var(--accent-soft)" : "transparent",
+              }}
+            >
+              <Upload className="h-6 w-6 text-primary shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[13.5px] text-foreground">Drop a video here or <span className="text-primary">browse files</span></div>
+                <div className="text-[11.5px] text-[color:var(--faint)]">MP4, WebM, or MOV · played from your device</div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4 rounded-xl border bg-[color:var(--sidebar)] p-3">
+              <div className="grid h-16 w-16 place-items-center rounded-md border bg-black text-primary shrink-0">
+                <Film size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 text-[13.5px] truncate">
+                  <span className="truncate">{videoFile?.name}</span>
+                </div>
+                <div className="text-[11.5px] text-[color:var(--muted-foreground)] mt-0.5">
+                  {videoDuration > 0
+                    ? `${mmss(Math.floor(videoDuration))} · ≈ ${videoCredits.toLocaleString()} credits`
+                    : "Reading duration…"}
+                  {streaming && <span className="ml-2 text-primary">• Live</span>}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button onClick={() => { if (!streaming) videoFileInputRef.current?.click(); }} disabled={streaming} className="text-[11px] rounded border px-2 py-1 hover:bg-card disabled:opacity-50">Change</button>
+                  {!streaming && (
+                    <button onClick={clearVideoFile} className="text-[11px] rounded border px-2 py-1 hover:bg-card text-[color:var(--muted-foreground)]">Remove</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {videoOverBudget && (
+            <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)]">
+              <AlertTriangle size={13} className="inline mr-1" />
+              Your balance covers about {mmss(Math.max(0, videoAffordSec))} of this video.
+            </div>
+          )}
+          {videoFileError && (
+            <div className="mt-3 rounded-lg border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 p-3 text-[12.5px] text-[color:var(--destructive)]">
+              {videoFileError}
+            </div>
+          )}
+          <label className="mt-4 flex items-start gap-3 rounded-xl border bg-[color:var(--sidebar)] p-3 cursor-pointer">
+            <input type="checkbox" checked={loopVideo} onChange={(e) => setLoopVideo(e.target.checked)} className="mt-1 accent-[color:var(--primary)]" />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 text-[13px] text-foreground">
+                <Repeat size={12} className="text-primary" /> Loop video
+              </div>
+              <div className="mt-0.5 text-[11.5px] text-[color:var(--muted-foreground)]">
+                When off, your stream stops automatically when the video ends.
+              </div>
+            </div>
+          </label>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 rounded-xl border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 px-4 py-3 text-[13px] text-[color:var(--destructive)] relative z-[1]">
+          {error}
+        </div>
+      )}
+
+      {/* ── The button ─────────────────────────────────────────── */}
+      <div className="flex flex-col items-center relative z-[1]" style={{ marginTop: 32, gap: 12 }}>
+        <button
+          type="button"
+          onClick={handleAction}
+          disabled={connecting || (!streaming && (STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))))}
+          className="disabled:opacity-60 disabled:cursor-not-allowed"
+          style={{
+            ...mono,
+            fontSize: 14,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+            padding: "16px 44px",
+            borderRadius: 999,
+            background: streaming ? "#ff7a6b" : "var(--primary)",
+            color: streaming ? "#1a0806" : "#111406",
+            border: "none",
+            boxShadow: streaming
+              ? "0 8px 32px -10px rgba(255,122,107,.7), 0 0 0 1px rgba(255,122,107,.35)"
+              : "0 8px 32px -8px rgba(198,242,78,.6), 0 0 0 1px rgba(198,242,78,.3)",
+            transition: "all 150ms ease",
+          }}
+        >
+          {streaming ? "◼ Cut" : "▶ Action"}
+        </button>
+        <div style={{ ...mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6b7160", textAlign: "center" }}>
+          Film burns at <span style={{ color: "var(--foreground)", fontWeight: 700 }}>{RATE} cr/sec</span>
+          {" "}·{" "}
+          ≈ <span style={{ color: "var(--foreground)", fontWeight: 700 }}>{timeLeftLabel}</span> left on the reel
+        </div>
+      </div>
+
+      {/* ── Footer HUD ─────────────────────────────────────────── */}
+      <div
+        className="relative z-[1] flex flex-wrap items-center justify-center"
+        style={{
+          ...mono,
+          fontSize: 10.5,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: "#6b7160",
+          columnGap: 26,
+          rowGap: 10,
+          marginTop: 40,
+          paddingTop: 20,
+          borderTop: "1px solid #1e2316",
+        }}
+      >
+        <span>Credits <span style={{ color: "var(--foreground)" }}>{credits.toLocaleString()}</span></span>
+        <span>Cost <span style={{ color: "var(--foreground)" }}>₦{cost.toLocaleString()}</span></span>
+        <span>
+          OBS 1280×720 ·{" "}
+          <button
+            type="button"
+            onClick={copyObsUrl}
+            disabled={!obsUrl}
+            style={{
+              ...mono,
+              color: "var(--primary)",
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: obsUrl ? "pointer" : "not-allowed",
+            }}
+          >
+            {copied ? "Copied ✓" : "Copy URL"}
+          </button>
+        </span>
+        <span>Tip: Face a light source</span>
+      </div>
+
+      {showOutOfCredits && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur p-4">
+          <div className="relative w-full max-w-md card-surface">
+            <button
+              onClick={() => setShowOutOfCredits(false)}
+              className="absolute top-3 right-3 text-[color:var(--muted-foreground)] hover:text-foreground"
+              aria-label="Close"
+            >
+              <X size={16} />
+            </button>
+            <h2 className="font-display text-2xl">Credits finished</h2>
+            <p className="mt-2 text-[13.5px] text-[color:var(--muted-foreground)]">Top up to continue streaming.</p>
+            <button
+              onClick={() => { setShowOutOfCredits(false); navigate({ to: "/credits" }); }}
+              className="btn-primary w-full mt-5"
+            >
+              <Plus size={14} /> Top up credits
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
