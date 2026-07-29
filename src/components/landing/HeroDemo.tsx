@@ -61,9 +61,14 @@ export function HeroDemo() {
               loop
               playsInline
               preload="auto"
-              className="absolute inset-0 h-full w-full object-cover"
+              disablePictureInPicture
+              disableRemotePlayback
+              controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+              onContextMenu={(e) => e.preventDefault()}
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
               style={{ objectPosition: "center" }}
             />
+
             {/* Scanlines */}
             <div
               className="pointer-events-none absolute inset-0"
@@ -96,9 +101,14 @@ export function HeroDemo() {
               loop
               playsInline
               preload="auto"
-              className="absolute inset-0 h-full w-full object-cover"
+              disablePictureInPicture
+              disableRemotePlayback
+              controlsList="nodownload noplaybackrate noremoteplayback nofullscreen"
+              onContextMenu={(e) => e.preventDefault()}
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
               style={{ objectPosition: "center" }}
             />
+
             <div className="absolute top-3 left-3 z-10"><Chip lime>LUMIFY OUTPUT</Chip></div>
             <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
               <Chip lime>LUCY 2.5</Chip>
