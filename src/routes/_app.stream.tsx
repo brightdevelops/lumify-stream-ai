@@ -922,11 +922,13 @@ function StreamPage() {
 
   const mmss = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-  const pct = startingCredits > 0 ? Math.max(0, Math.min(100, (credits / startingCredits) * 100)) : 0;
   const cost = used * NAIRA_PER_CREDIT;
 
   const secondsLeft = Math.floor(credits / RATE);
   const timeLeftLabel = formatTimeLeft(secondsLeft);
+  // Meter represents how much of a 10-minute comfortable buffer remains.
+  const bufferPct = Math.max(0, Math.min(100, (secondsLeft / 600) * 100));
+  const underTenMin = secondsLeft > 0 && secondsLeft < 600;
   const lowBalance = streaming && secondsLeft > 0 && secondsLeft <= LOW_BALANCE_SECONDS;
   const preflightTime = formatTimeLeft(secondsLeft);
 
@@ -964,10 +966,10 @@ function StreamPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* LEFT */}
-        <div className="space-y-5">
+        <div className="space-y-[18px]">
           {/* Live preview */}
           <div className="card-surface p-0 overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
               <Panel label={inputSource === "file" ? "Your video" : "Your camera"} streaming={streaming}>
                 {!streaming && inputSource === "camera" && <SilhouetteBg variant="camera" />}
                 {!streaming && inputSource === "file" && !videoFileUrl && <SilhouetteBg variant="camera" />}
@@ -1038,14 +1040,15 @@ function StreamPage() {
             </div>
 
             {/* Control strip */}
-            <div className="border-t border-[color:var(--border-soft)] p-4 flex flex-wrap items-center gap-4">
+            <div className="border-t border-[color:var(--border-soft)] p-5 flex flex-wrap items-end gap-4">
               {/* Input source */}
               <div
-                className="flex items-center gap-3"
+                className="flex flex-col"
                 title={streaming ? "Stop your stream to change input" : undefined}
+                style={{ gap: 6 }}
               >
-                <span className="eyebrow">Input</span>
-                <div className="segmented">
+                <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }}>Input</span>
+                <div className="segmented" style={{ height: 40 }}>
                   <button
                     type="button"
                     disabled={streaming}
@@ -1068,42 +1071,52 @@ function StreamPage() {
               </div>
 
               {inputSource === "camera" && cameras.length > 0 && (
-                <label className="flex items-center gap-2">
-                  <span className="eyebrow" title="Any 1080p camera works. Lighting matters most.">Camera <Info size={12} className="inline text-[color:var(--faint)]" /></span>
+                <div className="flex flex-col" style={{ gap: 6 }}>
+                  <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }} title="Any 1080p camera works. Lighting matters most.">
+                    Camera <Info size={12} className="inline text-[color:var(--faint)]" />
+                  </span>
                   <select
                     value={selectedCameraId}
                     onChange={(e) => handleCameraChange(e.target.value)}
-                    className="rounded-lg border bg-[color:var(--sidebar)] px-3 py-1.5 text-[13px] focus:border-[color:var(--primary)]"
+                    className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
+                    style={{ height: 40 }}
                   >
                     {cameras.map((cam, i) => (
                       <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
                     ))}
                   </select>
-                </label>
+                </div>
               )}
 
-              <div className="flex items-center gap-3">
-                <span className="eyebrow">Mode</span>
-                <div className="segmented">
+              <div className="flex flex-col" style={{ gap: 6 }}>
+                <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }}>Mode</span>
+                <div className="segmented" style={{ height: 40 }}>
                   <button type="button" data-active={mode === "realistic"} onClick={() => setMode("realistic")}>Realistic</button>
                   <button type="button" data-active={mode === "stylized"} onClick={() => setMode("stylized")}>Stylized</button>
                 </div>
               </div>
 
               {mode === "realistic" && (
-                <div className="flex items-center gap-3 min-w-[220px]">
-                  <span className="eyebrow">Realism</span>
-                  <input
-                    type="range"
-                    min={1}
-                    max={10}
-                    step={1}
-                    value={realism}
-                    onChange={(e) => setRealism(Number(e.target.value))}
-                    className="lime-range flex-1"
-                    style={{ ["--val" as any]: `${((realism - 1) / 9) * 100}%` }}
-                  />
-                  <span className="font-display text-[18px] text-primary min-w-[38px] text-right">{realism}/10</span>
+                <div className="flex flex-col flex-1" style={{ gap: 6, minWidth: 210 }}>
+                  <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }}>Realism</span>
+                  <div className="flex items-center gap-3" style={{ height: 40 }}>
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={realism}
+                      onChange={(e) => setRealism(Number(e.target.value))}
+                      className="lime-range flex-1"
+                      style={{ ["--val" as any]: `${((realism - 1) / 9) * 100}%`, minWidth: 210 }}
+                    />
+                    <span
+                      className="font-display text-[15px] text-primary text-right"
+                      style={{ width: 38, flexShrink: 0 }}
+                    >
+                      {realism}/10
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1244,15 +1257,26 @@ function StreamPage() {
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0] ?? null); }}
-                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-colors"
+                className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 cursor-pointer transition-colors"
                 style={{
-                  borderColor: dragOver ? "var(--primary)" : "var(--border)",
-                  background: dragOver ? "var(--accent-soft)" : "transparent",
+                  maxHeight: 96,
+                  border: "1.5px dashed",
+                  borderColor: dragOver ? "var(--primary)" : "#333a24",
+                  background: dragOver ? "rgba(198,242,78,.06)" : "transparent",
                 }}
               >
-                <Upload className="h-7 w-7 text-primary" />
-                <div className="text-[14px] text-foreground">Drop an image here or <span className="text-primary">browse files</span></div>
-                <div className="text-[12px] text-[color:var(--faint)]">JPG or PNG · guides the AI toward a specific look</div>
+                <div
+                  className="grid place-items-center shrink-0 rounded-[8px]"
+                  style={{ width: 42, height: 42, background: "var(--accent-soft)" }}
+                >
+                  <Upload className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] text-foreground leading-tight">
+                    <span className="font-semibold">Drop an image here</span> <span className="text-[color:var(--muted-foreground)]">or</span> <span className="text-primary">browse files</span>
+                  </div>
+                  <div className="text-[11.5px] text-[color:var(--faint)] mt-0.5">JPG or PNG · guides the AI toward a specific look</div>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-4 rounded-xl border bg-[color:var(--sidebar)] p-3">
@@ -1327,29 +1351,38 @@ function StreamPage() {
         </div>
 
         {/* RIGHT RAIL */}
-        <aside className="space-y-5">
+        <aside className="space-y-[18px]">
           {/* Balance */}
-          <div className="accent-card rounded-2xl p-5" style={{ boxShadow: "0 20px 60px -30px var(--accent-glow)" }}>
-            <div className="eyebrow">Balance</div>
+          <div className="accent-card rounded-2xl p-5" style={{ boxShadow: "0 10px 30px -20px var(--accent-glow)" }}>
+            <div className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#9aa08c" }}>Balance</div>
             <div className="mt-2 font-display text-[28px] leading-none text-foreground">
               ≈ {timeLeftLabel} <span className="text-[12px] text-[color:var(--muted-foreground)] font-sans">LEFT</span>
             </div>
             <div className="mt-4 h-1.5 rounded-full bg-[color:var(--border)] overflow-hidden">
               <div
-                className="h-full transition-all duration-500"
-                style={{ width: `${pct}%`, background: lowBalance ? "var(--warning)" : "var(--primary)" }}
+                className="h-full transition-all duration-500 rounded-full"
+                style={{
+                  width: `${bufferPct}%`,
+                  background: underTenMin
+                    ? "linear-gradient(90deg, #ffb75a, #ffd98a)"
+                    : "var(--primary)",
+                }}
               />
             </div>
             <div className="mt-2 text-[12px] text-[color:var(--muted-foreground)]">
               {credits.toLocaleString()} credits · {RATE} credits/sec
             </div>
-            {lowBalance && (
-              <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)]">
-                <AlertTriangle size={13} className="inline mr-1" />
-                Under 10 minutes of stream time left. Top up to avoid an interruption mid-stream.
+            {underTenMin && (
+              <div className="mt-3 rounded-lg border border-[color:var(--warning)]/40 bg-[color:var(--warning)]/10 p-3 text-[12.5px] text-[color:var(--warning)] flex items-start gap-2">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                <span>Under 10 minutes of stream time left. Top up to avoid an interruption mid-stream.</span>
               </div>
             )}
-            <Link to="/credits" className="btn-primary w-full mt-4">
+            <Link
+              to="/credits"
+              className="btn-primary w-full mt-4"
+              style={{ boxShadow: "0 3px 12px -4px var(--accent-glow)" }}
+            >
               <Plus size={14} /> Buy credits
             </Link>
           </div>
@@ -1439,7 +1472,14 @@ function StreamPage() {
 
 function Panel({ label, accent, streaming, children }: { label: string; accent?: boolean; streaming?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`relative overflow-hidden aspect-[16/10] bg-[#0b0d0a] ${accent ? "md:border-l" : ""}`}>
+    <div
+      className="relative overflow-hidden aspect-[16/10] bg-[#0b0d0a]"
+      style={{
+        borderRadius: 10,
+        border: `1px solid ${accent ? "#2e3520" : "#262b1c"}`,
+        boxShadow: accent ? "inset 0 0 0 1.5px rgba(198,242,78,0.2)" : undefined,
+      }}
+    >
       {/* corner label chip */}
       <div className={`absolute top-3 left-3 z-[4] inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${
         accent
@@ -1448,7 +1488,7 @@ function Panel({ label, accent, streaming, children }: { label: string; accent?:
       }`}>
         {label}
       </div>
-      {/* HUD chips top-right — persist over live video too */}
+      {/* HUD chips top-right */}
       <div className="absolute top-3 right-3 z-[4] flex items-center gap-1.5">
         {accent ? (
           <>
@@ -1461,11 +1501,9 @@ function Panel({ label, accent, streaming, children }: { label: string; accent?:
           </>
         ) : (
           <>
-            {streaming && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[color:var(--destructive)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--destructive)] animate-pulse" /> Rec
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[color:var(--destructive)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--destructive)] animate-pulse" /> Rec
+            </span>
             <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-semibold text-[color:var(--muted-foreground)]">
               720p
             </span>
@@ -1480,57 +1518,79 @@ function Panel({ label, accent, streaming, children }: { label: string; accent?:
 function SilhouetteBg({ variant }: { variant: "camera" | "output" }) {
   const isOutput = variant === "output";
   return (
-    <div className="absolute inset-0 z-0">
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      {/* Base radial */}
       <div
         className="absolute inset-0"
         style={{
           background: isOutput
-            ? "radial-gradient(70% 70% at 50% 45%, rgba(198,242,78,0.18), #0b0d0a 82%)"
-            : "radial-gradient(70% 70% at 50% 45%, #1c2016 0%, #0b0d0a 85%)",
+            ? "radial-gradient(70% 70% at 50% 40%, rgba(198,242,78,0.18), #0b0d0a 82%)"
+            : "radial-gradient(70% 70% at 50% 40%, #1c2016 0%, #0b0d0a 85%)",
         }}
       />
-      <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
+      {/* Silhouette — fits fully inside with breathing room (no bleed) */}
+      <svg
+        viewBox="0 0 160 110"
+        preserveAspectRatio="xMidYMax meet"
+        className="absolute inset-0 h-full w-full"
+      >
         <defs>
           <linearGradient id={`stream-sil-${variant}`} x1="0" x2="0" y1="0" y2="1">
             {isOutput ? (
               <>
-                <stop offset="0%" stopColor="#c6f24e" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#3a5a12" stopOpacity="0.55" />
+                <stop offset="0%" stopColor="#c6f24e" stopOpacity="0.75" />
+                <stop offset="100%" stopColor="#3a5a12" stopOpacity="0.45" />
               </>
             ) : (
               <>
-                <stop offset="0%" stopColor="#4a5240" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.9" />
+                <stop offset="0%" stopColor="#4a5240" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.8" />
               </>
             )}
           </linearGradient>
         </defs>
-        <circle cx="80" cy="46" r="20" fill={`url(#stream-sil-${variant})`} stroke={isOutput ? "#c6f24e" : "none"} strokeWidth={isOutput ? 0.6 : 0} />
-        <path
-          d="M40 110 C46 82, 68 70, 80 70 C92 70, 114 82, 120 110 Z"
-          fill={`url(#stream-sil-${variant})`}
-          stroke={isOutput ? "#c6f24e" : "none"}
-          strokeWidth={isOutput ? 0.6 : 0}
-        />
+        {/* Head + shoulders scaled to fit inside 160x110 with margins */}
+        <g transform="translate(80 58) scale(0.62) translate(-80 -55)">
+          <circle
+            cx="80"
+            cy="40"
+            r="18"
+            fill={`url(#stream-sil-${variant})`}
+            stroke={isOutput ? "#c6f24e" : "none"}
+            strokeWidth={isOutput ? 0.6 : 0}
+          />
+          <path
+            d="M46 100 C52 76, 70 66, 80 66 C90 66, 108 76, 114 100 Z"
+            fill={`url(#stream-sil-${variant})`}
+            stroke={isOutput ? "#c6f24e" : "none"}
+            strokeWidth={isOutput ? 0.6 : 0}
+          />
+        </g>
         {isOutput && (
           <>
-            <circle cx="55" cy="30" r="0.7" fill="#c6f24e" />
-            <circle cx="120" cy="38" r="0.9" fill="#c6f24e" />
-            <circle cx="112" cy="20" r="0.6" fill="#c6f24e" />
-            <circle cx="42" cy="60" r="0.7" fill="#c6f24e" />
-            <circle cx="135" cy="72" r="0.8" fill="#c6f24e" />
+            {/* At most 2 sparkles, tucked into empty corners */}
+            <circle cx="18" cy="20" r="0.9" fill="#c6f24e" opacity="0.85" />
+            <circle cx="144" cy="24" r="0.7" fill="#c6f24e" opacity="0.7" />
           </>
         )}
       </svg>
       {!isOutput && (
         <div
-          className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay"
+          className="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay"
           style={{
             backgroundImage:
               "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)",
           }}
         />
       )}
+      {/* Scrim — guarantees text legibility over artwork */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(5,6,4,0.25), rgba(5,6,4,0.62))",
+        }}
+      />
     </div>
   );
 }
@@ -1538,12 +1598,23 @@ function SilhouetteBg({ variant }: { variant: "camera" | "output" }) {
 function PanelEmpty({ icon, title, hint, accent }: { icon: React.ReactNode; title: string; hint?: string; accent?: boolean }) {
   return (
     <div className="absolute inset-0 z-[2] grid place-items-center p-6 text-center">
-      <div className="max-w-[240px]">
-        <div className={`mx-auto grid h-11 w-11 place-items-center rounded-xl ${accent ? "bg-[color:var(--accent-soft)] text-primary" : "bg-[color:var(--sidebar)] text-[color:var(--muted-foreground)]"}`}>
+      <div className="flex flex-col items-center" style={{ gap: 8 }}>
+        <div
+          className={`grid place-items-center rounded-xl ${accent ? "text-primary" : "text-[color:var(--muted-foreground)]"}`}
+          style={{
+            width: 44,
+            height: 44,
+            background: accent ? "var(--accent-soft)" : "rgba(198,242,78,0.08)",
+          }}
+        >
           {icon}
         </div>
-        <div className="mt-3 text-[13.5px] text-foreground">{title}</div>
-        {hint && <div className="mt-1 text-[11.5px] text-[color:var(--faint)] leading-relaxed">{hint}</div>}
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>{title}</div>
+        {hint && (
+          <div style={{ fontSize: 12, color: "#6b7160", maxWidth: 230, lineHeight: 1.5 }}>
+            {hint}
+          </div>
+        )}
       </div>
     </div>
   );
