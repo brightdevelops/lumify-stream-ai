@@ -1472,7 +1472,14 @@ function StreamPage() {
 
 function Panel({ label, accent, streaming, children }: { label: string; accent?: boolean; streaming?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`relative overflow-hidden aspect-[16/10] bg-[#0b0d0a] ${accent ? "md:border-l" : ""}`}>
+    <div
+      className="relative overflow-hidden aspect-[16/10] bg-[#0b0d0a]"
+      style={{
+        borderRadius: 10,
+        border: `1px solid ${accent ? "#2e3520" : "#262b1c"}`,
+        boxShadow: accent ? "inset 0 0 0 1.5px rgba(198,242,78,0.2)" : undefined,
+      }}
+    >
       {/* corner label chip */}
       <div className={`absolute top-3 left-3 z-[4] inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${
         accent
@@ -1481,7 +1488,7 @@ function Panel({ label, accent, streaming, children }: { label: string; accent?:
       }`}>
         {label}
       </div>
-      {/* HUD chips top-right — persist over live video too */}
+      {/* HUD chips top-right */}
       <div className="absolute top-3 right-3 z-[4] flex items-center gap-1.5">
         {accent ? (
           <>
@@ -1494,11 +1501,9 @@ function Panel({ label, accent, streaming, children }: { label: string; accent?:
           </>
         ) : (
           <>
-            {streaming && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[color:var(--destructive)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--destructive)] animate-pulse" /> Rec
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1 rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-widest text-[color:var(--destructive)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--destructive)] animate-pulse" /> Rec
+            </span>
             <span className="rounded-md border border-[color:var(--border)] bg-[color:var(--sidebar)]/80 px-1.5 py-0.5 text-[9.5px] font-semibold text-[color:var(--muted-foreground)]">
               720p
             </span>
@@ -1513,57 +1518,79 @@ function Panel({ label, accent, streaming, children }: { label: string; accent?:
 function SilhouetteBg({ variant }: { variant: "camera" | "output" }) {
   const isOutput = variant === "output";
   return (
-    <div className="absolute inset-0 z-0">
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      {/* Base radial */}
       <div
         className="absolute inset-0"
         style={{
           background: isOutput
-            ? "radial-gradient(70% 70% at 50% 45%, rgba(198,242,78,0.18), #0b0d0a 82%)"
-            : "radial-gradient(70% 70% at 50% 45%, #1c2016 0%, #0b0d0a 85%)",
+            ? "radial-gradient(70% 70% at 50% 40%, rgba(198,242,78,0.18), #0b0d0a 82%)"
+            : "radial-gradient(70% 70% at 50% 40%, #1c2016 0%, #0b0d0a 85%)",
         }}
       />
-      <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
+      {/* Silhouette — fits fully inside with breathing room (no bleed) */}
+      <svg
+        viewBox="0 0 160 110"
+        preserveAspectRatio="xMidYMax meet"
+        className="absolute inset-0 h-full w-full"
+      >
         <defs>
           <linearGradient id={`stream-sil-${variant}`} x1="0" x2="0" y1="0" y2="1">
             {isOutput ? (
               <>
-                <stop offset="0%" stopColor="#c6f24e" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#3a5a12" stopOpacity="0.55" />
+                <stop offset="0%" stopColor="#c6f24e" stopOpacity="0.75" />
+                <stop offset="100%" stopColor="#3a5a12" stopOpacity="0.45" />
               </>
             ) : (
               <>
-                <stop offset="0%" stopColor="#4a5240" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.9" />
+                <stop offset="0%" stopColor="#4a5240" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#1a1e14" stopOpacity="0.8" />
               </>
             )}
           </linearGradient>
         </defs>
-        <circle cx="80" cy="46" r="20" fill={`url(#stream-sil-${variant})`} stroke={isOutput ? "#c6f24e" : "none"} strokeWidth={isOutput ? 0.6 : 0} />
-        <path
-          d="M40 110 C46 82, 68 70, 80 70 C92 70, 114 82, 120 110 Z"
-          fill={`url(#stream-sil-${variant})`}
-          stroke={isOutput ? "#c6f24e" : "none"}
-          strokeWidth={isOutput ? 0.6 : 0}
-        />
+        {/* Head + shoulders scaled to fit inside 160x110 with margins */}
+        <g transform="translate(80 58) scale(0.62) translate(-80 -55)">
+          <circle
+            cx="80"
+            cy="40"
+            r="18"
+            fill={`url(#stream-sil-${variant})`}
+            stroke={isOutput ? "#c6f24e" : "none"}
+            strokeWidth={isOutput ? 0.6 : 0}
+          />
+          <path
+            d="M46 100 C52 76, 70 66, 80 66 C90 66, 108 76, 114 100 Z"
+            fill={`url(#stream-sil-${variant})`}
+            stroke={isOutput ? "#c6f24e" : "none"}
+            strokeWidth={isOutput ? 0.6 : 0}
+          />
+        </g>
         {isOutput && (
           <>
-            <circle cx="55" cy="30" r="0.7" fill="#c6f24e" />
-            <circle cx="120" cy="38" r="0.9" fill="#c6f24e" />
-            <circle cx="112" cy="20" r="0.6" fill="#c6f24e" />
-            <circle cx="42" cy="60" r="0.7" fill="#c6f24e" />
-            <circle cx="135" cy="72" r="0.8" fill="#c6f24e" />
+            {/* At most 2 sparkles, tucked into empty corners */}
+            <circle cx="18" cy="20" r="0.9" fill="#c6f24e" opacity="0.85" />
+            <circle cx="144" cy="24" r="0.7" fill="#c6f24e" opacity="0.7" />
           </>
         )}
       </svg>
       {!isOutput && (
         <div
-          className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay"
+          className="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay"
           style={{
             backgroundImage:
               "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)",
           }}
         />
       )}
+      {/* Scrim — guarantees text legibility over artwork */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(5,6,4,0.25), rgba(5,6,4,0.62))",
+        }}
+      />
     </div>
   );
 }
@@ -1571,12 +1598,23 @@ function SilhouetteBg({ variant }: { variant: "camera" | "output" }) {
 function PanelEmpty({ icon, title, hint, accent }: { icon: React.ReactNode; title: string; hint?: string; accent?: boolean }) {
   return (
     <div className="absolute inset-0 z-[2] grid place-items-center p-6 text-center">
-      <div className="max-w-[240px]">
-        <div className={`mx-auto grid h-11 w-11 place-items-center rounded-xl ${accent ? "bg-[color:var(--accent-soft)] text-primary" : "bg-[color:var(--sidebar)] text-[color:var(--muted-foreground)]"}`}>
+      <div className="flex flex-col items-center" style={{ gap: 8 }}>
+        <div
+          className={`grid place-items-center rounded-xl ${accent ? "text-primary" : "text-[color:var(--muted-foreground)]"}`}
+          style={{
+            width: 44,
+            height: 44,
+            background: accent ? "var(--accent-soft)" : "rgba(198,242,78,0.08)",
+          }}
+        >
           {icon}
         </div>
-        <div className="mt-3 text-[13.5px] text-foreground">{title}</div>
-        {hint && <div className="mt-1 text-[11.5px] text-[color:var(--faint)] leading-relaxed">{hint}</div>}
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)" }}>{title}</div>
+        {hint && (
+          <div style={{ fontSize: 12, color: "#6b7160", maxWidth: 230, lineHeight: 1.5 }}>
+            {hint}
+          </div>
+        )}
       </div>
     </div>
   );
