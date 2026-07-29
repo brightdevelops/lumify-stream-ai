@@ -1040,14 +1040,15 @@ function StreamPage() {
             </div>
 
             {/* Control strip */}
-            <div className="border-t border-[color:var(--border-soft)] p-4 flex flex-wrap items-center gap-4">
+            <div className="border-t border-[color:var(--border-soft)] p-5 flex flex-wrap items-end gap-4">
               {/* Input source */}
               <div
-                className="flex items-center gap-3"
+                className="flex flex-col"
                 title={streaming ? "Stop your stream to change input" : undefined}
+                style={{ gap: 6 }}
               >
-                <span className="eyebrow">Input</span>
-                <div className="segmented">
+                <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }}>Input</span>
+                <div className="segmented" style={{ height: 40 }}>
                   <button
                     type="button"
                     disabled={streaming}
@@ -1070,42 +1071,52 @@ function StreamPage() {
               </div>
 
               {inputSource === "camera" && cameras.length > 0 && (
-                <label className="flex items-center gap-2">
-                  <span className="eyebrow" title="Any 1080p camera works. Lighting matters most.">Camera <Info size={12} className="inline text-[color:var(--faint)]" /></span>
+                <div className="flex flex-col" style={{ gap: 6 }}>
+                  <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }} title="Any 1080p camera works. Lighting matters most.">
+                    Camera <Info size={12} className="inline text-[color:var(--faint)]" />
+                  </span>
                   <select
                     value={selectedCameraId}
                     onChange={(e) => handleCameraChange(e.target.value)}
-                    className="rounded-lg border bg-[color:var(--sidebar)] px-3 py-1.5 text-[13px] focus:border-[color:var(--primary)]"
+                    className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
+                    style={{ height: 40 }}
                   >
                     {cameras.map((cam, i) => (
                       <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
                     ))}
                   </select>
-                </label>
+                </div>
               )}
 
-              <div className="flex items-center gap-3">
-                <span className="eyebrow">Mode</span>
-                <div className="segmented">
+              <div className="flex flex-col" style={{ gap: 6 }}>
+                <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }}>Mode</span>
+                <div className="segmented" style={{ height: 40 }}>
                   <button type="button" data-active={mode === "realistic"} onClick={() => setMode("realistic")}>Realistic</button>
                   <button type="button" data-active={mode === "stylized"} onClick={() => setMode("stylized")}>Stylized</button>
                 </div>
               </div>
 
               {mode === "realistic" && (
-                <div className="flex items-center gap-3 min-w-[220px]">
-                  <span className="eyebrow">Realism</span>
-                  <input
-                    type="range"
-                    min={1}
-                    max={10}
-                    step={1}
-                    value={realism}
-                    onChange={(e) => setRealism(Number(e.target.value))}
-                    className="lime-range flex-1"
-                    style={{ ["--val" as any]: `${((realism - 1) / 9) * 100}%` }}
-                  />
-                  <span className="font-display text-[18px] text-primary min-w-[38px] text-right">{realism}/10</span>
+                <div className="flex flex-col flex-1" style={{ gap: 6, minWidth: 210 }}>
+                  <span className="eyebrow" style={{ fontSize: 11, letterSpacing: "0.12em", fontWeight: 600, color: "#6b7160" }}>Realism</span>
+                  <div className="flex items-center gap-3" style={{ height: 40 }}>
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={realism}
+                      onChange={(e) => setRealism(Number(e.target.value))}
+                      className="lime-range flex-1"
+                      style={{ ["--val" as any]: `${((realism - 1) / 9) * 100}%`, minWidth: 210 }}
+                    />
+                    <span
+                      className="font-display text-[15px] text-primary text-right"
+                      style={{ width: 38, flexShrink: 0 }}
+                    >
+                      {realism}/10
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
