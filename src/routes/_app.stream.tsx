@@ -595,52 +595,126 @@ function StreamPage() {
 
 
     let stream: MediaStream;
-    try {
-      await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
-      const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
-      const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
-      const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
-      const baseVideo: MediaTrackConstraints = {
-        ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
-        frameRate: { ideal: fps },
-        width: { ideal: width },
-        height: { ideal: height },
-      };
+    // Resolve the model dims/fps up-front — used by both branches so the
+    // canvas-captured file stream matches the camera path exactly.
+    await refreshLucyModelId();
+    const model = models.realtime("lucy-2.1" as any);
+    const modelFps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
+    const modelWidth = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
+    const modelHeight = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
 
+    if (inputSource === "file") {
+      // ── Video-file path ────────────────────────────────────────────────
+      if (!videoFile || !videoFileUrl) {
+        setError("Please pick a video file first.");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
+      if (videoFileError) {
+        setError(videoFileError);
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
+      const vid = inputVideoRef.current;
+      if (!vid) {
+        setError("Preview element not ready — try again.");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: baseVideo, audio: false });
-      } catch (inner: any) {
-        // OverconstrainedError / NotReadableError — retry with permissive constraints
-        if (inner?.name === "OverconstrainedError" || inner?.name === "NotReadableError" || inner?.name === "AbortError") {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        } else {
-          throw inner;
+        vid.loop = loopVideoRef.current;
+        vid.muted = true;
+        vid.currentTime = 0;
+        // Same click gesture — autoplay is allowed here.
+        await vid.play();
+      } catch (e: any) {
+        console.error("Video file play failed", e);
+        setError("Could not play this video — try MP4 (H.264).");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = modelWidth;
+      canvas.height = modelHeight;
+      const ctx = canvas.getContext("2d");
+      canvasRef.current = canvas;
+      const draw = () => {
+        if (!canvasRef.current || !ctx) return;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, modelWidth, modelHeight);
+        const vw = vid.videoWidth;
+        const vh = vid.videoHeight;
+        if (vw > 0 && vh > 0) {
+          const sc = Math.min(modelWidth / vw, modelHeight / vh);
+          const dw = vw * sc;
+          const dh = vh * sc;
+          const dx = (modelWidth - dw) / 2;
+          const dy = (modelHeight - dh) / 2;
+          try { ctx.drawImage(vid, dx, dy, dw, dh); } catch {}
         }
+        canvasRafRef.current = requestAnimationFrame(draw);
+      };
+      draw();
+      try {
+        stream = (canvas as unknown as HTMLCanvasElement).captureStream(modelFps);
+      } catch (e: any) {
+        console.error("canvas.captureStream failed", e);
+        if (canvasRafRef.current != null) cancelAnimationFrame(canvasRafRef.current);
+        canvasRafRef.current = null;
+        canvasRef.current = null;
+        setError("Your browser can't capture the video for streaming. Try the latest Chrome.");
+        setConnecting(false);
+        startingRef.current = false;
+        return;
       }
-    } catch (e: any) {
-      console.error("getUserMedia failed", e?.name, e?.message, e);
-      setConnecting(false);
-      startingRef.current = false;
-      const name = e?.name || "";
-      if (name === "NotAllowedError" || name === "SecurityError") {
+    } else {
+      // ── Camera path (unchanged behaviour) ──────────────────────────────
+      try {
+        const baseVideo: MediaTrackConstraints = {
+          ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
+          frameRate: { ideal: modelFps },
+          width: { ideal: modelWidth },
+          height: { ideal: modelHeight },
+        };
 
-        setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
-      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
-        setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
-      } else if (name === "NotReadableError") {
-        setError("Your camera is already in use by another app (Zoom, OBS, Teams, etc.). Close it and try again.");
-      } else {
-        setError(`Could not start camera: ${e?.message || name || "unknown error"}. Try reloading the page.`);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: baseVideo, audio: false });
+        } catch (inner: any) {
+          if (inner?.name === "OverconstrainedError" || inner?.name === "NotReadableError" || inner?.name === "AbortError") {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          } else {
+            throw inner;
+          }
+        }
+      } catch (e: any) {
+        console.error("getUserMedia failed", e?.name, e?.message, e);
+        setConnecting(false);
+        startingRef.current = false;
+        const name = e?.name || "";
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
+        } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+          setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
+        } else if (name === "NotReadableError") {
+          setError("Your camera is already in use by another app (Zoom, OBS, Teams, etc.). Close it and try again.");
+        } else {
+          setError(`Could not start camera: ${e?.message || name || "unknown error"}. Try reloading the page.`);
+        }
+        return;
       }
-      return;
     }
 
     mediaStreamRef.current = stream;
-    if (inputVideoRef.current) {
+    if (inputSource === "camera" && inputVideoRef.current) {
       inputVideoRef.current.srcObject = stream;
       inputVideoRef.current.play().catch(() => {});
     }
+
+
 
     try {
       const { apiKey } = await getDecartKey();
