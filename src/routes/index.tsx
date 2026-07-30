@@ -46,28 +46,8 @@ const FAQS = [
 
 const PLATFORMS = ["STREAMS EVERYWHERE OBS GOES", "TWITCH", "YOUTUBE LIVE", "TIKTOK LIVE", "KICK", "FACEBOOK LIVE", "TROVO"];
 
-function useReveal<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) {
-          e.target.classList.add("reveal-in");
-          io.unobserve(e.target);
-        }
-      }
-    }, { threshold: 0.1 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return ref;
-}
-
 function Reveal({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  const ref = useReveal<HTMLDivElement>();
-  return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
+  return <div className={className}>{children}</div>;
 }
 
 function Landing() {
@@ -104,7 +84,7 @@ function Landing() {
   if (!authChecked || hasSession) return null;
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground overflow-hidden">
+    <div className="landing-static relative min-h-screen bg-background text-foreground overflow-hidden">
       <LandingBackground />
       <div className="relative z-10">
       {/* NAV */}
@@ -136,7 +116,7 @@ function Landing() {
           </span>
           <h1 className="mt-6 font-display text-5xl md:text-[68px] leading-[1.05] tracking-tight">
             Transform your stream with{" "}
-            <em className="not-italic italic shimmer-text">intelligent light</em>
+            <em className="not-italic italic">intelligent light</em>
           </h1>
           <p className="mx-auto mt-6 max-w-[640px] text-[16px] text-[color:var(--muted-foreground)]">
             Lumify turns your webcam into a real-time AI persona. Go live as a sharper, styled, or entirely new version of you — no green screen, no GPU, no editing.
@@ -176,7 +156,7 @@ function Landing() {
           {/* Platform marquee */}
           <Reveal className="mt-10">
             <div className="marquee-mask overflow-hidden">
-              <div className="marquee-track text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--faint)] py-2">
+              <div className="flex text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--faint)] py-2">
                 {[...PLATFORMS, ...PLATFORMS, ...PLATFORMS, ...PLATFORMS].map((p, i) => (
                   <span key={i} className="flex items-center gap-12 shrink-0">
                     {p}
@@ -285,7 +265,7 @@ function Landing() {
         <div className="accent-card rounded-2xl p-10 md:p-14 text-center" style={{ boxShadow: "0 30px 80px -40px var(--accent-glow)" }}>
           <Sparkles size={22} className="mx-auto text-primary" />
           <h2 className="mt-4 font-display text-4xl md:text-5xl">
-            Your next stream, in a <em className="not-italic italic shimmer-text">new light</em>
+            Your next stream, in a <em className="not-italic italic">new light</em>
           </h2>
           <p className="mt-3 text-[15px] text-[color:var(--muted-foreground)]">
             Sign up, top up a starter pack, and be live in under five minutes.

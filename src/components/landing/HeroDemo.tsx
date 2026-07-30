@@ -218,18 +218,13 @@ export function HeroDemo() {
       </div>
 
       <style>{`
-        @keyframes rec-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
         .rec-dot {
           display: inline-block;
           width: 7px; height: 7px; border-radius: 9999px;
-          background: #ff5a4a; margin-right: 6px;
-          animation: rec-blink 1.4s steps(2, end) infinite;
+          background: #ff7a6b; margin-right: 6px;
         }
         @media (max-width: 719px) {
           .hero-demo-badge { transform: translate(-50%, -50%) rotate(90deg); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .rec-dot { animation: none; }
         }
       `}</style>
     </div>
