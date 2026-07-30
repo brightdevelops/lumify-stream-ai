@@ -1,76 +1,20 @@
-.lumi-app-bg {
+/* Static app background — no animation, no drift. */
+.lumi-app-dots-static,
+.lumi-app-vignette-static {
   position: fixed;
   inset: 0;
   z-index: 0;
-  overflow: hidden;
   pointer-events: none;
 }
 
-.lumi-app-bg > * { position: absolute; }
-
-/* Two static lime washes */
-.lumi-app-wash-a {
-  width: 52vmax; height: 52vmax;
-  left: -14vmax; top: -14vmax;
-  border-radius: 50%;
-  filter: blur(90px);
-  background: radial-gradient(circle at 40% 40%, rgba(198,242,78,.055), rgba(198,242,78,.02) 50%, transparent 72%);
-}
-.lumi-app-wash-b {
-  width: 46vmax; height: 46vmax;
-  right: -12vmax; bottom: -12vmax;
-  border-radius: 50%;
-  filter: blur(90px);
-  background: radial-gradient(circle at 40% 40%, rgba(143,194,51,.045), rgba(143,194,51,.02) 50%, transparent 72%);
+.lumi-app-dots-static {
+  background-color: #0b0d0a;
+  background-image: radial-gradient(rgba(198, 242, 78, 0.1) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black, transparent 75%);
 }
 
-/* Static dot grid, radial-masked upper-center */
-.lumi-app-dots {
-  inset: 0;
-  background-image: radial-gradient(rgba(198,242,78,.09) 1px, transparent 1.5px);
-  background-size: 34px 34px;
-  opacity: .4;
-  -webkit-mask-image: radial-gradient(60% 55% at 50% 30%, #000 0%, transparent 100%);
-          mask-image: radial-gradient(60% 55% at 50% 30%, #000 0%, transparent 100%);
-}
-
-/* The ONLY moving element — a gently breathing glow */
-.lumi-app-breath {
-  width: 30vmax; height: 30vmax;
-  left: 50%; top: 40%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  filter: blur(90px);
-  background: radial-gradient(circle at 50% 50%, rgba(217,250,122,.06), rgba(217,250,122,.02) 55%, transparent 75%);
-  animation: lumi-app-breath 24s ease-in-out infinite;
-  transform-origin: center;
-}
-@keyframes lumi-app-breath {
-  0%, 100% { transform: translate(-50%, -50%) scale(1);   opacity: .7; }
-  50%      { transform: translate(-50%, -50%) scale(1.1); opacity: 1;  }
-}
-
-/* Film grain */
-.lumi-app-grain {
-  inset: 0;
-  opacity: .04;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/></svg>");
-  background-size: 160px 160px;
-  mix-blend-mode: overlay;
-}
-
-/* Soft edge vignette */
-.lumi-app-vignette {
-  inset: 0;
-  background: radial-gradient(130% 110% at 50% 45%, transparent 60%, rgba(5,6,4,.55) 100%);
-}
-
-/* Pause all animation while streaming (body-level class) */
-.stream-live .lumi-app-bg *,
-.stream-live .lumi-app-bg {
-  animation-play-state: paused !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lumi-app-bg * { animation: none !important; }
+.lumi-app-vignette-static {
+  background: radial-gradient(ellipse 120% 100% at 50% 40%, transparent 60%, rgba(0, 0, 0, 0.5) 100%);
 }
