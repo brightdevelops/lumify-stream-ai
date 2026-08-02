@@ -594,13 +594,43 @@ export type Database = {
         }
         Relationships: []
       }
+      support_canned_replies: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_conversations: {
         Row: {
           created_at: string
           id: string
           last_message_at: string
           last_message_preview: string | null
+          snoozed_until: string | null
+          status: string
           subject: string | null
+          topic: string | null
           type: string
           unread_for_admin: number
           unread_for_user: number
@@ -613,7 +643,10 @@ export type Database = {
           id?: string
           last_message_at?: string
           last_message_preview?: string | null
+          snoozed_until?: string | null
+          status?: string
           subject?: string | null
+          topic?: string | null
           type: string
           unread_for_admin?: number
           unread_for_user?: number
@@ -626,7 +659,10 @@ export type Database = {
           id?: string
           last_message_at?: string
           last_message_preview?: string | null
+          snoozed_until?: string | null
+          status?: string
           subject?: string | null
+          topic?: string | null
           type?: string
           unread_for_admin?: number
           unread_for_user?: number
@@ -971,12 +1007,20 @@ export type Database = {
         Returns: {
           created_at: string
           credit_balance: number
+          first_message_at: string
           full_name: string
           id: string
+          last_admin_was_auto: boolean
           last_message_at: string
           last_message_preview: string
+          last_sender: string
+          message_count: number
+          snoozed_until: string
+          status: string
           subject: string
+          topic: string
           type: string
+          unanswered_count: number
           unread_for_admin: number
           user_email: string
           user_id: string
@@ -1055,6 +1099,14 @@ export type Database = {
       admin_set_admin: {
         Args: { make_admin: boolean; target_user_id: string }
         Returns: undefined
+      }
+      admin_set_conversation_status: {
+        Args: { p_conversation_id: string; p_status: string }
+        Returns: undefined
+      }
+      admin_support_customer_context: {
+        Args: { p_user_id: string }
+        Returns: Json
       }
       admin_top_pages: {
         Args: { p_limit?: number }
@@ -1230,6 +1282,7 @@ export type Database = {
         Args: { p_key: string; p_value: boolean }
         Returns: boolean
       }
+      support_classify_topic: { Args: { p_text: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
