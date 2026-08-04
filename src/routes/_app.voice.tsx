@@ -463,7 +463,6 @@ function VoiceList(props: {
                         await removeVoice({ data: { voice_id: v.id } });
                         setVoices((prev) => prev.filter((x) => x.id !== v.id));
                         onCount?.(Math.max(0, voices.length - 1));
-                        if (selected?.id === v.id) onSelect({ ...v, id: "" });
                       } catch (err) {
                         setPreviewError(err instanceof Error ? err.message : "Could not delete this voice.");
                       } finally {
