@@ -503,3 +503,36 @@ body.stream-live *::after {
   background: #c6f24e;
   cursor: pointer;
 }
+
+/* Voice preview equalizer */
+.voice-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  flex-shrink: 0;
+}
+.voice-eq i {
+  display: block;
+  width: 2px;
+  height: 10px;
+  border-radius: 1px;
+  background: #c6f24e;
+  transform-origin: bottom;
+  animation: voiceEq 0.8s ease-in-out infinite;
+}
+.voice-eq i:nth-child(2) { animation-delay: 0.15s; }
+.voice-eq i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes voiceEq {
+  0%, 100% { transform: scaleY(0.35); }
+  50%      { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-eq i { animation-play-state: paused; transform: scaleY(0.6); }
+}
+
+/* Voice Studio controls dock */
+@media (max-width: 1100px) {
+  .voice-dock-divider { display: none; }
+}
+
