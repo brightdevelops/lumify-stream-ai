@@ -231,18 +231,18 @@ function VoiceList(props: {
 
   return (
     <div className="mt-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search voices…"
-          className={INPUT}
+          className={`${INPUT} w-full min-w-0`}
           style={INPUT_STYLE}
         />
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          className={`${INPUT} w-[132px] shrink-0`}
+          className={`${INPUT} w-full min-w-0 sm:w-[132px] sm:shrink-0`}
           style={INPUT_STYLE}
         >
           <option value="">All languages</option>
