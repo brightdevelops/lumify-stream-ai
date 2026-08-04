@@ -658,10 +658,10 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       </section>
 
       <section className={CARD} style={CARD_STYLE}>
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="voice-dock flex flex-wrap items-end gap-4">
           <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
           <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
-          <div>
+          <div className="shrink-0">
             <div className={FIELD_LABEL}>Emotion</div>
             <select
               value={emotion}
@@ -675,8 +675,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
               ))}
             </select>
           </div>
-          <div className="hidden h-10 w-px self-end md:block" style={{ background: "#262b1c" }} />
-          <div>
+          <div className="voice-dock-divider h-10 w-px self-end" style={{ background: "#262b1c" }} />
+          <div className="shrink-0">
             <div className={FIELD_LABEL}>Format</div>
             <div className="mt-2 flex h-10 items-center rounded-full p-[3px]" style={{ background: "#101309" }}>
               {(["mp3", "wav"] as const).map((f) => (
