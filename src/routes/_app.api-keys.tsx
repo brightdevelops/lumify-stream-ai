@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, Copy, Check, X } from "lucide-react";
-import { createApiKey, listMyApiKeys, revokeApiKey } from "@/lib/api-keys.functions";
+import { createApiKey, listMyApiKeys, revokeApiKey, deleteApiKey } from "@/lib/api-keys.functions";
 
 export const Route = createFileRoute("/_app/api-keys")({
   head: () => ({
@@ -92,6 +92,7 @@ function ApiKeysPage() {
   const list = useServerFn(listMyApiKeys);
   const create = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
+  const del = useServerFn(deleteApiKey);
 
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +102,8 @@ function ApiKeysPage() {
   const [rawKey, setRawKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -148,6 +151,20 @@ function ApiKeysPage() {
       setError(e instanceof Error ? e.message : "Could not revoke key.");
     }
   };
+
+  const onDelete = async (id: string) => {
+    setDeleteId(null);
+    try {
+      await del({ data: { key_id: id } });
+      setKeys((prev) => prev.filter((k) => k.id !== id));
+      setToast("Key deleted");
+      window.setTimeout(() => setToast(null), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete key.");
+    }
+  };
+
+
 
   const createBtn = (
     <button
@@ -326,21 +343,19 @@ function ApiKeysPage() {
                         </span>
                       </td>
                       <td style={{ padding: "12px 8px", borderBottom: "1px solid #1e2316", textAlign: "right" }}>
-                        {!revoked && (
-                          <button
-                            onClick={() => setConfirmId(k.id)}
-                            style={{
-                              fontSize: 12,
-                              color: "#ff7a6b",
-                              border: "1px solid rgba(255,122,107,.3)",
-                              borderRadius: 8,
-                              padding: "5px 10px",
-                              transition: "all 150ms",
-                            }}
-                          >
-                            Revoke
-                          </button>
-                        )}
+                        <button
+                          onClick={() => (revoked ? setDeleteId(k.id) : setConfirmId(k.id))}
+                          style={{
+                            fontSize: 12,
+                            color: "#ff7a6b",
+                            border: "1px solid rgba(255,122,107,.3)",
+                            borderRadius: 8,
+                            padding: "5px 10px",
+                            transition: "all 150ms",
+                          }}
+                        >
+                          {revoked ? "Delete" : "Revoke"}
+                        </button>
                       </td>
                     </tr>
                   );
@@ -553,6 +568,73 @@ function ApiKeysPage() {
           </div>
         </div>
       )}
+
+      {/* DELETE CONFIRM */}
+      {deleteId && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.6)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 60,
+            padding: 16,
+          }}
+          onClick={() => setDeleteId(null)}
+        >
+          <div style={{ ...card, width: 420, maxWidth: "100%" }} onClick={(e) => e.stopPropagation()}>
+            <span style={cardTitle}>Delete this key permanently?</span>
+            <p style={{ fontSize: 13, color: "#9aa08c", marginTop: 10 }}>
+              This removes the key from your list forever. Its usage history stays in your billing records.
+            </p>
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setDeleteId(null)}
+                style={{ fontSize: 12.5, color: "#9aa08c", border: "1px solid #262b1c", borderRadius: 8, padding: "8px 14px" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void onDelete(deleteId)}
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: "#ff7a6b",
+                  background: "rgba(255,122,107,.12)",
+                  border: "1px solid rgba(255,122,107,.3)",
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#14170f",
+            border: "1px solid #262b1c",
+            borderRadius: 12,
+            padding: "10px 16px",
+            fontSize: 12.5,
+            color: "#f2f4ec",
+            zIndex: 70,
+          }}
+        >
+          {toast}
+        </div>
+      )}
+
+
 
       <style>{`
         .api-products { grid-template-columns: 1fr; }
