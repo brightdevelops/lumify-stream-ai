@@ -104,6 +104,11 @@ export const deleteClonedVoice = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("user_cloned_voices").delete().eq("cartesia_voice_id", data.voice_id);
+    try {
+      await supabaseAdmin.storage.from("voice-samples").remove([`${data.voice_id}.mp3`]);
+    } catch (e) {
+      console.error("[voice-samples] cleanup failed", e);
+    }
     return { ok: true };
   });
 

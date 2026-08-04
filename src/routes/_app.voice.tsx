@@ -177,6 +177,7 @@ function VoicePicker(props: {
           onSelect={setSelected}
           onCloneCta={() => setTab("clone")}
           onCount={setMineCount}
+          onDeleted={(id) => { if (selected?.id === id) setSelected(null); }}
         />
       )}
     </section>
@@ -192,12 +193,15 @@ function VoiceList(props: {
   onSelect: (v: VoiceSummary) => void;
   onCloneCta: () => void;
   onCount?: (n: number) => void;
+  onDeleted?: (id: string) => void;
 }) {
-  const { owner, selected, onSelect, onCloneCta, onCount } = props;
+  const { owner, selected, onSelect, onCloneCta, onCount, onDeleted } = props;
   const fetchVoices = useServerFn(listCartesiaVoices);
   const fetchMine = useServerFn(listMyClonedVoices);
   const removeVoice = useServerFn(deleteClonedVoice);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmVoice, setConfirmVoice] = useState<VoiceSummary | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const tts = useServerFn(generateCartesiaSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -223,6 +227,12 @@ function VoiceList(props: {
     const t = window.setTimeout(() => setPreviewError(null), 4000);
     return () => window.clearTimeout(t);
   }, [previewError]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
 
   const load = useCallback(
     async (startingAfter?: string) => {
@@ -357,6 +367,31 @@ function VoiceList(props: {
     }
   };
 
+  const confirmDelete = async () => {
+    const v = confirmVoice;
+    if (!v) return;
+    setDeletingId(v.id);
+    try {
+      await removeVoice({ data: { voice_id: v.id } });
+      if (playingId === v.id) { audioRef.current?.pause(); setPlayingId(null); }
+      const cached = PREVIEW_CACHE.get(v.id);
+      if (cached) { URL.revokeObjectURL(cached); PREVIEW_CACHE.delete(v.id); }
+      setVoices((prev) => {
+        const next = prev.filter((x) => x.id !== v.id);
+        onCount?.(next.length);
+        return next;
+      });
+      onDeleted?.(v.id);
+      setConfirmVoice(null);
+      setNotice("Voice deleted");
+    } catch (err) {
+      setPreviewError(err instanceof Error ? err.message : "Could not delete this voice.");
+      setConfirmVoice(null);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="mt-4">
       {previewError && (
@@ -453,29 +488,6 @@ function VoiceList(props: {
                     {v.language}
                   </span>
                 )}
-                {owner && (
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!window.confirm(`Delete "${v.name}"? This cannot be undone.`)) return;
-                      setDeletingId(v.id);
-                      try {
-                        await removeVoice({ data: { voice_id: v.id } });
-                        setVoices((prev) => prev.filter((x) => x.id !== v.id));
-                        onCount?.(Math.max(0, voices.length - 1));
-                      } catch (err) {
-                        setPreviewError(err instanceof Error ? err.message : "Could not delete this voice.");
-                      } finally {
-                        setDeletingId(null);
-                      }
-                    }}
-                    aria-label="Delete voice"
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
-                    style={{ borderColor: "rgba(255,122,107,.3)", color: "#ff7a6b" }}
-                  >
-                    {deletingId === v.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                  </button>
-                )}
                 <button
                   onClick={(e) => { e.stopPropagation(); void togglePreview(v); }}
                   aria-label="Preview voice"
@@ -488,6 +500,16 @@ function VoiceList(props: {
                 >
                   {loadingId === v.id ? <Loader2 size={12} className="animate-spin" /> : playingId === v.id ? <Pause size={12} /> : <Play size={12} />}
                 </button>
+                {owner && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmVoice(v); }}
+                    aria-label={`Delete ${v.name}`}
+                    className="voice-del grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
+                    style={{ borderColor: "#262b1c", color: "#6b7160" }}
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </div>
             );
           })
@@ -506,6 +528,57 @@ function VoiceList(props: {
           <div className="py-2 text-center text-[12px] text-[#6b7160]">Loading…</div>
         )}
       </div>
+
+      {confirmVoice && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center p-4"
+          style={{ background: "rgba(0,0,0,.65)" }}
+          onClick={() => { if (!deletingId) setConfirmVoice(null); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[380px] rounded-2xl border p-5"
+            style={{ background: "#14170f", borderColor: "#262b1c" }}
+          >
+            <div className="text-[16px] font-semibold text-[#f2f4ec]">Delete this voice?</div>
+            <p className="mt-2 text-[13px] leading-relaxed text-[#9aa08c]">
+              &ldquo;{confirmVoice.name}&rdquo; will be deleted permanently. This can&rsquo;t be undone, and no
+              credits are refunded — but it frees one of your 5 slots.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmVoice(null)}
+                disabled={Boolean(deletingId)}
+                className="rounded-full border px-4 py-2 text-[12.5px] text-[#9aa08c] transition-colors duration-150 hover:text-[#f2f4ec] disabled:opacity-50"
+                style={{ borderColor: "#262b1c" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void confirmDelete()}
+                disabled={Boolean(deletingId)}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold transition-opacity duration-150 disabled:opacity-60"
+                style={{ background: "#ff7a6b", color: "#1a0b09" }}
+              >
+                {deletingId ? <Loader2 size={13} className="animate-spin" /> : null}
+                Delete voice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notice && (
+        <div
+          role="status"
+          className="fixed bottom-5 right-5 z-[60] rounded-xl border px-4 py-3 text-[13px] shadow-lg"
+          style={{ background: "#14170f", borderColor: "#2a2f22", color: "#c6f24e" }}
+        >
+          {notice}
+        </div>
+      )}
     </div>
   );
 }

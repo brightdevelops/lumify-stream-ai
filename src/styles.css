@@ -536,3 +536,9 @@ body.stream-live *::after {
   .voice-dock-divider { display: none; }
 }
 
+
+/* Voice Studio — delete (×) ghost button */
+.voice-del:hover {
+  color: #ff7a6b;
+  border-color: rgba(255, 122, 107, 0.3);
+}
