@@ -169,6 +169,9 @@ function VoicePicker(props: {
   );
 }
 
+/** In-memory preview audio cache (object URLs), keyed by voice id. */
+const PREVIEW_CACHE = new Map<string, string>();
+
 function VoiceList(props: {
   owner: boolean;
   selected: VoiceSummary | null;
