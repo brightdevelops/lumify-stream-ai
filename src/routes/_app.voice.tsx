@@ -298,6 +298,7 @@ function VoiceList(props: {
           volume: 1.0,
           language: lang,
           format: "mp3" as const,
+          is_preview: true,
         },
       });
       if (previewSeq.current !== seq) return;
