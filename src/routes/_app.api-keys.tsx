@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, Copy, Check, X } from "lucide-react";
-import { createApiKey, listMyApiKeys, revokeApiKey } from "@/lib/api-keys.functions";
+import { createApiKey, listMyApiKeys, revokeApiKey, deleteApiKey } from "@/lib/api-keys.functions";
 
 export const Route = createFileRoute("/_app/api-keys")({
   head: () => ({
