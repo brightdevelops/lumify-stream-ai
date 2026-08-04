@@ -31,19 +31,19 @@ function authHeaders() {
 }
 
 async function cartesiaError(res: Response) {
-  let message = `Cartesia request failed (${res.status})`;
+  let detail = "";
   try {
     const text = await res.text();
     try {
       const json = JSON.parse(text);
-      message = json.error ?? json.message ?? text ?? message;
+      detail = String(json.error ?? json.message ?? text ?? "");
     } catch {
-      if (text) message = text;
+      detail = text;
     }
   } catch {
     /* ignore */
   }
-  return message;
+  return detail ? `${detail} (${res.status})` : `Cartesia request failed (${res.status})`;
 }
 
 /** GET /voices — library + owned voices. */
@@ -161,7 +161,8 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         voice_id: z.string().min(1),
         speed: z.number().min(0.6).max(1.5),
         volume: z.number().min(0.5).max(2.0),
-        emotion: z.string().min(1).max(40),
+        emotion: z.string().min(1).max(40).optional(),
+        language: z.string().min(2).max(8).optional(),
         format: z.enum(["mp3", "wav"]),
       })
       .parse(input),
@@ -182,6 +183,7 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         model_id: "sonic-3.5",
         transcript: data.transcript,
         voice: { mode: "id", id: data.voice_id },
+        ...(data.language ? { language: data.language } : {}),
         generation_config,
         output_format,
       }),

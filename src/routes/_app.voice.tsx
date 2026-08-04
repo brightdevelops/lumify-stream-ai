@@ -191,12 +191,20 @@ function VoiceList(props: {
   const [hasMore, setHasMore] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previewSeq = useRef(0);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(search.trim()), 300);
     return () => window.clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    if (!previewError) return;
+    const t = window.setTimeout(() => setPreviewError(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [previewError]);
 
   const load = useCallback(
     async (startingAfter?: string) => {
@@ -229,14 +237,33 @@ function VoiceList(props: {
 
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
-  const playUrl = (id: string, url: string) => {
-    audioRef.current?.pause();
-    const a = new Audio(url);
-    audioRef.current = a;
-    a.onended = () => setPlayingId((p) => (p === id ? null : p));
-    a.onpause = () => setPlayingId((p) => (p === id ? null : p));
-    void a.play().catch(() => setPlayingId(null));
-    setPlayingId(id);
+  /** Play a URL through the one shared Audio element. Resolves true on success. */
+  const playUrl = (id: string, url: string) =>
+    new Promise<boolean>((resolve) => {
+      audioRef.current?.pause();
+      const a = new Audio(url);
+      audioRef.current = a;
+      let settled = false;
+      const done = (ok: boolean) => { if (!settled) { settled = true; resolve(ok); } };
+      a.onended = () => setPlayingId((p) => (p === id ? null : p));
+      a.onpause = () => setPlayingId((p) => (p === id ? null : p));
+      a.onerror = () => { setPlayingId((p) => (p === id ? null : p)); done(false); };
+      a.onplaying = () => done(true);
+      setPlayingId(id);
+      a.play().then(() => done(true)).catch((err) => {
+        console.error(`[voice-preview] playback failed for ${id}`, err);
+        setPlayingId((p) => (p === id ? null : p));
+        done(false);
+      });
+    });
+
+  const SAMPLE_LINES: Record<string, string> = {
+    en: "Hey, this is my voice on Lumify. Let's make something great.",
+    es: "Hola, esta es mi voz en Lumify.",
+    fr: "Salut, voici ma voix sur Lumify.",
+    de: "Hallo, das ist meine Stimme auf Lumify.",
+    pt: "Olá, esta é a minha voz no Lumify.",
+    hi: "नमस्ते, यह Lumify पर मेरी आवाज़ है।",
   };
 
   const togglePreview = async (v: VoiceSummary) => {
@@ -244,38 +271,69 @@ function VoiceList(props: {
     audioRef.current?.pause();
     setPlayingId(null);
 
-    const cached = PREVIEW_CACHE.get(v.id);
-    if (cached) { playUrl(v.id, cached); return; }
-    if (v.preview_file_url) { playUrl(v.id, v.preview_file_url); return; }
+    const seq = ++previewSeq.current;
+    setLoadingId(null);
 
-    if (loadingId) return;
+    // Cached sample → instant, no spinner.
+    const cached = PREVIEW_CACHE.get(v.id);
+    if (cached) { void playUrl(v.id, cached); return; }
+
+    // 1) Provider preview URL.
+    if (v.preview_file_url) {
+      const ok = await playUrl(v.id, v.preview_file_url);
+      if (ok || previewSeq.current !== seq) return;
+      console.error(`[voice-preview] preview_file_url failed for ${v.id}`, v.preview_file_url);
+    }
+    if (previewSeq.current !== seq) return;
+
+    // 2) Generate a sample via TTS.
     setLoadingId(v.id);
     try {
+      const lang = (v.language || "en").slice(0, 2).toLowerCase();
       const res = await tts({
         data: {
-          transcript: "Hey, this is my voice on Lumify. Let's make something great.",
+          transcript: SAMPLE_LINES[lang] ?? SAMPLE_LINES["en"],
           voice_id: v.id,
           speed: 1.0,
           volume: 1.0,
-          emotion: "neutral",
+          language: lang,
           format: "mp3" as const,
         },
       });
+      if (previewSeq.current !== seq) return;
       const bin = atob(res.audioBase64);
       const arr = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
       const url = URL.createObjectURL(new Blob([arr], { type: res.contentType }));
       PREVIEW_CACHE.set(v.id, url);
-      playUrl(v.id, url);
-    } catch {
-      /* ignore preview failure */
+      const ok = await playUrl(v.id, url);
+      if (!ok && previewSeq.current === seq) {
+        setPreviewError("Couldn't preview this voice — audio could not be played.");
+      }
+    } catch (e) {
+      // 3) Total failure → visible error.
+      console.error(`[voice-preview] sample generation failed for ${v.id}`, e);
+      if (previewSeq.current === seq) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setPreviewError(`Couldn't preview this voice — ${msg}`);
+        setPlayingId(null);
+      }
     } finally {
-      setLoadingId(null);
+      if (previewSeq.current === seq) setLoadingId(null);
     }
   };
 
   return (
     <div className="mt-4">
+      {previewError && (
+        <div
+          role="alert"
+          className="fixed bottom-5 right-5 z-50 max-w-[340px] rounded-xl border px-4 py-3 text-[13px] shadow-lg"
+          style={{ background: "#14170f", borderColor: "#2a2f22", color: "#ff7a6b" }}
+        >
+          {previewError}
+        </div>
+      )}
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
           value={search}
