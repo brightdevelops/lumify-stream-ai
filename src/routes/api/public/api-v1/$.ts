@@ -223,7 +223,7 @@ async function handle(request: Request): Promise<Response> {
       return errorResponse(502, "upstream_error", "Voice provider is not configured.");
     }
 
-    const cost = Math.max(10, Math.ceil(text.length / 10));
+    const cost = Math.max(15, Math.ceil(text.length / 10));
     const { data: charged } = await supabaseAdmin.rpc("api_charge_credits", {
       p_user_id: keyRow.user_id,
       p_amount: cost,
