@@ -177,6 +177,7 @@ function VoicePicker(props: {
           onSelect={setSelected}
           onCloneCta={() => setTab("clone")}
           onCount={setMineCount}
+          onDeleted={(id) => { if (selected?.id === id) setSelected(null); }}
         />
       )}
     </section>
@@ -192,12 +193,15 @@ function VoiceList(props: {
   onSelect: (v: VoiceSummary) => void;
   onCloneCta: () => void;
   onCount?: (n: number) => void;
+  onDeleted?: (id: string) => void;
 }) {
-  const { owner, selected, onSelect, onCloneCta, onCount } = props;
+  const { owner, selected, onSelect, onCloneCta, onCount, onDeleted } = props;
   const fetchVoices = useServerFn(listCartesiaVoices);
   const fetchMine = useServerFn(listMyClonedVoices);
   const removeVoice = useServerFn(deleteClonedVoice);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmVoice, setConfirmVoice] = useState<VoiceSummary | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const tts = useServerFn(generateCartesiaSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -223,6 +227,12 @@ function VoiceList(props: {
     const t = window.setTimeout(() => setPreviewError(null), 4000);
     return () => window.clearTimeout(t);
   }, [previewError]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
 
   const load = useCallback(
     async (startingAfter?: string) => {
@@ -455,25 +465,12 @@ function VoiceList(props: {
                 )}
                 {owner && (
                   <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!window.confirm(`Delete "${v.name}"? This cannot be undone.`)) return;
-                      setDeletingId(v.id);
-                      try {
-                        await removeVoice({ data: { voice_id: v.id } });
-                        setVoices((prev) => prev.filter((x) => x.id !== v.id));
-                        onCount?.(Math.max(0, voices.length - 1));
-                      } catch (err) {
-                        setPreviewError(err instanceof Error ? err.message : "Could not delete this voice.");
-                      } finally {
-                        setDeletingId(null);
-                      }
-                    }}
-                    aria-label="Delete voice"
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
-                    style={{ borderColor: "rgba(255,122,107,.3)", color: "#ff7a6b" }}
+                    onClick={(e) => { e.stopPropagation(); setConfirmVoice(v); }}
+                    aria-label={`Delete ${v.name}`}
+                    className="voice-del grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
+                    style={{ borderColor: "#262b1c", color: "#6b7160" }}
                   >
-                    {deletingId === v.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    <X size={13} />
                   </button>
                 )}
                 <button
