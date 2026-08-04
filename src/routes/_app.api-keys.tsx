@@ -396,7 +396,7 @@ function ApiKeysPage() {
           </div>
         ))}
         <p style={{ fontSize: 12, color: "#6b7160" }}>
-          Pricing: 1 credit per 10 characters (minimum 10 credits per request) · 1,000 characters ≈ 100 credits.
+          Pricing: 1 credit per 10 characters (minimum 15 credits per request) · 1,000 characters ≈ 100 credits.
         </p>
       </div>
 

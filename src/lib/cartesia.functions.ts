@@ -164,10 +164,38 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         emotion: z.string().min(1).max(40).optional(),
         language: z.string().min(2).max(8).optional(),
         format: z.enum(["mp3", "wav"]),
+        is_preview: z.boolean().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
+    const isPreview = data.is_preview === true && data.format === "mp3";
+    const samplePath = `${data.voice_id}.mp3`;
+
+    const toBase64 = (buf: Uint8Array) => {
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < buf.length; i += chunk) {
+        binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+      }
+      return btoa(binary);
+    };
+
+    if (isPreview) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: file } = await supabaseAdmin.storage.from("voice-samples").download(samplePath);
+        if (file) {
+          const cached = new Uint8Array(await file.arrayBuffer());
+          if (cached.length > 0) {
+            return { audioBase64: toBase64(cached), contentType: "audio/mpeg", bytes: cached.length, cached: true };
+          }
+        }
+      } catch {
+        /* cache miss — fall through to generation */
+      }
+    }
+
     const generation_config: Record<string, unknown> = { speed: data.speed, volume: data.volume };
     if (data.emotion && data.emotion !== "neutral") generation_config["emotion"] = data.emotion;
 
@@ -191,14 +219,23 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
     if (!res.ok) throw new Error(await cartesiaError(res));
 
     const buf = new Uint8Array(await res.arrayBuffer());
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < buf.length; i += chunk) {
-      binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+
+    if (isPreview) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.storage
+          .from("voice-samples")
+          .upload(samplePath, buf, { contentType: "audio/mpeg", upsert: true, cacheControl: "86400" });
+      } catch (e) {
+        console.error("[voice-samples] upload failed", e);
+      }
     }
+
     return {
-      audioBase64: btoa(binary),
+      audioBase64: toBase64(buf),
       contentType: data.format === "wav" ? "audio/wav" : "audio/mpeg",
       bytes: buf.length,
+      cached: false,
     };
   });
+
