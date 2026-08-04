@@ -325,6 +325,15 @@ function VoiceList(props: {
 
   return (
     <div className="mt-4">
+      {previewError && (
+        <div
+          role="alert"
+          className="fixed bottom-5 right-5 z-50 max-w-[340px] rounded-xl border px-4 py-3 text-[13px] shadow-lg"
+          style={{ background: "#14170f", borderColor: "#2a2f22", color: "#ff7a6b" }}
+        >
+          {previewError}
+        </div>
+      )}
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
           value={search}
