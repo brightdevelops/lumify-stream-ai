@@ -146,6 +146,12 @@ function VoicePicker(props: {
         ))}
       </div>
 
+      {tab !== "clone" && (
+        <div className="mt-2 text-[11px] text-[#6b7160]">
+          Press ▶ to hear a voice · click a row to use it
+        </div>
+      )}
+
       {tab === "clone" ? (
         <CloneForm
           onCloned={(v) => { setSelected(v); setTab("mine"); }}
@@ -163,6 +169,9 @@ function VoicePicker(props: {
   );
 }
 
+/** In-memory preview audio cache (object URLs), keyed by voice id. */
+const PREVIEW_CACHE = new Map<string, string>();
+
 function VoiceList(props: {
   owner: boolean;
   selected: VoiceSummary | null;
@@ -171,6 +180,7 @@ function VoiceList(props: {
 }) {
   const { owner, selected, onSelect, onCloneCta } = props;
   const fetchVoices = useServerFn(listCartesiaVoices);
+  const tts = useServerFn(generateCartesiaSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [language, setLanguage] = useState("");
@@ -180,6 +190,7 @@ function VoiceList(props: {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -218,15 +229,49 @@ function VoiceList(props: {
 
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
-  const togglePreview = (v: VoiceSummary) => {
-    if (!v.preview_file_url) return;
+  const playUrl = (id: string, url: string) => {
+    audioRef.current?.pause();
+    const a = new Audio(url);
+    audioRef.current = a;
+    a.onended = () => setPlayingId((p) => (p === id ? null : p));
+    a.onpause = () => setPlayingId((p) => (p === id ? null : p));
+    void a.play().catch(() => setPlayingId(null));
+    setPlayingId(id);
+  };
+
+  const togglePreview = async (v: VoiceSummary) => {
     if (playingId === v.id) { audioRef.current?.pause(); setPlayingId(null); return; }
     audioRef.current?.pause();
-    const a = new Audio(v.preview_file_url);
-    audioRef.current = a;
-    a.onended = () => setPlayingId(null);
-    void a.play().catch(() => setPlayingId(null));
-    setPlayingId(v.id);
+    setPlayingId(null);
+
+    const cached = PREVIEW_CACHE.get(v.id);
+    if (cached) { playUrl(v.id, cached); return; }
+    if (v.preview_file_url) { playUrl(v.id, v.preview_file_url); return; }
+
+    if (loadingId) return;
+    setLoadingId(v.id);
+    try {
+      const res = await tts({
+        data: {
+          transcript: "Hey, this is my voice on Lumify. Let's make something great.",
+          voice_id: v.id,
+          speed: 1.0,
+          volume: 1.0,
+          emotion: "neutral",
+          format: "mp3" as const,
+        },
+      });
+      const bin = atob(res.audioBase64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: res.contentType }));
+      PREVIEW_CACHE.set(v.id, url);
+      playUrl(v.id, url);
+    } catch {
+      /* ignore preview failure */
+    } finally {
+      setLoadingId(null);
+    }
   };
 
   return (
@@ -297,6 +342,9 @@ function VoiceList(props: {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-[14px] font-semibold text-[#f2f4ec]">{v.name}</span>
+                    {playingId === v.id && (
+                      <span className="voice-eq" aria-hidden="true"><i /><i /><i /></span>
+                    )}
                     {isSel && (
                       <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em]" style={{ background: "rgba(198,242,78,.2)", color: "#c6f24e" }}>
                         SELECTED
@@ -314,13 +362,16 @@ function VoiceList(props: {
                   </span>
                 )}
                 <button
-                  onClick={(e) => { e.stopPropagation(); togglePreview(v); }}
-                  disabled={!v.preview_file_url}
+                  onClick={(e) => { e.stopPropagation(); void togglePreview(v); }}
                   aria-label="Preview voice"
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150 disabled:opacity-30"
-                  style={{ borderColor: "#262b1c", color: "#9aa08c" }}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
+                  style={
+                    playingId === v.id
+                      ? { background: "#c6f24e", borderColor: "#c6f24e", color: "#111406" }
+                      : { borderColor: "#262b1c", color: "#9aa08c" }
+                  }
                 >
-                  {playingId === v.id ? <Pause size={12} /> : <Play size={12} />}
+                  {loadingId === v.id ? <Loader2 size={12} className="animate-spin" /> : playingId === v.id ? <Pause size={12} /> : <Play size={12} />}
                 </button>
               </div>
             );
@@ -652,10 +703,10 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       </section>
 
       <section className={CARD} style={CARD_STYLE}>
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="voice-dock flex flex-wrap items-end gap-4">
           <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
           <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
-          <div>
+          <div className="shrink-0">
             <div className={FIELD_LABEL}>Emotion</div>
             <select
               value={emotion}
@@ -669,8 +720,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
               ))}
             </select>
           </div>
-          <div className="hidden h-10 w-px self-end md:block" style={{ background: "#262b1c" }} />
-          <div>
+          <div className="voice-dock-divider h-10 w-px self-end" style={{ background: "#262b1c" }} />
+          <div className="shrink-0">
             <div className={FIELD_LABEL}>Format</div>
             <div className="mt-2 flex h-10 items-center rounded-full p-[3px]" style={{ background: "#101309" }}>
               {(["mp3", "wav"] as const).map((f) => (
@@ -758,7 +809,7 @@ function SliderField(props: {
   const { label, value, min, max, step, onChange, disabled } = props;
   const pct = ((value - min) / (max - min)) * 100;
   return (
-    <div>
+    <div style={{ flex: "1 1 180px", minWidth: 180 }}>
       <div className={FIELD_LABEL}>{label}</div>
       <div className="mt-2 flex h-10 items-center gap-3">
         <input
@@ -769,9 +820,10 @@ function SliderField(props: {
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="voice-slider w-[150px]"
+          className="voice-slider min-w-0 flex-1"
           style={{ background: `linear-gradient(to right, #c6f24e ${pct}%, #262b1c ${pct}%)` }}
         />
+
         <span className="w-[44px] text-[13px] text-[#f2f4ec]" style={{ fontFamily: "Georgia, serif" }}>
           {value.toFixed(1)}×
         </span>
