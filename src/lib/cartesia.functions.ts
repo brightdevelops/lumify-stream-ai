@@ -192,6 +192,15 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
     const bytes = Uint8Array.from(atob(data.clipBase64), (c) => c.charCodeAt(0));
     if (bytes.byteLength > MAX_CLIP_BYTES) throw new Error("Clip is larger than 15 MB.");
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { count: ownedCount } = await supabaseAdmin
+      .from("user_cloned_voices")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", context.userId);
+    if ((ownedCount ?? 0) >= MAX_CLONES) {
+      throw new Error(`You can save up to ${MAX_CLONES} cloned voices. Delete one to make room.`);
+    }
+
     const form = new FormData();
     form.append("clip", new Blob([bytes], { type: data.clipType }), data.clipName);
     form.append("name", data.name);
@@ -199,7 +208,6 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
     form.append("access", "private");
     if (data.description) form.append("description", data.description);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: charged } = await supabaseAdmin.rpc("api_charge_credits", {
       p_user_id: context.userId,
       p_amount: CLONE_COST,
@@ -224,8 +232,18 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
       throw new Error(msg);
     }
     const v = (await res.json()) as CartesiaVoice;
+    const voiceId = String(v.id ?? "");
+    if (voiceId) {
+      const { error: ownErr } = await supabaseAdmin.from("user_cloned_voices").insert({
+        user_id: context.userId,
+        cartesia_voice_id: voiceId,
+        name: String(v.name ?? data.name),
+        language: v.language ? String(v.language) : data.language,
+      });
+      if (ownErr) console.error("[user_cloned_voices] insert failed", ownErr);
+    }
     return {
-      id: String(v.id ?? ""),
+      id: voiceId,
       name: String(v.name ?? "Untitled"),
       description: v.description ? String(v.description) : "",
       language: v.language ? String(v.language) : "",
