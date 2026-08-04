@@ -177,6 +177,7 @@ function VoiceList(props: {
 }) {
   const { owner, selected, onSelect, onCloneCta } = props;
   const fetchVoices = useServerFn(listCartesiaVoices);
+  const tts = useServerFn(generateCartesiaSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [language, setLanguage] = useState("");
@@ -186,6 +187,7 @@ function VoiceList(props: {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -224,15 +226,49 @@ function VoiceList(props: {
 
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
-  const togglePreview = (v: VoiceSummary) => {
-    if (!v.preview_file_url) return;
+  const playUrl = (id: string, url: string) => {
+    audioRef.current?.pause();
+    const a = new Audio(url);
+    audioRef.current = a;
+    a.onended = () => setPlayingId((p) => (p === id ? null : p));
+    a.onpause = () => setPlayingId((p) => (p === id ? null : p));
+    void a.play().catch(() => setPlayingId(null));
+    setPlayingId(id);
+  };
+
+  const togglePreview = async (v: VoiceSummary) => {
     if (playingId === v.id) { audioRef.current?.pause(); setPlayingId(null); return; }
     audioRef.current?.pause();
-    const a = new Audio(v.preview_file_url);
-    audioRef.current = a;
-    a.onended = () => setPlayingId(null);
-    void a.play().catch(() => setPlayingId(null));
-    setPlayingId(v.id);
+    setPlayingId(null);
+
+    const cached = PREVIEW_CACHE.get(v.id);
+    if (cached) { playUrl(v.id, cached); return; }
+    if (v.preview_file_url) { playUrl(v.id, v.preview_file_url); return; }
+
+    if (loadingId) return;
+    setLoadingId(v.id);
+    try {
+      const res = await tts({
+        data: {
+          transcript: "Hey, this is my voice on Lumify. Let's make something great.",
+          voice_id: v.id,
+          speed: 1.0,
+          volume: 1.0,
+          emotion: "neutral",
+          format: "mp3" as const,
+        },
+      });
+      const bin = atob(res.audioBase64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: res.contentType }));
+      PREVIEW_CACHE.set(v.id, url);
+      playUrl(v.id, url);
+    } catch {
+      /* ignore preview failure */
+    } finally {
+      setLoadingId(null);
+    }
   };
 
   return (
