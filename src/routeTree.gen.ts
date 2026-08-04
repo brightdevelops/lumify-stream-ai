@@ -51,6 +51,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as ApiPublicApiV1SplatRouteImport } from './routes/api/public/api-v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -270,6 +271,11 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicApiV1SplatRoute = ApiPublicApiV1SplatRouteImport.update({
+  id: '/api/public/api-v1/$',
+  path: '/api/public/api-v1/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -388,6 +395,7 @@ export interface FileRoutesByTo {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -438,6 +446,7 @@ export interface FileRoutesById {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -488,6 +497,7 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
+    | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -535,6 +545,7 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
+    | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -584,6 +595,7 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
+    | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -615,6 +627,7 @@ export interface RootRouteChildren {
   ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicApiV1SplatRoute: typeof ApiPublicApiV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -918,6 +931,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/api-v1/$': {
+      id: '/api/public/api-v1/$'
+      path: '/api/public/api-v1/$'
+      fullPath: '/api/public/api-v1/$'
+      preLoaderRoute: typeof ApiPublicApiV1SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -1037,6 +1057,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicApiV1SplatRoute: ApiPublicApiV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
