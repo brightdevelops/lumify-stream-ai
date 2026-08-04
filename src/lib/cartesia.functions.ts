@@ -168,6 +168,7 @@ const ALLOWED_CLIP_TYPES = [
 const MAX_CLIP_BYTES = 15 * 1024 * 1024;
 
 const CLONE_COST = 150;
+const MAX_CLONES = 5;
 const speechCost = (chars: number) => Math.max(15, Math.ceil(chars / 10));
 
 /** POST /voices/clone — clip arrives base64-encoded from the browser. */
@@ -270,6 +271,8 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await assertVoiceAccess(data.voice_id, context.userId);
+
     const isPreview = data.is_preview === true && data.format === "mp3";
     const samplePath = `${data.voice_id}.mp3`;
 
