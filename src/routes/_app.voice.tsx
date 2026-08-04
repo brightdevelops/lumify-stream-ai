@@ -303,6 +303,9 @@ function VoiceList(props: {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-[14px] font-semibold text-[#f2f4ec]">{v.name}</span>
+                    {playingId === v.id && (
+                      <span className="voice-eq" aria-hidden="true"><i /><i /><i /></span>
+                    )}
                     {isSel && (
                       <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em]" style={{ background: "rgba(198,242,78,.2)", color: "#c6f24e" }}>
                         SELECTED
