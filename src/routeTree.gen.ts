@@ -26,6 +26,7 @@ import { Route as TrustRouteImport } from './routes/trust'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AppApiKeysRouteImport } from './routes/_app.api-keys'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -51,6 +52,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as ApiPublicApiV1SplatRouteImport } from './routes/api/public/api-v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -143,6 +145,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AppApiKeysRoute = AppApiKeysRouteImport.update({
+  id: '/api-keys',
+  path: '/api-keys',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppBillingRoute = AppBillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -270,6 +277,11 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicApiV1SplatRoute = ApiPublicApiV1SplatRouteImport.update({
+  id: '/api/public/api-v1/$',
+  path: '/api/public/api-v1/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -316,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api-keys': typeof AppApiKeysRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -341,6 +354,7 @@ export interface FileRoutesByFullPath {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -363,6 +377,7 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api-keys': typeof AppApiKeysRoute
   '/billing': typeof AppBillingRoute
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -388,6 +403,7 @@ export interface FileRoutesByTo {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -413,6 +429,7 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_app/api-keys': typeof AppApiKeysRoute
   '/_app/billing': typeof AppBillingRoute
   '/_app/credits': typeof AppCreditsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -438,6 +455,7 @@ export interface FileRoutesById {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -463,6 +481,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api-keys'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -488,6 +507,7 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
+    | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -510,6 +530,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api-keys'
     | '/billing'
     | '/credits'
     | '/dashboard'
@@ -535,6 +556,7 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
+    | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -559,6 +581,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_app/api-keys'
     | '/_app/billing'
     | '/_app/credits'
     | '/_app/dashboard'
@@ -584,6 +607,7 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/lovable/email/suppression'
+    | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -615,6 +639,7 @@ export interface RootRouteChildren {
   ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicApiV1SplatRoute: typeof ApiPublicApiV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -742,6 +767,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/api-keys': {
+      id: '/_app/api-keys'
+      path: '/api-keys'
+      fullPath: '/api-keys'
+      preLoaderRoute: typeof AppApiKeysRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/billing': {
       id: '/_app/billing'
@@ -918,6 +950,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/api-v1/$': {
+      id: '/api/public/api-v1/$'
+      path: '/api/public/api-v1/$'
+      fullPath: '/api/public/api-v1/$'
+      preLoaderRoute: typeof ApiPublicApiV1SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -957,6 +996,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppApiKeysRoute: typeof AppApiKeysRoute
   AppBillingRoute: typeof AppBillingRoute
   AppCreditsRoute: typeof AppCreditsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -968,6 +1008,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppApiKeysRoute: AppApiKeysRoute,
   AppBillingRoute: AppBillingRoute,
   AppCreditsRoute: AppCreditsRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -1037,6 +1078,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicApiV1SplatRoute: ApiPublicApiV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
