@@ -104,6 +104,80 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_requests: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          credits_charged: number
+          endpoint: string
+          id: number
+          status_code: number
+          user_id: string
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          credits_charged?: number
+          endpoint: string
+          id?: never
+          status_code: number
+          user_id: string
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          credits_charged?: number
+          endpoint?: string
+          id?: never
+          status_code?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_requests_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_ledger: {
         Row: {
           balance_after: number
