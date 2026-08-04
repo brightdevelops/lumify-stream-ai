@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Wrench, GraduationCap, Plus, Mic } from "lucide-react";
+import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Wrench, GraduationCap, Plus, Mic, KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,9 @@ const items = [
   { to: "/credits", label: "Wallet", icon: Wallet, tour: "credits" },
   { to: "/billing", label: "Billing", icon: Receipt, tour: "billing" },
   { to: "/voice", label: "Voice Studio", icon: Mic, tour: "voice" },
+  { to: "/api-keys", label: "API keys", icon: KeyRound, tour: "api-keys" },
 ] as const;
+
 
 const secondary = [
   { to: "/settings", label: "Settings", icon: Settings, tour: "settings" },
