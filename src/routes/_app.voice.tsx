@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles } from "lucide-react";
+import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2 } from "lucide-react";
 import {
   listCartesiaVoices,
   cloneCartesiaVoice,
   generateCartesiaSpeech,
+  listMyClonedVoices,
+  deleteClonedVoice,
   type VoiceSummary,
 } from "@/lib/cartesia.functions";
 
@@ -130,9 +132,20 @@ function VoicePicker(props: {
   setSelected: (v: VoiceSummary | null) => void;
 }) {
   const { tab, setTab, selected, setSelected } = props;
+  const [mineCount, setMineCount] = useState<number | null>(null);
   return (
     <section className={CARD} style={CARD_STYLE}>
-      <div className={TITLE}>Voices</div>
+      <div className="flex items-center justify-between">
+        <div className={TITLE}>Voices</div>
+        {mineCount !== null && (
+          <span
+            className="rounded-full border px-2 py-0.5 font-mono text-[10px] text-[#9aa08c]"
+            style={{ background: "#101309", borderColor: "#262b1c" }}
+          >
+            {mineCount}/5 slots
+          </span>
+        )}
+      </div>
       <div className="mt-3 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
         {([["library", "Library"], ["mine", "My voices"], ["clone", "Clone new"]] as const).map(([k, label]) => (
           <button
@@ -163,6 +176,7 @@ function VoicePicker(props: {
           selected={selected}
           onSelect={setSelected}
           onCloneCta={() => setTab("clone")}
+          onCount={setMineCount}
         />
       )}
     </section>
@@ -177,9 +191,13 @@ function VoiceList(props: {
   selected: VoiceSummary | null;
   onSelect: (v: VoiceSummary) => void;
   onCloneCta: () => void;
+  onCount?: (n: number) => void;
 }) {
-  const { owner, selected, onSelect, onCloneCta } = props;
+  const { owner, selected, onSelect, onCloneCta, onCount } = props;
   const fetchVoices = useServerFn(listCartesiaVoices);
+  const fetchMine = useServerFn(listMyClonedVoices);
+  const removeVoice = useServerFn(deleteClonedVoice);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const tts = useServerFn(generateCartesiaSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -211,6 +229,21 @@ function VoiceList(props: {
       setLoading(true);
       setError(null);
       try {
+        if (owner) {
+          // Clones are private to the user who made them — read our own ownership table.
+          const mine = await fetchMine({});
+          const q = debounced.toLowerCase();
+          const filtered = mine.data.filter(
+            (v) =>
+              (!q || v.name.toLowerCase().includes(q)) &&
+              (!language || (v.language || "").toLowerCase().startsWith(language)),
+          );
+          setVoices(filtered);
+          setHasMore(false);
+          setCursor(null);
+          onCount?.(mine.count);
+          return;
+        }
         const res = await fetchVoices({
           data: {
             limit: 30,
@@ -230,7 +263,7 @@ function VoiceList(props: {
         setLoading(false);
       }
     },
-    [fetchVoices, debounced, language, owner],
+    [fetchVoices, fetchMine, debounced, language, owner, onCount],
   );
 
   useEffect(() => { void load(); }, [load]);
@@ -419,6 +452,30 @@ function VoiceList(props: {
                   >
                     {v.language}
                   </span>
+                )}
+                {owner && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!window.confirm(`Delete "${v.name}"? This cannot be undone.`)) return;
+                      setDeletingId(v.id);
+                      try {
+                        await removeVoice({ data: { voice_id: v.id } });
+                        setVoices((prev) => prev.filter((x) => x.id !== v.id));
+                        onCount?.(Math.max(0, voices.length - 1));
+                        if (selected?.id === v.id) onSelect({ ...v, id: "" });
+                      } catch (err) {
+                        setPreviewError(err instanceof Error ? err.message : "Could not delete this voice.");
+                      } finally {
+                        setDeletingId(null);
+                      }
+                    }}
+                    aria-label="Delete voice"
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
+                    style={{ borderColor: "rgba(255,122,107,.3)", color: "#ff7a6b" }}
+                  >
+                    {deletingId === v.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  </button>
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); void togglePreview(v); }}
