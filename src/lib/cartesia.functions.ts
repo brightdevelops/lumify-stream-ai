@@ -31,19 +31,19 @@ function authHeaders() {
 }
 
 async function cartesiaError(res: Response) {
-  let message = `Cartesia request failed (${res.status})`;
+  let detail = "";
   try {
     const text = await res.text();
     try {
       const json = JSON.parse(text);
-      message = json.error ?? json.message ?? text ?? message;
+      detail = String(json.error ?? json.message ?? text ?? "");
     } catch {
-      if (text) message = text;
+      detail = text;
     }
   } catch {
     /* ignore */
   }
-  return message;
+  return detail ? `${detail} (${res.status})` : `Cartesia request failed (${res.status})`;
 }
 
 /** GET /voices — library + owned voices. */
