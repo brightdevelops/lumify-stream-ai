@@ -46,7 +46,68 @@ async function cartesiaError(res: Response) {
   return detail ? `${detail} (${res.status})` : `Cartesia request failed (${res.status})`;
 }
 
-/** GET /voices — library + owned voices. */
+/** Rows in user_cloned_voices are private per user. Returns owner id or null when not a tracked clone. */
+async function clonedVoiceOwner(voiceId: string): Promise<string | null> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("user_cloned_voices")
+    .select("user_id")
+    .eq("cartesia_voice_id", voiceId)
+    .maybeSingle();
+  return data?.user_id ?? null;
+}
+
+/** Throws when the voice is a clone owned by someone other than `userId`. */
+async function assertVoiceAccess(voiceId: string, userId: string) {
+  const owner = await clonedVoiceOwner(voiceId);
+  if (owner && owner !== userId) {
+    throw new Error("This cloned voice belongs to another user.");
+  }
+}
+
+/** My voices tab — only the caller's own clones. */
+export const listMyClonedVoices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("user_cloned_voices")
+      .select("cartesia_voice_id, name, language, created_at")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return {
+      data: (data ?? []).map((r) => ({
+        id: r.cartesia_voice_id,
+        name: r.name,
+        description: "Cloned voice",
+        language: r.language ?? "",
+        preview_file_url: "",
+      })) as VoiceSummary[],
+      count: data?.length ?? 0,
+    };
+  });
+
+/** Delete a clone the caller owns (ours first, then Cartesia). */
+export const deleteClonedVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ voice_id: z.string().min(1) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const owner = await clonedVoiceOwner(data.voice_id);
+    if (!owner || owner !== context.userId) {
+      throw new Error("You can only delete voices you cloned.");
+    }
+    const res = await fetch(`${API}/voices/${encodeURIComponent(data.voice_id)}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (!res.ok && res.status !== 404) throw new Error(await cartesiaError(res));
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("user_cloned_voices").delete().eq("cartesia_voice_id", data.voice_id);
+    return { ok: true };
+  });
+
+
 export const listCartesiaVoices = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
@@ -107,6 +168,7 @@ const ALLOWED_CLIP_TYPES = [
 const MAX_CLIP_BYTES = 15 * 1024 * 1024;
 
 const CLONE_COST = 150;
+const MAX_CLONES = 5;
 const speechCost = (chars: number) => Math.max(15, Math.ceil(chars / 10));
 
 /** POST /voices/clone — clip arrives base64-encoded from the browser. */
@@ -131,6 +193,15 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
     const bytes = Uint8Array.from(atob(data.clipBase64), (c) => c.charCodeAt(0));
     if (bytes.byteLength > MAX_CLIP_BYTES) throw new Error("Clip is larger than 15 MB.");
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { count: ownedCount } = await supabaseAdmin
+      .from("user_cloned_voices")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", context.userId);
+    if ((ownedCount ?? 0) >= MAX_CLONES) {
+      throw new Error(`You can save up to ${MAX_CLONES} cloned voices. Delete one to make room.`);
+    }
+
     const form = new FormData();
     form.append("clip", new Blob([bytes], { type: data.clipType }), data.clipName);
     form.append("name", data.name);
@@ -138,7 +209,6 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
     form.append("access", "private");
     if (data.description) form.append("description", data.description);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: charged } = await supabaseAdmin.rpc("api_charge_credits", {
       p_user_id: context.userId,
       p_amount: CLONE_COST,
@@ -163,8 +233,18 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
       throw new Error(msg);
     }
     const v = (await res.json()) as CartesiaVoice;
+    const voiceId = String(v.id ?? "");
+    if (voiceId) {
+      const { error: ownErr } = await supabaseAdmin.from("user_cloned_voices").insert({
+        user_id: context.userId,
+        cartesia_voice_id: voiceId,
+        name: String(v.name ?? data.name),
+        language: v.language ? String(v.language) : data.language,
+      });
+      if (ownErr) console.error("[user_cloned_voices] insert failed", ownErr);
+    }
     return {
-      id: String(v.id ?? ""),
+      id: voiceId,
       name: String(v.name ?? "Untitled"),
       description: v.description ? String(v.description) : "",
       language: v.language ? String(v.language) : "",
@@ -191,6 +271,8 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await assertVoiceAccess(data.voice_id, context.userId);
+
     const isPreview = data.is_preview === true && data.format === "mp3";
     const samplePath = `${data.voice_id}.mp3`;
 

@@ -906,6 +906,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_cloned_voices: {
+        Row: {
+          cartesia_voice_id: string
+          created_at: string
+          id: string
+          language: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          cartesia_voice_id: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          cartesia_voice_id?: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

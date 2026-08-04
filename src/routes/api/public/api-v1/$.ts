@@ -168,9 +168,19 @@ async function handle(request: Request): Promise<Response> {
       has_more?: boolean;
       next_page?: string | null;
     };
+    // Hide clones that belong to other Lumify users; keep library voices for all.
+    const ids = (json.data ?? []).map((v) => String(v["id"] ?? "")).filter(Boolean);
+    const { data: clonedRows } = await supabaseAdmin
+      .from("user_cloned_voices")
+      .select("cartesia_voice_id, user_id")
+      .in("cartesia_voice_id", ids.length ? ids : ["__none__"]);
+    const foreignClones = new Set(
+      (clonedRows ?? []).filter((r) => r.user_id !== keyRow.user_id).map((r) => r.cartesia_voice_id),
+    );
+
     await log(200, 0);
     return jsonResponse(200, {
-      data: (json.data ?? []).map((v) => ({
+      data: (json.data ?? []).filter((v) => !foreignClones.has(String(v["id"] ?? ""))).map((v) => ({
         id: String(v["id"] ?? ""),
         name: String(v["name"] ?? "Untitled"),
         description: v["description"] ? String(v["description"]) : "",
@@ -221,6 +231,16 @@ async function handle(request: Request): Promise<Response> {
     if (!cartesiaKey) {
       await log(502, 0);
       return errorResponse(502, "upstream_error", "Voice provider is not configured.");
+    }
+
+    const { data: ownerRow } = await supabaseAdmin
+      .from("user_cloned_voices")
+      .select("user_id")
+      .eq("cartesia_voice_id", voice_id)
+      .maybeSingle();
+    if (ownerRow && ownerRow.user_id !== keyRow.user_id) {
+      await log(403, 0);
+      return errorResponse(403, "insufficient_scope", "This cloned voice belongs to another user.");
     }
 
     const cost = Math.max(15, Math.ceil(text.length / 10));
