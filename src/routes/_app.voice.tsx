@@ -320,13 +320,16 @@ function VoiceList(props: {
                   </span>
                 )}
                 <button
-                  onClick={(e) => { e.stopPropagation(); togglePreview(v); }}
-                  disabled={!v.preview_file_url}
+                  onClick={(e) => { e.stopPropagation(); void togglePreview(v); }}
                   aria-label="Preview voice"
-                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150 disabled:opacity-30"
-                  style={{ borderColor: "#262b1c", color: "#9aa08c" }}
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
+                  style={
+                    playingId === v.id
+                      ? { background: "#c6f24e", borderColor: "#c6f24e", color: "#111406" }
+                      : { borderColor: "#262b1c", color: "#9aa08c" }
+                  }
                 >
-                  {playingId === v.id ? <Pause size={12} /> : <Play size={12} />}
+                  {loadingId === v.id ? <Loader2 size={12} className="animate-spin" /> : playingId === v.id ? <Pause size={12} /> : <Play size={12} />}
                 </button>
               </div>
             );
