@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Menu, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Menu, GraduationCap, Mic } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -11,6 +11,7 @@ const items = [
   { to: "/stream", label: "Start Stream", icon: Video },
   { to: "/credits", label: "Wallet", icon: Wallet },
   { to: "/billing", label: "Billing", icon: Receipt },
+  { to: "/voice", label: "Voice Studio", icon: Mic },
   { to: "/settings", label: "Settings", icon: Settings },
   { to: "/tutorial", label: "Tutorial", icon: GraduationCap },
 ] as const;

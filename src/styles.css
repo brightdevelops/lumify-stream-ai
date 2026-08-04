@@ -476,3 +476,30 @@ body.stream-live *::after {
 .lumify-tour-popover .driver-popover-arrow-side-right.driver-popover-arrow {
   border-color: var(--card);
 }
+
+/* Voice Studio sliders */
+.voice-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  outline: none;
+}
+.voice-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #c6f24e;
+  border: 3px solid #14170f;
+  cursor: pointer;
+}
+.voice-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #14170f;
+  border-radius: 999px;
+  background: #c6f24e;
+  cursor: pointer;
+}
