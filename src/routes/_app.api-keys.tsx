@@ -343,21 +343,19 @@ function ApiKeysPage() {
                         </span>
                       </td>
                       <td style={{ padding: "12px 8px", borderBottom: "1px solid #1e2316", textAlign: "right" }}>
-                        {!revoked && (
-                          <button
-                            onClick={() => setConfirmId(k.id)}
-                            style={{
-                              fontSize: 12,
-                              color: "#ff7a6b",
-                              border: "1px solid rgba(255,122,107,.3)",
-                              borderRadius: 8,
-                              padding: "5px 10px",
-                              transition: "all 150ms",
-                            }}
-                          >
-                            Revoke
-                          </button>
-                        )}
+                        <button
+                          onClick={() => (revoked ? setDeleteId(k.id) : setConfirmId(k.id))}
+                          style={{
+                            fontSize: 12,
+                            color: "#ff7a6b",
+                            border: "1px solid rgba(255,122,107,.3)",
+                            borderRadius: 8,
+                            padding: "5px 10px",
+                            transition: "all 150ms",
+                          }}
+                        >
+                          {revoked ? "Delete" : "Revoke"}
+                        </button>
                       </td>
                     </tr>
                   );
