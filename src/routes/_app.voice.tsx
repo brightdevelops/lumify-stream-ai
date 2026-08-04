@@ -809,7 +809,7 @@ function SliderField(props: {
   const { label, value, min, max, step, onChange, disabled } = props;
   const pct = ((value - min) / (max - min)) * 100;
   return (
-    <div>
+    <div style={{ flex: "1 1 180px", minWidth: 180 }}>
       <div className={FIELD_LABEL}>{label}</div>
       <div className="mt-2 flex h-10 items-center gap-3">
         <input
@@ -820,9 +820,10 @@ function SliderField(props: {
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="voice-slider w-[150px]"
+          className="voice-slider min-w-0 flex-1"
           style={{ background: `linear-gradient(to right, #c6f24e ${pct}%, #262b1c ${pct}%)` }}
         />
+
         <span className="w-[44px] text-[13px] text-[#f2f4ec]" style={{ fontFamily: "Georgia, serif" }}>
           {value.toFixed(1)}×
         </span>
