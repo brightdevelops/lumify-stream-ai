@@ -5,6 +5,22 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const CARTESIA_VERSION = "2026-03-01";
 const API = "https://api.cartesia.ai";
 
+type CartesiaVoice = {
+  id?: string;
+  name?: string;
+  description?: string | null;
+  language?: string | null;
+  preview_file_url?: string | null;
+};
+
+export type VoiceSummary = {
+  id: string;
+  name: string;
+  description: string;
+  language: string;
+  preview_file_url: string;
+};
+
 function authHeaders() {
   const key = process.env["CARTESIA_API_KEY"];
   if (!key) throw new Error("Voice Studio is not configured yet (missing Cartesia API key).");
@@ -57,10 +73,21 @@ export const listCartesiaVoices = createServerFn({ method: "POST" })
 
     const res = await fetch(`${API}/voices?${params.toString()}`, { headers: authHeaders() });
     if (!res.ok) throw new Error(await cartesiaError(res));
-    return (await res.json()) as {
-      data: Array<Record<string, unknown>>;
+    const json = (await res.json()) as {
+      data?: CartesiaVoice[];
       has_more?: boolean;
       next_page?: string | null;
+    };
+    return {
+      data: (json.data ?? []).map((v) => ({
+        id: String(v.id ?? ""),
+        name: String(v.name ?? "Untitled"),
+        description: v.description ? String(v.description) : "",
+        language: v.language ? String(v.language) : "",
+        preview_file_url: v.preview_file_url ? String(v.preview_file_url) : "",
+      })),
+      has_more: Boolean(json.has_more),
+      next_page: json.next_page ?? null,
     };
   });
 
@@ -114,7 +141,14 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
       body: form,
     });
     if (!res.ok) throw new Error(await cartesiaError(res));
-    return (await res.json()) as Record<string, unknown>;
+    const v = (await res.json()) as CartesiaVoice;
+    return {
+      id: String(v.id ?? ""),
+      name: String(v.name ?? "Untitled"),
+      description: v.description ? String(v.description) : "",
+      language: v.language ? String(v.language) : "",
+      preview_file_url: v.preview_file_url ? String(v.preview_file_url) : "",
+    };
   });
 
 /** POST /tts/bytes — returns base64 audio for the browser to turn into a Blob. */
