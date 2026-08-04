@@ -92,6 +92,7 @@ function ApiKeysPage() {
   const list = useServerFn(listMyApiKeys);
   const create = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
+  const del = useServerFn(deleteApiKey);
 
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +102,8 @@ function ApiKeysPage() {
   const [rawKey, setRawKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
