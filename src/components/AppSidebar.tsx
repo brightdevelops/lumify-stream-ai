@@ -27,6 +27,13 @@ export function AppSidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isInventor, setIsInventor] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const onChanged = () => setRefreshKey((k) => k + 1);
+    window.addEventListener("lumify:credits-changed", onChanged);
+    return () => window.removeEventListener("lumify:credits-changed", onChanged);
+  }, []);
 
   useEffect(() => {
     if (!user) { setIsAdmin(false); setIsInventor(false); setBalance(null); return; }
