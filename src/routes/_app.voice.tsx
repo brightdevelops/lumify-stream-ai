@@ -553,6 +553,7 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
           language,
         },
       });
+      window.dispatchEvent(new Event("lumify:credits-changed"));
       setToast(true);
       window.setTimeout(() => setToast(false), 3000);
       onCloned(created);
@@ -719,6 +720,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         filename: `lumify-voice-${selected.name.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${format}`,
         summary: `${selected.name} · ${emotion[0].toUpperCase()}${emotion.slice(1)} · ${speed.toFixed(1)}× · ${format.toUpperCase()} · ${fmtSize(res.bytes)}`,
       };
+      window.dispatchEvent(new Event("lumify:credits-changed"));
       setCurrent(gen);
       setAutoplay(true);
       setHistory((h) => [gen, ...h].slice(0, 5));

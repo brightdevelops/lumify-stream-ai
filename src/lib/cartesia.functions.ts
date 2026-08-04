@@ -106,6 +106,9 @@ const ALLOWED_CLIP_TYPES = [
 
 const MAX_CLIP_BYTES = 15 * 1024 * 1024;
 
+const CLONE_COST = 150;
+const speechCost = (chars: number) => Math.max(15, Math.ceil(chars / 10));
+
 /** POST /voices/clone — clip arrives base64-encoded from the browser. */
 export const cloneCartesiaVoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -121,7 +124,7 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     if (!ALLOWED_CLIP_TYPES.includes(data.clipType.toLowerCase().split(";")[0])) {
       throw new Error("Unsupported audio format. Use flac, mp3, ogg, wav or webm.");
     }
@@ -135,12 +138,30 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
     form.append("access", "private");
     if (data.description) form.append("description", data.description);
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: charged } = await supabaseAdmin.rpc("api_charge_credits", {
+      p_user_id: context.userId,
+      p_amount: CLONE_COST,
+      p_description: `Voice clone · ${data.name}`,
+    });
+    if (charged !== true) {
+      throw new Error(`Voice cloning costs ${CLONE_COST} credits and your balance is too low. Top up your wallet to continue.`);
+    }
+
     const res = await fetch(`${API}/voices/clone`, {
       method: "POST",
       headers: authHeaders(),
       body: form,
     });
-    if (!res.ok) throw new Error(await cartesiaError(res));
+    if (!res.ok) {
+      const msg = await cartesiaError(res);
+      await supabaseAdmin.rpc("api_refund_credits", {
+        p_user_id: context.userId,
+        p_amount: CLONE_COST,
+        p_description: "Voice clone refund (provider error)",
+      });
+      throw new Error(msg);
+    }
     const v = (await res.json()) as CartesiaVoice;
     return {
       id: String(v.id ?? ""),
@@ -148,6 +169,7 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
       description: v.description ? String(v.description) : "",
       language: v.language ? String(v.language) : "",
       preview_file_url: v.preview_file_url ? String(v.preview_file_url) : "",
+      credits_charged: CLONE_COST,
     };
   });
 
@@ -168,7 +190,7 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const isPreview = data.is_preview === true && data.format === "mp3";
     const samplePath = `${data.voice_id}.mp3`;
 
@@ -188,11 +210,24 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         if (file) {
           const cached = new Uint8Array(await file.arrayBuffer());
           if (cached.length > 0) {
-            return { audioBase64: toBase64(cached), contentType: "audio/mpeg", bytes: cached.length, cached: true };
+            return { audioBase64: toBase64(cached), contentType: "audio/mpeg", bytes: cached.length, cached: true, credits_charged: 0 };
           }
         }
       } catch {
         /* cache miss — fall through to generation */
+      }
+    }
+
+    const cost = isPreview ? 0 : speechCost(data.transcript.length);
+    if (cost > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: charged } = await supabaseAdmin.rpc("api_charge_credits", {
+        p_user_id: context.userId,
+        p_amount: cost,
+        p_description: `Voice generation · ${data.transcript.length} characters`,
+      });
+      if (charged !== true) {
+        throw new Error(`This generation costs ${cost} credits and your balance is too low. Top up your wallet to continue.`);
       }
     }
 
@@ -216,7 +251,18 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         output_format,
       }),
     });
-    if (!res.ok) throw new Error(await cartesiaError(res));
+    if (!res.ok) {
+      const msg = await cartesiaError(res);
+      if (cost > 0) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.rpc("api_refund_credits", {
+          p_user_id: context.userId,
+          p_amount: cost,
+          p_description: "Voice generation refund (provider error)",
+        });
+      }
+      throw new Error(msg);
+    }
 
     const buf = new Uint8Array(await res.arrayBuffer());
 
@@ -236,6 +282,7 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
       contentType: data.format === "wav" ? "audio/wav" : "audio/mpeg",
       bytes: buf.length,
       cached: false,
+      credits_charged: cost,
     };
   });
 
