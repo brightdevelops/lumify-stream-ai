@@ -146,6 +146,12 @@ function VoicePicker(props: {
         ))}
       </div>
 
+      {tab !== "clone" && (
+        <div className="mt-2 text-[11px] text-[#6b7160]">
+          Press ▶ to hear a voice · click a row to use it
+        </div>
+      )}
+
       {tab === "clone" ? (
         <CloneForm
           onCloned={(v) => { setSelected(v); setTab("mine"); }}
