@@ -79,3 +79,28 @@ export const revokeApiKey = createServerFn({ method: "POST" })
     if (!row) throw new Error("Key not found.");
     return row;
   });
+
+export const deleteApiKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ key_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: existing, error: findError } = await supabaseAdmin
+      .from("api_keys")
+      .select("id, revoked_at")
+      .eq("id", data.key_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (findError) throw new Error(findError.message);
+    if (!existing) throw new Error("Key not found.");
+    if (!existing.revoked_at) throw new Error("Revoke the key first, then delete it.");
+
+    const { error } = await supabaseAdmin
+      .from("api_keys")
+      .delete()
+      .eq("id", data.key_id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { id: data.key_id };
+  });
