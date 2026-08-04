@@ -152,6 +152,20 @@ function ApiKeysPage() {
     }
   };
 
+  const onDelete = async (id: string) => {
+    setDeleteId(null);
+    try {
+      await del({ data: { key_id: id } });
+      setKeys((prev) => prev.filter((k) => k.id !== id));
+      setToast("Key deleted");
+      window.setTimeout(() => setToast(null), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not delete key.");
+    }
+  };
+
+
+
   const createBtn = (
     <button
       onClick={() => setModalOpen(true)}
