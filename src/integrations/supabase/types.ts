@@ -1220,6 +1220,14 @@ export type Database = {
           visits_week: number
         }[]
       }
+      api_charge_credits: {
+        Args: { p_amount: number; p_description: string; p_user_id: string }
+        Returns: boolean
+      }
+      api_refund_credits: {
+        Args: { p_amount: number; p_description: string; p_user_id: string }
+        Returns: boolean
+      }
       auto_close_stale_stream_sessions: { Args: never; Returns: undefined }
       can_start_stream: {
         Args: never
