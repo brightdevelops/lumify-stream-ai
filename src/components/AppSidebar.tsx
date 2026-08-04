@@ -45,7 +45,7 @@ export function AppSidebar() {
     supabase.from("credits").select("balance").eq("user_id", user.id).maybeSingle()
       .then(({ data }) => { if (!cancelled) setBalance(data?.balance ?? 0); });
     return () => { cancelled = true; };
-  }, [user, path]);
+  }, [user, path, refreshKey]);
 
   const adminExtras = [
     ...(isAdmin ? [{ to: "/admin" as const, label: "Admin", icon: Shield }] : []),
