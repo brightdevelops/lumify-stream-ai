@@ -569,6 +569,73 @@ function ApiKeysPage() {
         </div>
       )}
 
+      {/* DELETE CONFIRM */}
+      {deleteId && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.6)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 60,
+            padding: 16,
+          }}
+          onClick={() => setDeleteId(null)}
+        >
+          <div style={{ ...card, width: 420, maxWidth: "100%" }} onClick={(e) => e.stopPropagation()}>
+            <span style={cardTitle}>Delete this key permanently?</span>
+            <p style={{ fontSize: 13, color: "#9aa08c", marginTop: 10 }}>
+              This removes the key from your list forever. Its usage history stays in your billing records.
+            </p>
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setDeleteId(null)}
+                style={{ fontSize: 12.5, color: "#9aa08c", border: "1px solid #262b1c", borderRadius: 8, padding: "8px 14px" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void onDelete(deleteId)}
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: "#ff7a6b",
+                  background: "rgba(255,122,107,.12)",
+                  border: "1px solid rgba(255,122,107,.3)",
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#14170f",
+            border: "1px solid #262b1c",
+            borderRadius: 12,
+            padding: "10px 16px",
+            fontSize: 12.5,
+            color: "#f2f4ec",
+            zIndex: 70,
+          }}
+        >
+          {toast}
+        </div>
+      )}
+
+
+
       <style>{`
         .api-products { grid-template-columns: 1fr; }
         @media (min-width: 720px) { .api-products { grid-template-columns: 1fr 1fr; } }
