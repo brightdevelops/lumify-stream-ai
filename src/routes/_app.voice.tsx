@@ -901,7 +901,7 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
         className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[13.5px] font-bold transition-colors duration-150 disabled:opacity-40"
         style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
       >
-        {busy ? (<><Loader2 size={15} className="animate-spin" /> Cloning…</>) : "Clone voice"}
+        {busy ? (<><Loader2 size={15} className="animate-spin" /> Cloning…</>) : "Clone voice · 150 credits"}
       </button>
 
       {toast && (
