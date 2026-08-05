@@ -1027,16 +1027,32 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          onClick={generate}
-          disabled={!canGenerate}
-          className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
-          style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
-        >
-          {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
-        </button>
+        <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+          <button
+            onClick={generate}
+            disabled={!canGenerate}
+            className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
+            style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
+          >
+            {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
+          </button>
+          <span className="flex items-center gap-1.5 text-[12px] text-[#9aa08c]">
+            ≈ {estimatedCost} credits
+            <span className="relative inline-flex" tabIndex={0} onClick={() => setTipOpen((v) => !v)}>
+              <Info size={12} color="#6b7160" className="cursor-pointer" />
+              <span
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] text-[#f2f4ec] group-hover:block"
+                style={{ background: "#101309", borderColor: "#262b1c", display: tipOpen ? "block" : undefined }}
+                data-tip
+              >
+                1 credit per 10 characters · 15 credit minimum
+              </span>
+            </span>
+          </span>
+        </div>
         <span className="text-[12px] text-[#6b7160]">Powered by Cartesia Sonic 3.5</span>
       </div>
+
 
       {(current || error) && (
         <section className={CARD} style={CARD_STYLE}>
