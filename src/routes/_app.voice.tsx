@@ -923,7 +923,13 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [history, setHistory] = useState<Generation[]>([]);
   const [autoplay, setAutoplay] = useState(false);
 
+  const [tipOpen, setTipOpen] = useState(false);
   const canGenerate = Boolean(selected && transcript.trim() && !busy);
+  const estimatedCost = useMemo(
+    () => Math.max(15, Math.ceil(transcript.trim().length / 10)),
+    [transcript],
+  );
+
 
   const generate = async () => {
     if (!selected || !canGenerate) return;
