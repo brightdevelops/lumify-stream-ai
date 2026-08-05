@@ -1067,7 +1067,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             </span>
           </span>
         </div>
-        <span className="text-[12px] text-[#6b7160]">Powered by Cartesia Sonic 3.5</span>
+        
       </div>
 
 
