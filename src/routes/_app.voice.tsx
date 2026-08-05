@@ -437,6 +437,11 @@ function VoiceList(props: {
         },
       });
       if (previewSeq.current !== seq) return;
+      if (res.error) {
+        setPreviewError(res.error);
+        setPlayingId(null);
+        return;
+      }
       const bin = atob(res.audioBase64);
       const arr = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
@@ -940,6 +945,11 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       const res = await tts({
         data: { transcript: transcript.trim(), voice_id: selected.id, speed, volume, emotion, format },
       });
+      if (res.error) {
+        setError(res.error);
+        setCurrent(null);
+        return;
+      }
       const bin = atob(res.audioBase64);
       const arr = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
