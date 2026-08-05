@@ -1510,6 +1510,26 @@ function StudioLayout(p: StudioProps) {
                   </div>
                 </div>
 
+                {/* POP OUT */}
+                <div className="flex flex-col" style={{ gap: 8 }}>
+                  <span style={fieldLabel}>Preview</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!obsUrl) return;
+                      window.open(obsUrl, "lumify-ai-output",
+                        "popup=yes,width=1280,height=720,menubar=no,toolbar=no,location=no,status=no,noopener,noreferrer");
+                    }}
+                    disabled={!obsUrl}
+                    title={obsUrl ? "Open AI output in a new window" : "Available once your stream link is ready"}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-3 text-[11px] font-semibold uppercase tracking-widest text-primary transition disabled:opacity-45"
+                    style={{ ...MONO, height: 40 }}
+                  >
+                    <ExternalLink size={13} /> Pop out
+                  </button>
+                </div>
+
+
                 {/* REALISM */}
                 {mode === "realistic" && (
                   <div className="flex flex-col flex-1" style={{ gap: 8, minWidth: 210 }}>
