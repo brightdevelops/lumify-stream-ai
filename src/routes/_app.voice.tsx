@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2 } from "lucide-react";
+import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Key, Info } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listCartesiaVoices,
   cloneCartesiaVoice,
