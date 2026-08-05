@@ -155,7 +155,7 @@ async function handle(request: Request): Promise<Response> {
       const v = url.searchParams.get(p);
       if (v) params.set(p, v);
     }
-    if (url.searchParams.get("is_owner") === "true") params.set("is_owner", "true");
+    
 
     const res = await fetch(`${CARTESIA_API}/voices?${params.toString()}`, { headers: cartesiaHeaders });
     if (!res.ok) {
@@ -185,7 +185,7 @@ async function handle(request: Request): Promise<Response> {
         name: String(v["name"] ?? "Untitled"),
         description: v["description"] ? String(v["description"]) : "",
         language: v["language"] ? String(v["language"]) : "",
-        is_owner: Boolean(v["is_owner"] ?? false),
+        
       })),
       has_more: Boolean(json.has_more),
       next_page: json.next_page ?? null,

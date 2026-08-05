@@ -134,7 +134,7 @@ export const listCartesiaVoices = createServerFn({ method: "POST" })
     if (data.q) params.set("q", data.q);
     if (data.gender) params.set("gender", data.gender);
     if (data.language) params.set("language", data.language);
-    if (data.is_owner) params.set("is_owner", "true");
+    
     params.append("expand[]", "preview_file_url");
 
     const res = await fetch(`${API}/voices?${params.toString()}`, { headers: authHeaders() });
