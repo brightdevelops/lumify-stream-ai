@@ -158,12 +158,8 @@ function PricingCard() {
       title: "Previews & downloads",
       desc: "Always free. Listen to any voice and download your audio at no extra cost.",
     },
-    {
-      icon: <Key size={14} color="#c6f24e" />,
-      title: "Your own Cartesia key",
-      desc: "Connect your own key in the API key card and everything here is free — usage bills to your Cartesia account instead.",
-    },
   ];
+
 
   return (
     <section className={CARD} style={CARD_STYLE}>
