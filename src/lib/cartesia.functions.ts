@@ -297,7 +297,7 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         if (file) {
           const cached = new Uint8Array(await file.arrayBuffer());
           if (cached.length > 0) {
-            return { audioBase64: toBase64(cached), contentType: "audio/mpeg", bytes: cached.length, cached: true, credits_charged: 0 };
+            return { audioBase64: toBase64(cached), contentType: "audio/mpeg", bytes: cached.length, cached: true, credits_charged: 0, error: null as string | null };
           }
         }
       } catch {
@@ -314,7 +314,15 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         p_description: `Voice generation · ${data.transcript.length} characters`,
       });
       if (charged !== true) {
-        throw new Error(`This generation costs ${cost} credits and your balance is too low. Top up your wallet to continue.`);
+        // Soft failure: an expected business outcome, not a crash.
+        return {
+          audioBase64: "",
+          contentType: "",
+          bytes: 0,
+          cached: false,
+          credits_charged: 0,
+          error: `This generation costs ${cost} credits and your balance is too low. Top up your wallet to continue.`,
+        };
       }
     }
 
@@ -370,6 +378,7 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
       bytes: buf.length,
       cached: false,
       credits_charged: cost,
+      error: null as string | null,
     };
   });
 
