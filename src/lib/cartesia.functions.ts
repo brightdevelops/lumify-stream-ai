@@ -297,7 +297,7 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         if (file) {
           const cached = new Uint8Array(await file.arrayBuffer());
           if (cached.length > 0) {
-            return { audioBase64: toBase64(cached), contentType: "audio/mpeg", bytes: cached.length, cached: true, credits_charged: 0 };
+            return { audioBase64: toBase64(cached), contentType: "audio/mpeg", bytes: cached.length, cached: true, credits_charged: 0, error: null as string | null };
           }
         }
       } catch {
@@ -378,6 +378,7 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
       bytes: buf.length,
       cached: false,
       credits_charged: cost,
+      error: null as string | null,
     };
   });
 
