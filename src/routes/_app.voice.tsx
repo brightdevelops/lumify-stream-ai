@@ -103,6 +103,95 @@ function bufferToWav(buffer: AudioBuffer, maxSec = 30): Blob {
 type Clip = { blob: Blob; name: string; url: string; duration: number; fromVideo: boolean };
 type Generation = { id: string; transcript: string; voiceName: string; url: string; filename: string; summary: string };
 
+function PricingNotice() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive) return;
+      const seen = (data.user?.user_metadata as Record<string, unknown> | undefined)?.["voice_pricing_seen"];
+      setShow(seen !== true);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div
+      className="mb-5 flex items-start gap-3 rounded-xl border p-4"
+      style={{ background: "#14170f", borderColor: "#262b1c", borderLeft: "3px solid #c6f24e" }}
+    >
+      <p className="flex-1 text-[13px] leading-relaxed text-[#f2f4ec]">
+        Voice Studio uses your Lumify credits: 1 credit per 10 characters of speech (min 15), 150 credits to clone a
+        voice. Previews are always free.
+      </p>
+      <button
+        onClick={() => {
+          setShow(false);
+          void supabase.auth.updateUser({ data: { voice_pricing_seen: true } });
+        }}
+        className="shrink-0 rounded-full border px-3 py-1.5 text-[12px] text-[#9aa08c] transition-colors duration-150 hover:text-[#f2f4ec]"
+        style={{ borderColor: "#262b1c" }}
+      >
+        Got it
+      </button>
+    </div>
+  );
+}
+
+function PricingCard() {
+  const rows: Array<{ icon: React.ReactNode; title: string; desc: string }> = [
+    {
+      icon: <Sparkles size={14} color="#c6f24e" />,
+      title: "Generate speech",
+      desc: "1 credit per 10 characters, minimum 15 credits per generation. A 1,000-character script costs 100 credits.",
+    },
+    {
+      icon: <Mic size={14} color="#c6f24e" />,
+      title: "Clone a voice",
+      desc: "One-time 150 credits per voice. Keep up to 5 — deleting a voice frees a slot.",
+    },
+    {
+      icon: <Play size={14} color="#c6f24e" />,
+      title: "Previews & downloads",
+      desc: "Always free. Listen to any voice and download your audio at no extra cost.",
+    },
+    {
+      icon: <Key size={14} color="#c6f24e" />,
+      title: "Your own Cartesia key",
+      desc: "Connect your own key in the API key card and everything here is free — usage bills to your Cartesia account instead.",
+    },
+  ];
+
+  return (
+    <section className={CARD} style={CARD_STYLE}>
+      <div className={TITLE}>How pricing works</div>
+      <div className="mt-4 space-y-3.5">
+        {rows.map((r) => (
+          <div key={r.title} className="flex items-start gap-3">
+            <span
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg"
+              style={{ background: "rgba(198,242,78,.12)" }}
+            >
+              {r.icon}
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] text-[#f2f4ec]">{r.title}</div>
+              <div className="mt-0.5 text-[12px] leading-relaxed text-[#9aa08c]">{r.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 border-t pt-3 text-[11px] leading-relaxed text-[#6b7160]" style={{ borderColor: "#262b1c" }}>
+        Charges come from the same credit balance you use for streaming. Top up in your{" "}
+        <Link to="/credits" className="underline" style={{ color: "#9aa08c" }}>wallet</Link>.
+      </div>
+    </section>
+  );
+}
+
 function VoiceStudio() {
   const [tab, setTab] = useState<"library" | "mine" | "clone">("library");
   const [selected, setSelected] = useState<VoiceSummary | null>(null);
@@ -116,13 +205,19 @@ function VoiceStudio() {
         <p className="mt-1 text-[13px] text-[#6b7160]">Clone a voice. Type anything. Hear it speak.</p>
       </header>
 
+      <PricingNotice />
+
       <div className="grid gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
-        <VoicePicker tab={tab} setTab={setTab} selected={selected} setSelected={setSelected} />
+        <div className="space-y-4">
+          <VoicePicker tab={tab} setTab={setTab} selected={selected} setSelected={setSelected} />
+          <PricingCard />
+        </div>
         <Composer selected={selected} />
       </div>
     </div>
   );
 }
+
 
 /* ---------------- left column ---------------- */
 
