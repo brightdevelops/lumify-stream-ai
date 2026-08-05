@@ -123,7 +123,7 @@ export const listCartesiaVoices = createServerFn({ method: "POST" })
         q: z.string().optional(),
         gender: z.string().optional(),
         language: z.string().optional(),
-        is_owner: z.boolean().optional(),
+        
       })
       .parse(input ?? {}),
   )
