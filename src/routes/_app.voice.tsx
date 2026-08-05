@@ -886,6 +886,11 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
         </span>
       </button>
 
+      <div className="text-[11px] leading-relaxed text-[#6b7160]">
+        One-time 150 credits per voice · keep up to 5 · deleting frees a slot.
+      </div>
+
+
       {error && (
         <div className="rounded-xl p-3 text-[12px]" style={{ background: "rgba(255,122,107,.12)", color: "#ff7a6b" }}>{error}</div>
       )}
