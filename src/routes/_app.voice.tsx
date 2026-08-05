@@ -352,7 +352,7 @@ function VoiceList(props: {
             ...(startingAfter ? { starting_after: startingAfter } : {}),
             ...(debounced ? { q: debounced } : {}),
             ...(language ? { language } : {}),
-            ...(owner ? { is_owner: true } : {}),
+            
           },
         });
         setVoices((prev) => (startingAfter ? [...prev, ...res.data] : res.data));
