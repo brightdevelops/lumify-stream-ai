@@ -507,7 +507,7 @@ function VoiceList(props: {
                     className="voice-del grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
                     style={{ borderColor: "#262b1c", color: "#6b7160" }}
                   >
-                    <X size={13} />
+                    <Trash2 size={13} />
                   </button>
                 )}
               </div>
