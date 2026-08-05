@@ -1038,7 +1038,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
           </button>
           <span className="flex items-center gap-1.5 text-[12px] text-[#9aa08c]">
             ≈ {estimatedCost} credits
-            <span className="relative inline-flex" tabIndex={0} onClick={() => setTipOpen((v) => !v)}>
+            <span className="group relative inline-flex" tabIndex={0} onClick={() => setTipOpen((v: boolean) => !v)}>
               <Info size={12} color="#6b7160" className="cursor-pointer" />
               <span
                 className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] text-[#f2f4ec] group-hover:block"
