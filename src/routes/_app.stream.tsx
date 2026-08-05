@@ -1432,7 +1432,7 @@ function StudioLayout(p: StudioProps) {
                     </div>
                   </div>
                 )}
-                {streaming && user?.email === "brightsolutionslab@gmail.com" && (
+                {streaming && (
                   <button
                     type="button"
                     onClick={() => {
