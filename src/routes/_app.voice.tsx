@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Key, Info } from "lucide-react";
+import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listCartesiaVoices,
@@ -158,12 +158,8 @@ function PricingCard() {
       title: "Previews & downloads",
       desc: "Always free. Listen to any voice and download your audio at no extra cost.",
     },
-    {
-      icon: <Key size={14} color="#c6f24e" />,
-      title: "Your own Cartesia key",
-      desc: "Connect your own key in the API key card and everything here is free — usage bills to your Cartesia account instead.",
-    },
   ];
+
 
   return (
     <section className={CARD} style={CARD_STYLE}>
@@ -356,7 +352,7 @@ function VoiceList(props: {
             ...(startingAfter ? { starting_after: startingAfter } : {}),
             ...(debounced ? { q: debounced } : {}),
             ...(language ? { language } : {}),
-            ...(owner ? { is_owner: true } : {}),
+            
           },
         });
         setVoices((prev) => (startingAfter ? [...prev, ...res.data] : res.data));
