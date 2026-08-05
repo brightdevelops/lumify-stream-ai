@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2 } from "lucide-react";
+import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Key, Info } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listCartesiaVoices,
   cloneCartesiaVoice,
@@ -102,6 +103,95 @@ function bufferToWav(buffer: AudioBuffer, maxSec = 30): Blob {
 type Clip = { blob: Blob; name: string; url: string; duration: number; fromVideo: boolean };
 type Generation = { id: string; transcript: string; voiceName: string; url: string; filename: string; summary: string };
 
+function PricingNotice() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive) return;
+      const seen = (data.user?.user_metadata as Record<string, unknown> | undefined)?.["voice_pricing_seen"];
+      setShow(seen !== true);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div
+      className="mb-5 flex items-start gap-3 rounded-xl border p-4"
+      style={{ background: "#14170f", borderColor: "#262b1c", borderLeft: "3px solid #c6f24e" }}
+    >
+      <p className="flex-1 text-[13px] leading-relaxed text-[#f2f4ec]">
+        Voice Studio uses your Lumify credits: 1 credit per 10 characters of speech (min 15), 150 credits to clone a
+        voice. Previews are always free.
+      </p>
+      <button
+        onClick={() => {
+          setShow(false);
+          void supabase.auth.updateUser({ data: { voice_pricing_seen: true } });
+        }}
+        className="shrink-0 rounded-full border px-3 py-1.5 text-[12px] text-[#9aa08c] transition-colors duration-150 hover:text-[#f2f4ec]"
+        style={{ borderColor: "#262b1c" }}
+      >
+        Got it
+      </button>
+    </div>
+  );
+}
+
+function PricingCard() {
+  const rows: Array<{ icon: React.ReactNode; title: string; desc: string }> = [
+    {
+      icon: <Sparkles size={14} color="#c6f24e" />,
+      title: "Generate speech",
+      desc: "1 credit per 10 characters, minimum 15 credits per generation. A 1,000-character script costs 100 credits.",
+    },
+    {
+      icon: <Mic size={14} color="#c6f24e" />,
+      title: "Clone a voice",
+      desc: "One-time 150 credits per voice. Keep up to 5 — deleting a voice frees a slot.",
+    },
+    {
+      icon: <Play size={14} color="#c6f24e" />,
+      title: "Previews & downloads",
+      desc: "Always free. Listen to any voice and download your audio at no extra cost.",
+    },
+    {
+      icon: <Key size={14} color="#c6f24e" />,
+      title: "Your own Cartesia key",
+      desc: "Connect your own key in the API key card and everything here is free — usage bills to your Cartesia account instead.",
+    },
+  ];
+
+  return (
+    <section className={CARD} style={CARD_STYLE}>
+      <div className={TITLE}>How pricing works</div>
+      <div className="mt-4 space-y-3.5">
+        {rows.map((r) => (
+          <div key={r.title} className="flex items-start gap-3">
+            <span
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg"
+              style={{ background: "rgba(198,242,78,.12)" }}
+            >
+              {r.icon}
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] text-[#f2f4ec]">{r.title}</div>
+              <div className="mt-0.5 text-[12px] leading-relaxed text-[#9aa08c]">{r.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 border-t pt-3 text-[11px] leading-relaxed text-[#6b7160]" style={{ borderColor: "#262b1c" }}>
+        Charges come from the same credit balance you use for streaming. Top up in your{" "}
+        <Link to="/credits" className="underline" style={{ color: "#9aa08c" }}>wallet</Link>.
+      </div>
+    </section>
+  );
+}
+
 function VoiceStudio() {
   const [tab, setTab] = useState<"library" | "mine" | "clone">("library");
   const [selected, setSelected] = useState<VoiceSummary | null>(null);
@@ -115,13 +205,19 @@ function VoiceStudio() {
         <p className="mt-1 text-[13px] text-[#6b7160]">Clone a voice. Type anything. Hear it speak.</p>
       </header>
 
+      <PricingNotice />
+
       <div className="grid gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
-        <VoicePicker tab={tab} setTab={setTab} selected={selected} setSelected={setSelected} />
+        <div className="space-y-4">
+          <VoicePicker tab={tab} setTab={setTab} selected={selected} setSelected={setSelected} />
+          <PricingCard />
+        </div>
         <Composer selected={selected} />
       </div>
     </div>
   );
 }
+
 
 /* ---------------- left column ---------------- */
 
@@ -790,6 +886,11 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
         </span>
       </button>
 
+      <div className="text-[11px] leading-relaxed text-[#6b7160]">
+        One-time 150 credits per voice · keep up to 5 · deleting frees a slot.
+      </div>
+
+
       {error && (
         <div className="rounded-xl p-3 text-[12px]" style={{ background: "rgba(255,122,107,.12)", color: "#ff7a6b" }}>{error}</div>
       )}
@@ -800,7 +901,7 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
         className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[13.5px] font-bold transition-colors duration-150 disabled:opacity-40"
         style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
       >
-        {busy ? (<><Loader2 size={15} className="animate-spin" /> Cloning…</>) : "Clone voice"}
+        {busy ? (<><Loader2 size={15} className="animate-spin" /> Cloning…</>) : "Clone voice · 150 credits"}
       </button>
 
       {toast && (
@@ -827,7 +928,13 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [history, setHistory] = useState<Generation[]>([]);
   const [autoplay, setAutoplay] = useState(false);
 
+  const [tipOpen, setTipOpen] = useState(false);
   const canGenerate = Boolean(selected && transcript.trim() && !busy);
+  const estimatedCost = useMemo(
+    () => Math.max(15, Math.ceil(transcript.trim().length / 10)),
+    [transcript],
+  );
+
 
   const generate = async () => {
     if (!selected || !canGenerate) return;
@@ -931,16 +1038,32 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          onClick={generate}
-          disabled={!canGenerate}
-          className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
-          style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
-        >
-          {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
-        </button>
+        <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+          <button
+            onClick={generate}
+            disabled={!canGenerate}
+            className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
+            style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
+          >
+            {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
+          </button>
+          <span className="flex items-center gap-1.5 text-[12px] text-[#9aa08c]">
+            ≈ {estimatedCost} credits
+            <span className="group relative inline-flex" tabIndex={0} onClick={() => setTipOpen((v: boolean) => !v)}>
+              <Info size={12} color="#6b7160" className="cursor-pointer" />
+              <span
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] text-[#f2f4ec] group-hover:block"
+                style={{ background: "#101309", borderColor: "#262b1c", display: tipOpen ? "block" : undefined }}
+                data-tip
+              >
+                1 credit per 10 characters · 15 credit minimum
+              </span>
+            </span>
+          </span>
+        </div>
         <span className="text-[12px] text-[#6b7160]">Powered by Cartesia Sonic 3.5</span>
       </div>
+
 
       {(current || error) && (
         <section className={CARD} style={CARD_STYLE}>
