@@ -288,7 +288,7 @@ function StreamPage() {
 
     try {
       await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
+      const model = models.realtime("lucy-2.5" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -509,7 +509,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset, mode, realism, !!image),
+        prompt: buildPrompt(preset, mode, realism, !!image, background),
         image,
         enhance: true,
       } as never);
@@ -548,7 +548,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           });
         })();
       }
@@ -598,7 +598,7 @@ function StreamPage() {
     // Resolve the model dims/fps up-front — used by both branches so the
     // canvas-captured file stream matches the camera path exactly.
     await refreshLucyModelId();
-    const model = models.realtime("lucy-2.1" as any);
+    const model = models.realtime("lucy-2.5" as any);
     const modelFps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
     const modelWidth = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
     const modelHeight = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -719,7 +719,7 @@ function StreamPage() {
     try {
       const { apiKey } = await getDecartKey();
       await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
+      const model = models.realtime("lucy-2.5" as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
@@ -764,7 +764,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         image: photo,
         enhance: true,
       } as never);
@@ -824,7 +824,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -888,7 +888,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism, !!referenceImage),
+          prompt: buildPrompt(next, mode, realism, !!referenceImage, background),
         });
       }
     }
@@ -904,7 +904,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
