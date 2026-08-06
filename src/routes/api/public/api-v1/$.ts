@@ -289,6 +289,18 @@ async function handle(request: Request): Promise<Response> {
     }
 
     const bytes = await res.arrayBuffer();
+    try {
+      await supabaseAdmin.from("voice_usage").insert({
+        user_id: keyRow.user_id,
+        kind: "generation",
+        characters: text.length,
+        credits: cost,
+        voice_id: voice_id,
+        source: "api",
+      });
+    } catch (e) {
+      console.error("[voice_usage] api log failed", e);
+    }
     await log(200, cost);
     return new Response(bytes, {
       status: 200,

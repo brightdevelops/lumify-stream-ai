@@ -35,6 +35,7 @@ import { Route as AppStreamRouteImport } from './routes/_app.stream'
 import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppTutorialRouteImport } from './routes/_app.tutorial'
 import { Route as AppVoiceRouteImport } from './routes/_app.voice'
+import { Route as AdminVoiceRouteImport } from './routes/admin_.voice'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
@@ -190,6 +191,11 @@ const AppVoiceRoute = AppVoiceRouteImport.update({
   path: '/voice',
   getParentRoute: () => AppRoute,
 } as any)
+const AdminVoiceRoute = AdminVoiceRouteImport.update({
+  id: '/admin_/voice',
+  path: '/admin/voice',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
@@ -337,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof AppSupportRoute
   '/tutorial': typeof AppTutorialRoute
   '/voice': typeof AppVoiceRoute
+  '/admin/voice': typeof AdminVoiceRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
@@ -386,6 +393,7 @@ export interface FileRoutesByTo {
   '/support': typeof AppSupportRoute
   '/tutorial': typeof AppTutorialRoute
   '/voice': typeof AppVoiceRoute
+  '/admin/voice': typeof AdminVoiceRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
@@ -438,6 +446,7 @@ export interface FileRoutesById {
   '/_app/support': typeof AppSupportRoute
   '/_app/tutorial': typeof AppTutorialRoute
   '/_app/voice': typeof AppVoiceRoute
+  '/admin_/voice': typeof AdminVoiceRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
@@ -490,6 +499,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tutorial'
     | '/voice'
+    | '/admin/voice'
     | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
@@ -539,6 +549,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tutorial'
     | '/voice'
+    | '/admin/voice'
     | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
@@ -590,6 +601,7 @@ export interface FileRouteTypes {
     | '/_app/support'
     | '/_app/tutorial'
     | '/_app/voice'
+    | '/admin_/voice'
     | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
@@ -633,6 +645,7 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdminVoiceRoute: typeof AdminVoiceRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -830,6 +843,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/voice'
       preLoaderRoute: typeof AppVoiceRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/admin_/voice': {
+      id: '/admin_/voice'
+      path: '/admin/voice'
+      fullPath: '/admin/voice'
+      preLoaderRoute: typeof AdminVoiceRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
@@ -1072,6 +1092,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdminVoiceRoute: AdminVoiceRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
