@@ -36,7 +36,7 @@ const buildPrompt = (
 ) => {
   let base: string;
   if (mode === "realistic") {
-    const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail.`;
+    const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail. Preserve the person's real facial movements exactly — the mouth, lips, and jaw must follow the person's actual movements and must not move on their own. Do not animate or alter the mouth independently of the real person.`;
     base = hasReference
       ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
       : realisticBase;
@@ -519,7 +519,7 @@ function StreamPage() {
       await decartClientRef.current.set({
         prompt: buildPrompt(preset, mode, realism, !!image, background),
         image,
-        enhance: true,
+        enhance: false,
       } as never);
     } catch (e) {
       console.error("Decart set error", e);
@@ -774,7 +774,7 @@ function StreamPage() {
       await realtimeClient.set({
         prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         image: photo,
-        enhance: true,
+        enhance: false,
       } as never);
     } catch (e) {
       console.error("Decart connect failed", e);
@@ -929,7 +929,7 @@ function StreamPage() {
           await client.set({
             prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
             ...(referenceImage ? { image: referenceImage } : {}),
-            enhance: true,
+            enhance: false,
           } as never);
         } catch (e) {
           console.error("Decart set error", e);
