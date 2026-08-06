@@ -248,6 +248,18 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
       });
       if (ownErr) console.error("[user_cloned_voices] insert failed", ownErr);
     }
+    try {
+      await supabaseAdmin.from("voice_usage").insert({
+        user_id: context.userId,
+        kind: "clone",
+        characters: 0,
+        credits: CLONE_COST,
+        voice_id: voiceId || null,
+        source: "dashboard",
+      });
+    } catch (e) {
+      console.error("[voice_usage] clone log failed", e);
+    }
     return {
       id: voiceId,
       name: String(v.name ?? "Untitled"),
@@ -360,6 +372,22 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
     }
 
     const buf = new Uint8Array(await res.arrayBuffer());
+
+    if (!isPreview) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("voice_usage").insert({
+          user_id: context.userId,
+          kind: "generation",
+          characters: data.transcript.length,
+          credits: cost,
+          voice_id: data.voice_id,
+          source: "dashboard",
+        });
+      } catch (e) {
+        console.error("[voice_usage] generation log failed", e);
+      }
+    }
 
     if (isPreview) {
       try {
