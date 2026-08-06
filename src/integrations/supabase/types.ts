@@ -954,6 +954,39 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_usage: {
+        Row: {
+          characters: number
+          created_at: string
+          credits: number
+          id: number
+          kind: string
+          source: string
+          user_id: string
+          voice_id: string | null
+        }
+        Insert: {
+          characters?: number
+          created_at?: string
+          credits?: number
+          id?: never
+          kind: string
+          source: string
+          user_id: string
+          voice_id?: string | null
+        }
+        Update: {
+          characters?: number
+          created_at?: string
+          credits?: number
+          id?: never
+          kind?: string
+          source?: string
+          user_id?: string
+          voice_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
