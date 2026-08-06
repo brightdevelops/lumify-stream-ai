@@ -68,14 +68,27 @@ function VoiceAdminPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setErr(null);
-    statsFn({ data: { range } })
-      .then((r) => { if (!cancelled) setData(r as VoiceAdminStats); })
-      .catch((e) => { if (!cancelled) setErr(e instanceof Error ? e.message : "Failed to load"); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    let inFlight = false;
+    let timer: number | undefined;
+
+    const load = (first: boolean) => {
+      if (inFlight) return;
+      inFlight = true;
+      if (first) { setLoading(true); setErr(null); }
+      statsFn({ data: { range } })
+        .then((r) => { if (!cancelled) { setData(r as VoiceAdminStats); setErr(null); } })
+        .catch((e) => { if (!cancelled && first) setErr(e instanceof Error ? e.message : "Failed to load"); })
+        .finally(() => { inFlight = false; if (!cancelled && first) setLoading(false); });
+    };
+
+    load(true);
+    timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") load(false);
+    }, 200);
+
+    return () => { cancelled = true; if (timer) window.clearInterval(timer); };
   }, [range, statsFn]);
+
 
   const t = data?.totals;
   const apiShare = data && t && t.generations > 0 ? Math.round((data.api_generations / t.generations) * 100) : 0;
