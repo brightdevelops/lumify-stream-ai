@@ -519,7 +519,7 @@ function StreamPage() {
       await decartClientRef.current.set({
         prompt: buildPrompt(preset, mode, realism, !!image, background),
         image,
-        enhance: true,
+        enhance: false,
       } as never);
     } catch (e) {
       console.error("Decart set error", e);
@@ -774,7 +774,7 @@ function StreamPage() {
       await realtimeClient.set({
         prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         image: photo,
-        enhance: true,
+        enhance: false,
       } as never);
     } catch (e) {
       console.error("Decart connect failed", e);
@@ -929,7 +929,7 @@ function StreamPage() {
           await client.set({
             prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
             ...(referenceImage ? { image: referenceImage } : {}),
-            enhance: true,
+            enhance: false,
           } as never);
         } catch (e) {
           console.error("Decart set error", e);
