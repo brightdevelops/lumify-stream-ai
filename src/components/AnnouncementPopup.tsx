@@ -95,8 +95,13 @@ export function AnnouncementPopup() {
       onClose={close}
       onAction={() => {
         markDismissed(a);
-        if (a.button_link) window.open(a.button_link, "_blank", "noopener,noreferrer");
         setOpen(false);
+        const path = internalPath(a.button_link);
+        if (path) {
+          void navigate({ to: path });
+        } else if (a.button_link) {
+          window.open(a.button_link, "_blank", "noopener,noreferrer");
+        }
       }}
     />
   );
