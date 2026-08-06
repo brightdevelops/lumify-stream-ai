@@ -983,6 +983,8 @@ function StreamPage() {
     setMode={setMode}
     realism={realism}
     setRealism={setRealism}
+    background={background}
+    setBackground={setBackground}
     referenceImage={referenceImage}
     referenceUrl={referenceUrl}
     fileInputRef={fileInputRef}
@@ -1303,7 +1305,7 @@ function StudioLayout(p: StudioProps) {
   const {
     user, streaming, connecting,
     inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
-    mode, setMode, realism, setRealism,
+    mode, setMode, realism, setRealism, background, setBackground,
     referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
     selectedPreset, selectPreset,
     videoFile, videoFileUrl, videoFileInputRef, handleVideoFile, clearVideoFile,
