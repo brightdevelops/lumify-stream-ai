@@ -227,9 +227,13 @@ function AdminPage() {
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} /> Refresh
           </button>
+          <Link to="/admin/voice" className="text-xs inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-primary hover:bg-primary/20">
+            Voice Studio
+          </Link>
           <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <ArrowLeft className="h-3 w-3" /> Back to app
           </Link>
+
         </div>
       </header>
 
