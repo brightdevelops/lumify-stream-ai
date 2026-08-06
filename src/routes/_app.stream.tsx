@@ -115,6 +115,7 @@ function StreamPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
+  const [background, setBackground] = useState<string>("");
 
   // ── Video-file input mode ───────────────────────────────────────────────
   const [inputSource, setInputSource] = useState<"camera" | "file">("camera");
