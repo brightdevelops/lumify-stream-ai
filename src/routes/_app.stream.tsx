@@ -918,6 +918,30 @@ function StreamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
 
+  // Push background changes through the SAME update path as prompt changes.
+  useEffect(() => {
+    if (!streaming) return;
+    const t = setTimeout(() => {
+      const client = decartClientRef.current;
+      if (!client) return;
+      void (async () => {
+        try {
+          await client.set({
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            ...(referenceImage ? { image: referenceImage } : {}),
+            enhance: true,
+          } as never);
+        } catch (e) {
+          console.error("Decart set error", e);
+        }
+      })();
+    }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [background, streaming]);
+
+
+
 
 
 
