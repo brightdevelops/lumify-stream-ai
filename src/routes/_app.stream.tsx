@@ -1533,7 +1533,21 @@ function StudioLayout(p: StudioProps) {
                   </div>
                 )}
 
+                {/* BACKGROUND */}
+                <div className="flex flex-col flex-1" style={{ gap: 8, minWidth: 260 }}>
+                  <span style={fieldLabel}>Background</span>
+                  <input
+                    type="text"
+                    value={background}
+                    onChange={(e) => setBackground(e.target.value)}
+                    placeholder="e.g. a sunny beach, a neon city street, a cozy studio — or leave blank"
+                    className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] outline-none focus:border-[color:var(--primary)]"
+                    style={{ height: 40 }}
+                  />
+                </div>
+
                 {/* MODE */}
+
                 <div className="flex flex-col" style={{ gap: 8 }}>
                   <span style={fieldLabel}>Mode</span>
                   <div className="segmented items-center" style={{ height: 40 }}>
