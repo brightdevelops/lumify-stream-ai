@@ -1,6 +1,22 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+
+/** Returns an internal path ("/voice") if the link is same-origin, else null. */
+function internalPath(link: string): string | null {
+  if (!link) return null;
+  if (link.startsWith("/") && !link.startsWith("//")) return link;
+  try {
+    const url = new URL(link, typeof window !== "undefined" ? window.location.origin : undefined);
+    if (typeof window !== "undefined" && url.origin === window.location.origin) {
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 type Announcement = {
   id: string;
@@ -45,6 +61,7 @@ function markDismissed(a: Announcement) {
 export function AnnouncementPopup() {
   const [a, setA] = useState<Announcement | null>(null);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
