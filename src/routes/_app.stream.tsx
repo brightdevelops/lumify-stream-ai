@@ -32,16 +32,23 @@ const buildPrompt = (
   mode: "realistic" | "stylized",
   realism: number,
   hasReference: boolean = false,
+  background: string = "",
 ) => {
+  let base: string;
   if (mode === "realistic") {
-    const base = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail.`;
-    return hasReference
-      ? `${base} Keep transformations subtle and natural, avoid cartoon or anime effects.`
-      : base;
+    const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail.`;
+    base = hasReference
+      ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
+      : realisticBase;
+  } else {
+    base = preset
+      ? `Transform into this character in ${preset} style.`
+      : "Transform into this character.";
   }
-  return preset
-    ? `Transform into this character in ${preset} style.`
-    : "Transform into this character.";
+  const bg = background.trim();
+  return bg
+    ? `${base} Change the background to: ${bg}. Keep the person's face, body, and identity unchanged.`
+    : base;
 };
 
 
