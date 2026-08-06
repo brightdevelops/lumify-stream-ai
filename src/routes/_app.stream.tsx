@@ -32,16 +32,23 @@ const buildPrompt = (
   mode: "realistic" | "stylized",
   realism: number,
   hasReference: boolean = false,
+  background: string = "",
 ) => {
+  let base: string;
   if (mode === "realistic") {
-    const base = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail.`;
-    return hasReference
-      ? `${base} Keep transformations subtle and natural, avoid cartoon or anime effects.`
-      : base;
+    const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail.`;
+    base = hasReference
+      ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
+      : realisticBase;
+  } else {
+    base = preset
+      ? `Transform into this character in ${preset} style.`
+      : "Transform into this character.";
   }
-  return preset
-    ? `Transform into this character in ${preset} style.`
-    : "Transform into this character.";
+  const bg = background.trim();
+  return bg
+    ? `${base} Change the background to: ${bg}. Keep the person's face, body, and identity unchanged.`
+    : base;
 };
 
 
@@ -108,6 +115,7 @@ function StreamPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
+  const [background, setBackground] = useState<string>("");
 
   // ── Video-file input mode ───────────────────────────────────────────────
   const [inputSource, setInputSource] = useState<"camera" | "file">("camera");
@@ -288,7 +296,7 @@ function StreamPage() {
 
     try {
       await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
+      const model = models.realtime("lucy-2.5" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -509,7 +517,7 @@ function StreamPage() {
     if (!decartClientRef.current || !image) return;
     try {
       await decartClientRef.current.set({
-        prompt: buildPrompt(preset, mode, realism, !!image),
+        prompt: buildPrompt(preset, mode, realism, !!image, background),
         image,
         enhance: true,
       } as never);
@@ -548,7 +556,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           });
         })();
       }
@@ -598,7 +606,7 @@ function StreamPage() {
     // Resolve the model dims/fps up-front — used by both branches so the
     // canvas-captured file stream matches the camera path exactly.
     await refreshLucyModelId();
-    const model = models.realtime("lucy-2.1" as any);
+    const model = models.realtime("lucy-2.5" as any);
     const modelFps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
     const modelWidth = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
     const modelHeight = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -719,7 +727,7 @@ function StreamPage() {
     try {
       const { apiKey } = await getDecartKey();
       await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
+      const model = models.realtime("lucy-2.5" as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
@@ -764,7 +772,7 @@ function StreamPage() {
 
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         image: photo,
         enhance: true,
       } as never);
@@ -824,7 +832,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -888,7 +896,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism, !!referenceImage),
+          prompt: buildPrompt(next, mode, realism, !!referenceImage, background),
         });
       }
     }
@@ -904,11 +912,35 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, realism]);
+
+  // Push background changes through the SAME update path as prompt changes.
+  useEffect(() => {
+    if (!streaming) return;
+    const t = setTimeout(() => {
+      const client = decartClientRef.current;
+      if (!client) return;
+      void (async () => {
+        try {
+          await client.set({
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            ...(referenceImage ? { image: referenceImage } : {}),
+            enhance: true,
+          } as never);
+        } catch (e) {
+          console.error("Decart set error", e);
+        }
+      })();
+    }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [background, streaming]);
+
+
 
 
 
@@ -951,6 +983,8 @@ function StreamPage() {
     setMode={setMode}
     realism={realism}
     setRealism={setRealism}
+    background={background}
+    setBackground={setBackground}
     referenceImage={referenceImage}
     referenceUrl={referenceUrl}
     fileInputRef={fileInputRef}
@@ -1271,7 +1305,7 @@ function StudioLayout(p: StudioProps) {
   const {
     user, streaming, connecting,
     inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
-    mode, setMode, realism, setRealism,
+    mode, setMode, realism, setRealism, background, setBackground,
     referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
     selectedPreset, selectPreset,
     videoFile, videoFileUrl, videoFileInputRef, handleVideoFile, clearVideoFile,
@@ -1501,7 +1535,21 @@ function StudioLayout(p: StudioProps) {
                   </div>
                 )}
 
+                {/* BACKGROUND */}
+                <div className="flex flex-col flex-1" style={{ gap: 8, minWidth: 260 }}>
+                  <span style={fieldLabel}>Background</span>
+                  <input
+                    type="text"
+                    value={background}
+                    onChange={(e) => setBackground(e.target.value)}
+                    placeholder="e.g. a sunny beach, a neon city street, a cozy studio — or leave blank"
+                    className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] outline-none focus:border-[color:var(--primary)]"
+                    style={{ height: 40 }}
+                  />
+                </div>
+
                 {/* MODE */}
+
                 <div className="flex flex-col" style={{ gap: 8 }}>
                   <span style={fieldLabel}>Mode</span>
                   <div className="segmented items-center" style={{ height: 40 }}>
