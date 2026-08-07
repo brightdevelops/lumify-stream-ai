@@ -1187,7 +1187,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
             style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
           >
-            {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
+            {busy ? <><Loader2 size={16} className="animate-spin" /> {streaming ? "Streaming…" : "Generating…"}</> : <><Sparkles size={16} /> Generate speech</>}
           </button>
           <span className="flex items-center gap-1.5 text-[12px] text-[#9aa08c]">
             ≈ {estimatedCost} credits
