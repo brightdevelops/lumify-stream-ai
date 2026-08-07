@@ -175,6 +175,140 @@ const MAX_CLIP_BYTES = 15 * 1024 * 1024;
 const CLONE_COST = 150;
 const MAX_CLONES = 5;
 const speechCost = (chars: number) => Math.max(15, Math.ceil(chars / 10));
+/** Voice changer pricing — placeholder rate, easy to tune. */
+const CONVERT_COST = (seconds: number) => Math.max(15, Math.ceil(seconds * 3));
+
+/** POST /voice-changer/bytes — speech-to-speech, keeps the speaker's delivery. */
+export const convertVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        clipBase64: z.string().min(1),
+        clipType: z.string().min(1),
+        clipName: z.string().min(1).max(200),
+        voice_id: z.string().min(1),
+        durationSeconds: z.number().min(0).max(100000),
+        format: z.enum(["mp3", "wav"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    if (!ALLOWED_CLIP_TYPES.includes(data.clipType.toLowerCase().split(";")[0])) {
+      throw new Error("Unsupported audio format. Use flac, mp3, ogg, wav or webm.");
+    }
+    if (data.durationSeconds > 60) {
+      throw new Error("Clips must be 60 seconds or shorter for voice conversion.");
+    }
+    const seconds = Math.min(60, Math.max(0.5, data.durationSeconds));
+
+    const bytes = Uint8Array.from(atob(data.clipBase64), (c) => c.charCodeAt(0));
+    if (bytes.byteLength > MAX_CLIP_BYTES) throw new Error("Clip is larger than 15 MB.");
+
+    await assertVoiceAccess(data.voice_id, context.userId);
+
+    const cost = CONVERT_COST(seconds);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: charged } = await supabaseAdmin.rpc("api_charge_credits", {
+      p_user_id: context.userId,
+      p_amount: cost,
+      p_description: `Voice conversion · ${Math.round(seconds)}s`,
+    });
+    if (charged !== true) {
+      return {
+        audioBase64: "",
+        contentType: "",
+        bytes: 0,
+        credits_charged: 0,
+        error: `This conversion costs ${cost} credits and your balance is too low. Top up your wallet to continue.`,
+      };
+    }
+
+    let refunded = false;
+    const refund = async (why: string) => {
+      if (refunded) return;
+      refunded = true;
+      try {
+        await supabaseAdmin.rpc("api_refund_credits", {
+          p_user_id: context.userId,
+          p_amount: cost,
+          p_description: `Voice conversion refund (${why})`,
+        });
+      } catch (e) {
+        console.error("[cartesia] conversion refund failed", { user_id: context.userId, why, error: e });
+      }
+    };
+
+    const form = new FormData();
+    form.append("clip", new Blob([bytes], { type: data.clipType }), data.clipName);
+    form.append("voice_id", data.voice_id);
+    form.append("output_format[container]", data.format === "wav" ? "wav" : "mp3");
+    form.append("output_format[sample_rate]", "44100");
+    if (data.format === "wav") form.append("output_format[encoding]", "pcm_s16le");
+    else form.append("output_format[bit_rate]", "128000");
+
+    let buf: Uint8Array;
+    try {
+      const res = await fetch(`${API}/voice-changer/bytes`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: form,
+      });
+      if (!res.ok) {
+        const msg = await cartesiaError(res);
+        await refund("provider error");
+        throw new Error(msg);
+      }
+      buf = new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+      await refund("network error");
+      throw e instanceof Error ? e : new Error("Voice conversion failed. Please try again.");
+    }
+
+    if (buf.length === 0) {
+      await refund("empty audio");
+      throw new Error("Voice conversion returned no audio. You were not charged.");
+    }
+
+    try {
+      const { error: usageErr } = await supabaseAdmin.from("voice_usage").insert({
+        user_id: context.userId,
+        kind: "conversion",
+        characters: 0,
+        credits: cost,
+        voice_id: data.voice_id,
+        source: "dashboard",
+      });
+      if (usageErr) {
+        console.error("[voice_usage] conversion log failed", {
+          user_id: context.userId,
+          kind: "conversion",
+          voice_id: data.voice_id,
+          error: usageErr,
+        });
+      }
+    } catch (e) {
+      console.error("[voice_usage] conversion log failed", {
+        user_id: context.userId,
+        kind: "conversion",
+        voice_id: data.voice_id,
+        error: e,
+      });
+    }
+
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < buf.length; i += chunk) binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+
+    return {
+      audioBase64: btoa(binary),
+      contentType: data.format === "wav" ? "audio/wav" : "audio/mpeg",
+      bytes: buf.length,
+      credits_charged: cost,
+      error: null as string | null,
+    };
+  });
 
 /** POST /voices/clone — clip arrives base64-encoded from the browser. */
 export const cloneCartesiaVoice = createServerFn({ method: "POST" })
