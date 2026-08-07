@@ -984,76 +984,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [history, setHistory] = useState<Generation[]>([]);
   const [autoplay] = useState(false);
 
-  /* --- Convert my voice (speech-to-speech) --- */
-  const convertFn = useServerFn(convertVoice);
-  const [mode, setMode] = useState<"tts" | "convert">("tts");
-  const [srcClip, setSrcClip] = useState<Clip | null>(null);
-  const [cvRecording, setCvRecording] = useState(false);
-  const [cvRecSec, setCvRecSec] = useState(0);
-  const cvRecRef = useRef<MediaRecorder | null>(null);
-  const cvFileRef = useRef<HTMLInputElement | null>(null);
 
-  const setSrcFromBlob = async (blob: Blob, fname: string) => {
-    const url = URL.createObjectURL(blob);
-    let duration = 0;
-    try {
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new Ctx();
-      const buf = await ctx.decodeAudioData(await blob.slice(0).arrayBuffer());
-      duration = buf.duration;
-      await ctx.close();
-    } catch {
-      duration = await new Promise<number>((resolve) => {
-        const a = new Audio(url);
-        a.onloadedmetadata = () => resolve(Number.isFinite(a.duration) ? a.duration : 0);
-        a.onerror = () => resolve(0);
-      });
-    }
-    setSrcClip({ blob, name: fname, url, duration, fromVideo: false });
-  };
 
-  const handleConvertFile = async (file: File) => {
-    setError(null);
-    if (file.size > AUDIO_MAX) { setError("Audio clips must be under 15 MB."); return; }
-    await setSrcFromBlob(file, file.name);
-  };
-
-  const startConvertRecording = async () => {
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      const chunks: BlobPart[] = [];
-      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-      rec.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        await setSrcFromBlob(new Blob(chunks, { type: "audio/webm" }), "recording.webm");
-        setCvRecording(false);
-      };
-      cvRecRef.current = rec;
-      rec.start();
-      setCvRecording(true);
-      setCvRecSec(0);
-    } catch {
-      setError("Microphone access was blocked.");
-    }
-  };
-
-  useEffect(() => {
-    if (!cvRecording) return;
-    const id = window.setInterval(() => {
-      setCvRecSec((s) => {
-        if (s + 1 >= 60) { cvRecRef.current?.stop(); return 60; }
-        return s + 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [cvRecording]);
-
-  const convertCost = useMemo(
-    () => Math.max(15, Math.ceil(Math.min(60, Math.max(0.5, srcClip?.duration ?? 0)) * 3)),
-    [srcClip],
-  );
 
 
   const saveFn = useServerFn(saveGeneration);
