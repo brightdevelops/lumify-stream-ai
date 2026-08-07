@@ -1215,7 +1215,10 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
           ) : current ? (
             <>
               <AudioPlayer key={current.id} src={current.url} autoPlay={autoplay} onAutoPlayed={() => setAutoplay(false)} filename={current.filename} />
-              <div className="mt-2 text-[12px] text-[#6b7160]">{current.summary}</div>
+              <div className="mt-2 text-[12px] text-[#6b7160]">
+                {current.summary}
+                {ttfa !== null ? ` · first audio in ${ttfa} ms` : ""}
+              </div>
             </>
           ) : null}
         </section>
