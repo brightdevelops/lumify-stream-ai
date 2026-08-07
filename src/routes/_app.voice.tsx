@@ -1028,17 +1028,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       }
 
       started = true;
-      setStreaming(true);
 
       const sampleRate = Number(res.headers.get("X-Sample-Rate") ?? 44100) || 44100;
-      const ctx =
-        audioCtxRef.current && audioCtxRef.current.state !== "closed"
-          ? audioCtxRef.current
-          : new AudioContext();
-      audioCtxRef.current = ctx;
-      if (ctx.state === "suspended") await ctx.resume();
-
-      let playhead = ctx.currentTime + 0.12;
       const reader = res.body.getReader();
       const parts: Uint8Array[] = [];
       let carry = new Uint8Array(0);
@@ -1048,7 +1039,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         const { value, done } = await reader.read();
         if (done) break;
         if (!value || value.length === 0) continue;
-        if (ttfa === null && total === 0) setTtfa(Math.round(performance.now() - t0));
+
 
         let bytes = value;
         if (carry.length) {
