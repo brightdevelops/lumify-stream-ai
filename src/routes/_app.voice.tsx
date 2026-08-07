@@ -1067,17 +1067,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         parts.push(bytes);
         total += bytes.length;
 
-        const samples = bytes.length / 2;
-        const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-        const buffer = ctx.createBuffer(1, samples, sampleRate);
-        const channel = buffer.getChannelData(0);
-        for (let i = 0; i < samples; i++) channel[i] = dv.getInt16(i * 2, true) / 32768;
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(ctx.destination);
-        const startAt = Math.max(playhead, ctx.currentTime + 0.02);
-        src.start(startAt);
-        playhead = startAt + buffer.duration;
+        // Audio is accumulated only — no live playback.
+
       }
 
       if (total === 0) throw new Error("stream-empty");
