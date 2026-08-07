@@ -1212,7 +1212,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             <div className="mt-3 rounded-xl p-3 text-[12px]" style={{ background: "rgba(255,122,107,.12)", color: "#ff7a6b" }}>{error}</div>
           ) : current ? (
             <>
-              <AudioPlayer key={current.id} src={current.url} autoPlay={autoplay} filename={current.filename} />
+              <AudioPlayer key={current.id} src={current.url} autoPlay={autoplay} onAutoPlayed={() => {}} filename={current.filename} />
               <div className="mt-2 text-[12px] text-[#6b7160]">
                 {current.summary}
                 
