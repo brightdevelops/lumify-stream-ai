@@ -1000,7 +1000,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const bin = atob(res.audioBase64);
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text);
+    finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text, voice.id);
 
   };
 
@@ -1081,7 +1081,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         pcm.set(p, off);
         off += p.length;
       }
-      finish(pcmToWavBlob(pcm, sampleRate), "wav", pcm.length + 44, voice.name, text);
+      finish(pcmToWavBlob(pcm, sampleRate), "wav", pcm.length + 44, voice.name, text, voice.id);
     } catch (e) {
       if (started) {
         setError(e instanceof Error && e.message !== "stream-empty" ? e.message : "Generation failed.");
