@@ -1315,20 +1315,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     <div className="space-y-4">
       <section className={CARD} style={CARD_STYLE}>
         <div className="flex items-center justify-between gap-3">
-          <div className={TITLE}>{mode === "tts" ? "Script" : "Your recording"}</div>
-          <div className="flex h-9 items-center rounded-full p-[3px]" style={{ background: "#101309" }}>
-            {([["tts", "Write text"], ["convert", "Convert my voice"]] as const).map(([m, label]) => (
-              <button
-                key={m}
-                disabled={busy}
-                onClick={() => { setMode(m); setError(null); }}
-                className="h-full rounded-full px-3 text-[12px] font-semibold transition-colors duration-150"
-                style={mode === m ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <div className={TITLE}>Script</div>
         </div>
         <div className="mt-3">
           <span
@@ -1342,83 +1329,21 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             {selected ? `◉ Voice — ${selected.name}${selected.language ? ` (${selected.language})` : ""}` : "Select a voice on the left"}
           </span>
         </div>
-        {mode === "tts" ? (
-          <>
-            <textarea
-              value={transcript}
-              maxLength={5000}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Type what you want this voice to say…"
-              className="mt-3 min-h-[180px] w-full rounded-xl border p-[14px] text-[15px] leading-[1.6] text-[#f2f4ec] outline-none transition-colors duration-150 placeholder:text-[#6b7160] focus:border-[#3a4229]"
-              style={INPUT_STYLE}
-            />
-            <div className="mt-1 text-right font-mono text-[11px]" style={{ color: counterColor }}>
-              {transcript.length} / 5000
-            </div>
-          </>
-        ) : (
-          <div className="mt-3 space-y-3">
-            <input
-              ref={cvFileRef}
-              type="file"
-              accept="audio/*"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleConvertFile(f); e.target.value = ""; }}
-            />
-            {!srcClip && (
-              <>
-                <div
-                  onClick={() => cvFileRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) void handleConvertFile(f); }}
-                  className="cursor-pointer rounded-xl border border-dashed p-6 text-center transition-colors duration-150"
-                  style={{ borderColor: "#262b1c" }}
-                >
-                  <Upload size={20} className="mx-auto" color="#9aa08c" />
-                  <div className="mt-2 text-[13px] text-[#f2f4ec]">Drop an audio clip, or click to browse</div>
-                  <div className="mt-1 text-[11px] text-[#6b7160]">
-                    mp3, wav, ogg, flac, webm · up to 15 MB · 60 seconds max
-                  </div>
-                </div>
-                <button
-                  onClick={() => (cvRecording ? cvRecRef.current?.stop() : void startConvertRecording())}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-full border text-[12.5px] transition-colors duration-150"
-                  style={{ borderColor: "#262b1c", color: cvRecording ? "#ff7a6b" : "#9aa08c" }}
-                >
-                  {cvRecording ? (
-                    <>
-                      <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: "#ff7a6b" }} />
-                      <span className="font-mono">{fmtTime(cvRecSec)}</span> Stop
-                    </>
-                  ) : (
-                    <>● Record</>
-                  )}
-                </button>
-              </>
-            )}
-            {srcClip && (
-              <div className="rounded-xl border p-3" style={{ background: "#101309", borderColor: "#262b1c" }}>
-                <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#f2f4ec]">{srcClip.name}</span>
-                  <span className="font-mono text-[11px] text-[#6b7160]">{fmtTime(srcClip.duration)}</span>
-                  <button onClick={() => setSrcClip(null)} aria-label="Remove clip" className="text-[#9aa08c] hover:text-[#f2f4ec]">
-                    <X size={14} />
-                  </button>
-                </div>
-                <audio controls src={srcClip.url} className="mt-2 w-full" style={{ height: 36 }} />
-              </div>
-            )}
-            <div className="text-[11px] leading-relaxed text-[#6b7160]">
-              Your delivery, emotion and timing are kept — only the voice changes.
-            </div>
-          </div>
-        )}
+        <textarea
+          value={transcript}
+          maxLength={5000}
+          onChange={(e) => setTranscript(e.target.value)}
+          placeholder="Type what you want this voice to say…"
+          className="mt-3 min-h-[180px] w-full rounded-xl border p-[14px] text-[15px] leading-[1.6] text-[#f2f4ec] outline-none transition-colors duration-150 placeholder:text-[#6b7160] focus:border-[#3a4229]"
+          style={INPUT_STYLE}
+        />
+        <div className="mt-1 text-right font-mono text-[11px]" style={{ color: counterColor }}>
+          {transcript.length} / 5000
+        </div>
       </section>
 
       <section className={CARD} style={CARD_STYLE}>
         <div className="voice-dock flex flex-wrap items-end gap-4">
-          {mode === "tts" && (
-          <>
           <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
           <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
           <div className="shrink-0">
@@ -1436,8 +1361,6 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             </select>
           </div>
           <div className="voice-dock-divider h-10 w-px self-end" style={{ background: "#262b1c" }} />
-          </>
-          )}
           <div className="shrink-0">
             <div className={FIELD_LABEL}>Format</div>
             <div className="mt-2 flex h-10 items-center rounded-full p-[3px]" style={{ background: "#101309" }}>
@@ -1460,17 +1383,15 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
           <button
-            onClick={mode === "tts" ? generate : convert}
-            disabled={mode === "tts" ? !canGenerate : !canConvert}
+            onClick={generate}
+            disabled={!canGenerate}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
             style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
           >
-            {mode === "tts"
-              ? (busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>)
-              : (busy ? <><Loader2 size={16} className="animate-spin" /> Converting…</> : <><Sparkles size={16} /> Convert</>)}
+            {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
           </button>
           <span className="flex items-center gap-1.5 text-[12px] text-[#9aa08c]">
-            ≈ {mode === "tts" ? estimatedCost : convertCost} credits
+            ≈ {estimatedCost} credits
             <span className="group relative inline-flex" tabIndex={0} onClick={() => setTipOpen((v: boolean) => !v)}>
               <Info size={12} color="#6b7160" className="cursor-pointer" />
               <span
@@ -1478,11 +1399,12 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
                 style={{ background: "#101309", borderColor: "#262b1c", display: tipOpen ? "block" : undefined }}
                 data-tip
               >
-                {mode === "tts" ? "1 credit per 10 characters · 15 credit minimum" : "3 credits per second of audio · 15 credit minimum"}
+                1 credit per 10 characters · 15 credit minimum
               </span>
             </span>
           </span>
         </div>
+
         
       </div>
 
