@@ -9,6 +9,7 @@ import {
   generateCartesiaSpeech,
   listMyClonedVoices,
   deleteClonedVoice,
+  convertVoice,
   type VoiceSummary,
 } from "@/lib/cartesia.functions";
 import {
@@ -1259,6 +1260,52 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     }
   };
 
+
+  const convert = async () => {
+    if (!selected || !srcClip || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await convertFn({
+        data: {
+          clipBase64: await blobToBase64(srcClip.blob),
+          clipType: srcClip.blob.type || "audio/wav",
+          clipName: srcClip.name,
+          voice_id: selected.id,
+          durationSeconds: srcClip.duration || 0.5,
+          format,
+        },
+      });
+      if (res.error) {
+        setError(res.error);
+        setCurrent(null);
+        return;
+      }
+      const bin = atob(res.audioBase64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const blob = new Blob([arr], { type: res.contentType });
+      const gen: Generation = {
+        id: `${Date.now()}`,
+        transcript: `Voice conversion · ${fmtTime(srcClip.duration)}`,
+        voiceName: selected.name,
+        voiceId: selected.id,
+        blob,
+        ext: format,
+        url: URL.createObjectURL(blob),
+        filename: `lumify-voice-${selected.name.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${format}`,
+        summary: `${selected.name} · Converted · ${fmtTime(srcClip.duration)} · ${format.toUpperCase()} · ${fmtSize(res.bytes)}`,
+      };
+      window.dispatchEvent(new Event("lumify:credits-changed"));
+      setCurrent(gen);
+      setHistory((h) => [gen, ...h].slice(0, 5));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Voice conversion failed.");
+      setCurrent(null);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const counterColor = transcript.length > 4500 ? "#ffd28a" : "#6b7160";
 
