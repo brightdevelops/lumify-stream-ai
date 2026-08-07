@@ -949,10 +949,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Generation | null>(null);
   const [history, setHistory] = useState<Generation[]>([]);
-  const [autoplay, setAutoplay] = useState(false);
-  const [streaming, setStreaming] = useState(false);
-  const [ttfa, setTtfa] = useState<number | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [autoplay] = useState(false);
+
 
   const [tipOpen, setTipOpen] = useState(false);
   const canGenerate = Boolean(selected && transcript.trim() && !busy);
@@ -990,7 +988,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text);
-    setAutoplay(true);
+
   };
 
   const generate = async () => {
@@ -999,7 +997,6 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const text = transcript.trim();
     setBusy(true);
     setError(null);
-    setTtfa(null);
 
     let started = false;
     try {
@@ -1007,7 +1004,6 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       const token = sess.session?.access_token;
       if (!token) throw new Error("no-session");
 
-      const t0 = performance.now();
       const res = await fetch("/api/voice/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -1030,17 +1026,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       }
 
       started = true;
-      setStreaming(true);
 
       const sampleRate = Number(res.headers.get("X-Sample-Rate") ?? 44100) || 44100;
-      const ctx =
-        audioCtxRef.current && audioCtxRef.current.state !== "closed"
-          ? audioCtxRef.current
-          : new AudioContext();
-      audioCtxRef.current = ctx;
-      if (ctx.state === "suspended") await ctx.resume();
-
-      let playhead = ctx.currentTime + 0.12;
       const reader = res.body.getReader();
       const parts: Uint8Array[] = [];
       let carry = new Uint8Array(0);
@@ -1050,7 +1037,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         const { value, done } = await reader.read();
         if (done) break;
         if (!value || value.length === 0) continue;
-        if (ttfa === null && total === 0) setTtfa(Math.round(performance.now() - t0));
+
 
         let bytes = value;
         if (carry.length) {
@@ -1069,17 +1056,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         parts.push(bytes);
         total += bytes.length;
 
-        const samples = bytes.length / 2;
-        const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-        const buffer = ctx.createBuffer(1, samples, sampleRate);
-        const channel = buffer.getChannelData(0);
-        for (let i = 0; i < samples; i++) channel[i] = dv.getInt16(i * 2, true) / 32768;
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(ctx.destination);
-        const startAt = Math.max(playhead, ctx.currentTime + 0.02);
-        src.start(startAt);
-        playhead = startAt + buffer.duration;
+        // Audio is accumulated only — no live playback.
+
       }
 
       if (total === 0) throw new Error("stream-empty");
@@ -1104,7 +1082,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         }
       }
     } finally {
-      setStreaming(false);
+      
       setBusy(false);
     }
   };
@@ -1187,7 +1165,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
             style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
           >
-            {busy ? <><Loader2 size={16} className="animate-spin" /> {streaming ? "Streaming…" : "Generating…"}</> : <><Sparkles size={16} /> Generate speech</>}
+            {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
           </button>
           <span className="flex items-center gap-1.5 text-[12px] text-[#9aa08c]">
             ≈ {estimatedCost} credits
@@ -1214,10 +1192,10 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             <div className="mt-3 rounded-xl p-3 text-[12px]" style={{ background: "rgba(255,122,107,.12)", color: "#ff7a6b" }}>{error}</div>
           ) : current ? (
             <>
-              <AudioPlayer key={current.id} src={current.url} autoPlay={autoplay} onAutoPlayed={() => setAutoplay(false)} filename={current.filename} />
+              <AudioPlayer key={current.id} src={current.url} autoPlay={autoplay} onAutoPlayed={() => {}} filename={current.filename} />
               <div className="mt-2 text-[12px] text-[#6b7160]">
                 {current.summary}
-                {ttfa !== null ? ` · first audio in ${ttfa} ms` : ""}
+                
               </div>
             </>
           ) : null}
