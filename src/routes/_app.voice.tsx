@@ -11,6 +11,28 @@ import {
   deleteClonedVoice,
   type VoiceSummary,
 } from "@/lib/cartesia.functions";
+import {
+  saveGeneration,
+  listMyGenerations,
+  deleteGeneration,
+  type SavedGeneration,
+} from "@/lib/voice-history.functions";
+
+function SaveButton({ gen, state, onSave }: { gen: Generation; state?: "saving" | "saved"; onSave: () => void }) {
+  void gen;
+  return (
+    <button
+      onClick={onSave}
+      disabled={Boolean(state)}
+      className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] text-[#9aa08c] transition-colors duration-150 hover:text-[#f2f4ec] disabled:opacity-50"
+      style={{ borderColor: "#262b1c" }}
+    >
+      {state === "saved" ? <><Check size={12} color="#c6f24e" /> Saved</>
+        : state === "saving" ? <><Loader2 size={12} className="animate-spin" /> Saving…</>
+        : <><Download size={12} /> Save</>}
+    </button>
+  );
+}
 
 export const Route = createFileRoute("/_app/voice")({
   head: () => ({
@@ -123,7 +145,17 @@ function bufferToWav(buffer: AudioBuffer, maxSec = 30): Blob {
 }
 
 type Clip = { blob: Blob; name: string; url: string; duration: number; fromVideo: boolean };
-type Generation = { id: string; transcript: string; voiceName: string; url: string; filename: string; summary: string };
+type Generation = {
+  id: string;
+  transcript: string;
+  voiceName: string;
+  voiceId: string;
+  url: string;
+  filename: string;
+  summary: string;
+  blob: Blob;
+  ext: "mp3" | "wav";
+};
 
 function PricingNotice() {
   const [show, setShow] = useState(false);
@@ -951,6 +983,71 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [history, setHistory] = useState<Generation[]>([]);
   const [autoplay] = useState(false);
 
+  const saveFn = useServerFn(saveGeneration);
+  const listSavedFn = useServerFn(listMyGenerations);
+  const deleteSavedFn = useServerFn(deleteGeneration);
+  const [saved, setSaved] = useState<SavedGeneration[]>([]);
+  const [savedLoading, setSavedLoading] = useState(true);
+  const [saveState, setSaveState] = useState<Record<string, "saving" | "saved">>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmSaved, setConfirmSaved] = useState<SavedGeneration | null>(null);
+
+  const refreshSaved = useCallback(async () => {
+    try {
+      const res = await listSavedFn({});
+      setSaved(res.data);
+    } catch {
+      /* non-fatal */
+    } finally {
+      setSavedLoading(false);
+    }
+  }, [listSavedFn]);
+
+  useEffect(() => {
+    void refreshSaved();
+  }, [refreshSaved]);
+
+  const saveGen = async (gen: Generation) => {
+    if (saveState[gen.id]) return;
+    setSaveError(null);
+    setSaveState((s) => ({ ...s, [gen.id]: "saving" }));
+    try {
+      const audioBase64 = await blobToBase64(gen.blob);
+      await saveFn({
+        data: {
+          audioBase64,
+          format: gen.ext,
+          voice_id: gen.voiceId,
+          voice_name: gen.voiceName,
+          transcript: gen.transcript,
+          characters: gen.transcript.length,
+        },
+      });
+      setSaveState((s) => ({ ...s, [gen.id]: "saved" }));
+      await refreshSaved();
+    } catch (e) {
+      setSaveState((s) => {
+        const next = { ...s };
+        delete next[gen.id];
+        return next;
+      });
+      setSaveError(e instanceof Error ? e.message : "Could not save this generation.");
+    }
+  };
+
+  const removeSaved = async () => {
+    const row = confirmSaved;
+    setConfirmSaved(null);
+    if (!row) return;
+    try {
+      await deleteSavedFn({ data: { id: row.id } });
+      setSaved((list) => list.filter((s) => s.id !== row.id));
+      await refreshSaved();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Could not delete this generation.");
+    }
+  };
+
 
   const [tipOpen, setTipOpen] = useState(false);
   const canGenerate = Boolean(selected && transcript.trim() && !busy);
@@ -959,11 +1056,14 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     [transcript],
   );
 
-  const finish = (blob: Blob, ext: string, sizeLabel: number, voiceName: string, text: string) => {
+  const finish = (blob: Blob, ext: "mp3" | "wav", sizeLabel: number, voiceName: string, text: string, voiceId: string) => {
     const gen: Generation = {
       id: `${Date.now()}`,
       transcript: text,
       voiceName,
+      voiceId,
+      blob,
+      ext,
       url: URL.createObjectURL(blob),
       filename: `lumify-voice-${voiceName.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${ext}`,
       summary: `${voiceName} · ${emotion[0].toUpperCase()}${emotion.slice(1)} · ${speed.toFixed(1)}× · ${ext.toUpperCase()} · ${fmtSize(sizeLabel)}`,
@@ -987,7 +1087,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const bin = atob(res.audioBase64);
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text);
+    finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text, voice.id);
 
   };
 
@@ -1068,7 +1168,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         pcm.set(p, off);
         off += p.length;
       }
-      finish(pcmToWavBlob(pcm, sampleRate), "wav", pcm.length + 44, voice.name, text);
+      finish(pcmToWavBlob(pcm, sampleRate), "wav", pcm.length + 44, voice.name, text, voice.id);
     } catch (e) {
       if (started) {
         setError(e instanceof Error && e.message !== "stream-empty" ? e.message : "Generation failed.");
@@ -1193,10 +1293,13 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
           ) : current ? (
             <>
               <AudioPlayer key={current.id} src={current.url} autoPlay={autoplay} onAutoPlayed={() => {}} filename={current.filename} />
-              <div className="mt-2 text-[12px] text-[#6b7160]">
-                {current.summary}
-                
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[12px] text-[#6b7160]">
+                <span>{current.summary}</span>
+                <SaveButton gen={current} state={saveState[current.id]} onSave={() => void saveGen(current)} />
               </div>
+              {saveError && (
+                <div className="mt-2 rounded-xl p-2 text-[11.5px]" style={{ background: "rgba(255,122,107,.12)", color: "#ff7a6b" }}>{saveError}</div>
+              )}
             </>
           ) : null}
         </section>
@@ -1229,10 +1332,83 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
                 >
                   <Download size={12} />
                 </a>
+                <SaveButton gen={g} state={saveState[g.id]} onSave={() => void saveGen(g)} />
               </div>
             ))}
           </div>
         </section>
+      )}
+
+      <section className={CARD} style={CARD_STYLE}>
+        <div className="flex items-center justify-between">
+          <div className={TITLE}>Saved</div>
+          <span className="text-[11px] text-[#6b7160]">{saved.length} saved</span>
+        </div>
+        {savedLoading ? (
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-[#9aa08c]"><Loader2 size={13} className="animate-spin" /> Loading…</div>
+        ) : saved.length === 0 ? (
+          <div className="mt-3 text-[12px] text-[#6b7160]">Nothing saved yet. Click Save on a generation to keep it here.</div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {saved.map((s) => (
+              <div key={s.id} className="rounded-xl border px-3 py-2.5" style={{ background: "#101309", borderColor: "#262b1c" }}>
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#f2f4ec]">{s.transcript_preview || "Untitled"}</span>
+                  <span className="rounded-full border px-1.5 py-0.5 font-mono text-[10px] uppercase text-[#9aa08c]" style={{ borderColor: "#262b1c", background: "rgba(0,0,0,.55)" }}>
+                    {s.format}
+                  </span>
+                  <button
+                    aria-label="Delete"
+                    onClick={() => setConfirmSaved(s)}
+                    className="grid h-7 w-7 place-items-center rounded-full border text-[#9aa08c] transition-colors duration-150 hover:text-[#ff7a6b]"
+                    style={{ borderColor: "#262b1c" }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+                <div className="mt-1 text-[11px] text-[#6b7160]">
+                  {s.voice_name ?? "Voice"} · {new Date(s.created_at).toLocaleString()}
+                </div>
+                {s.url && (
+                  <AudioPlayer
+                    key={s.id}
+                    src={s.url}
+                    autoPlay={false}
+                    onAutoPlayed={() => {}}
+                    filename={`lumify-voice-${s.id}.${s.format ?? "mp3"}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {confirmSaved && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(0,0,0,.6)" }}>
+          <div className="w-full max-w-[380px] rounded-2xl border p-5" style={{ background: "#14170f", borderColor: "#262b1c" }}>
+            <div className="text-[14px] font-semibold text-[#f2f4ec]">Delete saved generation?</div>
+            <div className="mt-2 text-[12.5px] text-[#9aa08c]">
+              This audio will be deleted permanently. This can&rsquo;t be undone.
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmSaved(null)}
+                className="rounded-xl border px-3.5 py-2 text-[12.5px] text-[#9aa08c]"
+                style={{ borderColor: "#262b1c" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void removeSaved()}
+                className="rounded-xl px-3.5 py-2 text-[12.5px] font-semibold"
+                style={{ background: "#ff7a6b", color: "#1a0f0d" }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
