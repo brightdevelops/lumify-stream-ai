@@ -1353,6 +1353,29 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_cloned_voice_if_under_cap: {
+        Args: {
+          p_cartesia_voice_id: string
+          p_language: string
+          p_max: number
+          p_name: string
+          p_user_id: string
+        }
+        Returns: {
+          cartesia_voice_id: string
+          created_at: string
+          id: string
+          language: string | null
+          name: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_cloned_voices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       inventor_visit_stats: { Args: never; Returns: Json }
       is_maintenance_mode: { Args: never; Returns: boolean }
       log_usage_transaction:
