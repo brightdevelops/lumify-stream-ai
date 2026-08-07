@@ -949,10 +949,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Generation | null>(null);
   const [history, setHistory] = useState<Generation[]>([]);
-  const [autoplay, setAutoplay] = useState(false);
-  const [streaming, setStreaming] = useState(false);
-  const [ttfa, setTtfa] = useState<number | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [autoplay] = useState(false);
+
 
   const [tipOpen, setTipOpen] = useState(false);
   const canGenerate = Boolean(selected && transcript.trim() && !busy);
