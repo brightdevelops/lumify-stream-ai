@@ -123,7 +123,17 @@ function bufferToWav(buffer: AudioBuffer, maxSec = 30): Blob {
 }
 
 type Clip = { blob: Blob; name: string; url: string; duration: number; fromVideo: boolean };
-type Generation = { id: string; transcript: string; voiceName: string; url: string; filename: string; summary: string };
+type Generation = {
+  id: string;
+  transcript: string;
+  voiceName: string;
+  voiceId: string;
+  url: string;
+  filename: string;
+  summary: string;
+  blob: Blob;
+  ext: "mp3" | "wav";
+};
 
 function PricingNotice() {
   const [show, setShow] = useState(false);
