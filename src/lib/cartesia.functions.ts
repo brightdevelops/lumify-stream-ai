@@ -199,6 +199,8 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
     if (bytes.byteLength > MAX_CLIP_BYTES) throw new Error("Clip is larger than 15 MB.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // (a) best-effort cap check BEFORE charging
     const { count: ownedCount } = await supabaseAdmin
       .from("user_cloned_voices")
       .select("id", { count: "exact", head: true })
@@ -214,6 +216,7 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
     form.append("access", "private");
     if (data.description) form.append("description", data.description);
 
+    // (b) charge
     const { data: charged } = await supabaseAdmin.rpc("api_charge_credits", {
       p_user_id: context.userId,
       p_amount: CLONE_COST,
@@ -223,33 +226,82 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
       throw new Error(`Voice cloning costs ${CLONE_COST} credits and your balance is too low. Top up your wallet to continue.`);
     }
 
-    const res = await fetch(`${API}/voices/clone`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: form,
-    });
-    if (!res.ok) {
-      const msg = await cartesiaError(res);
-      await supabaseAdmin.rpc("api_refund_credits", {
-        p_user_id: context.userId,
-        p_amount: CLONE_COST,
-        p_description: "Voice clone refund (provider error)",
-      });
-      throw new Error(msg);
-    }
-    const v = (await res.json()) as CartesiaVoice;
-    const voiceId = String(v.id ?? "");
-    if (voiceId) {
-      const { error: ownErr } = await supabaseAdmin.from("user_cloned_voices").insert({
-        user_id: context.userId,
-        cartesia_voice_id: voiceId,
-        name: String(v.name ?? data.name),
-        language: v.language ? String(v.language) : data.language,
-      });
-      if (ownErr) console.error("[user_cloned_voices] insert failed", ownErr);
-    }
+    let refunded = false;
+    const refundClone = async (why: string) => {
+      if (refunded) return;
+      refunded = true;
+      try {
+        await supabaseAdmin.rpc("api_refund_credits", {
+          p_user_id: context.userId,
+          p_amount: CLONE_COST,
+          p_description: `Voice clone refund (${why})`,
+        });
+      } catch (e) {
+        console.error("[cartesia] clone refund failed", { user_id: context.userId, why, error: e });
+      }
+    };
+
+    // (c) call Cartesia — any throw, timeout or non-OK status refunds exactly once
+    let v: CartesiaVoice;
     try {
-      await supabaseAdmin.from("voice_usage").insert({
+      const res = await fetch(`${API}/voices/clone`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: form,
+      });
+      if (!res.ok) {
+        const msg = await cartesiaError(res);
+        await refundClone("provider error");
+        throw new Error(msg);
+      }
+      v = (await res.json()) as CartesiaVoice;
+    } catch (e) {
+      await refundClone("network error");
+      throw e instanceof Error ? e : new Error("Voice cloning failed. Please try again.");
+    }
+
+    const voiceId = String(v.id ?? "");
+
+    // (d) atomic ownership insert under the cap
+    let inserted = false;
+    try {
+      const { data: row, error: rpcErr } = await supabaseAdmin.rpc(
+        "insert_cloned_voice_if_under_cap" as never,
+        {
+          p_user_id: context.userId,
+          p_cartesia_voice_id: voiceId,
+          p_name: String(v.name ?? data.name),
+          p_language: v.language ? String(v.language) : data.language,
+          p_max: MAX_CLONES,
+        } as never,
+      );
+      if (rpcErr) throw rpcErr;
+      inserted = Boolean(row);
+    } catch (e) {
+      console.error("[user_cloned_voices] insert failed", { user_id: context.userId, voice_id: voiceId, error: e });
+      inserted = false;
+    }
+
+    // (e) compensate: remove the orphan upstream voice + refund
+    if (!inserted) {
+      if (voiceId) {
+        try {
+          await fetch(`${API}/voices/${encodeURIComponent(voiceId)}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+          });
+        } catch (e) {
+          console.error("[cartesia] orphan voice cleanup failed", { voice_id: voiceId, error: e });
+        }
+      }
+      await refundClone("could not save voice");
+      throw new Error(
+        `We couldn't save this voice (limit is ${MAX_CLONES}). You were not charged — delete a voice and try again.`,
+      );
+    }
+
+    try {
+      const { error: usageErr } = await supabaseAdmin.from("voice_usage").insert({
         user_id: context.userId,
         kind: "clone",
         characters: 0,
@@ -257,9 +309,23 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
         voice_id: voiceId || null,
         source: "dashboard",
       });
+      if (usageErr) {
+        console.error("[voice_usage] clone log failed", {
+          user_id: context.userId,
+          kind: "clone",
+          voice_id: voiceId,
+          error: usageErr,
+        });
+      }
     } catch (e) {
-      console.error("[voice_usage] clone log failed", e);
+      console.error("[voice_usage] clone log failed", {
+        user_id: context.userId,
+        kind: "clone",
+        voice_id: voiceId,
+        error: e,
+      });
     }
+
     return {
       id: voiceId,
       name: String(v.name ?? "Untitled"),
@@ -346,37 +412,51 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         ? { container: "wav", encoding: "pcm_s16le", sample_rate: 44100 }
         : { container: "mp3", sample_rate: 44100, bit_rate: 128000 };
 
-    const res = await fetch(`${API}/tts/bytes`, {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model_id: "sonic-3.5",
-        transcript: data.transcript,
-        voice: { mode: "id", id: data.voice_id },
-        ...(data.language ? { language: data.language } : {}),
-        generation_config,
-        output_format,
-      }),
-    });
-    if (!res.ok) {
-      const msg = await cartesiaError(res);
-      if (cost > 0) {
+    let genRefunded = false;
+    const refundGeneration = async (why: string) => {
+      if (genRefunded || cost <= 0) return;
+      genRefunded = true;
+      try {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin.rpc("api_refund_credits", {
           p_user_id: context.userId,
           p_amount: cost,
-          p_description: "Voice generation refund (provider error)",
+          p_description: `Voice generation refund (${why})`,
         });
+      } catch (e) {
+        console.error("[cartesia] generation refund failed", { user_id: context.userId, why, error: e });
       }
-      throw new Error(msg);
-    }
+    };
 
-    const buf = new Uint8Array(await res.arrayBuffer());
+    let buf: Uint8Array;
+    try {
+      const res = await fetch(`${API}/tts/bytes`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model_id: "sonic-3.5",
+          transcript: data.transcript,
+          voice: { mode: "id", id: data.voice_id },
+          ...(data.language ? { language: data.language } : {}),
+          generation_config,
+          output_format,
+        }),
+      });
+      if (!res.ok) {
+        const msg = await cartesiaError(res);
+        await refundGeneration("provider error");
+        throw new Error(msg);
+      }
+      buf = new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+      await refundGeneration("network error");
+      throw e instanceof Error ? e : new Error("Voice generation failed. Please try again.");
+    }
 
     if (!isPreview) {
       try {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await supabaseAdmin.from("voice_usage").insert({
+        const { error: usageErr } = await supabaseAdmin.from("voice_usage").insert({
           user_id: context.userId,
           kind: "generation",
           characters: data.transcript.length,
@@ -384,10 +464,24 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
           voice_id: data.voice_id,
           source: "dashboard",
         });
+        if (usageErr) {
+          console.error("[voice_usage] generation log failed", {
+            user_id: context.userId,
+            kind: "generation",
+            voice_id: data.voice_id,
+            error: usageErr,
+          });
+        }
       } catch (e) {
-        console.error("[voice_usage] generation log failed", e);
+        console.error("[voice_usage] generation log failed", {
+          user_id: context.userId,
+          kind: "generation",
+          voice_id: data.voice_id,
+          error: e,
+        });
       }
     }
+
 
     if (isPreview) {
       try {
