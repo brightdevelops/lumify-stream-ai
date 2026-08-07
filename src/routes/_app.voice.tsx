@@ -1102,7 +1102,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
         }
       }
     } finally {
-      setStreaming(false);
+      
       setBusy(false);
     }
   };
