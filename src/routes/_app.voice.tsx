@@ -969,11 +969,14 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     [transcript],
   );
 
-  const finish = (blob: Blob, ext: string, sizeLabel: number, voiceName: string, text: string) => {
+  const finish = (blob: Blob, ext: "mp3" | "wav", sizeLabel: number, voiceName: string, text: string, voiceId: string) => {
     const gen: Generation = {
       id: `${Date.now()}`,
       transcript: text,
       voiceName,
+      voiceId,
+      blob,
+      ext,
       url: URL.createObjectURL(blob),
       filename: `lumify-voice-${voiceName.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${ext}`,
       summary: `${voiceName} · ${emotion[0].toUpperCase()}${emotion.slice(1)} · ${speed.toFixed(1)}× · ${ext.toUpperCase()} · ${fmtSize(sizeLabel)}`,
