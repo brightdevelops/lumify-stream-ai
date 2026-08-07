@@ -988,7 +988,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text);
-    setAutoplay(true);
+
   };
 
   const generate = async () => {
