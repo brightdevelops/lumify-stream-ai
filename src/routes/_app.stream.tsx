@@ -296,7 +296,7 @@ function StreamPage() {
 
     try {
       await refreshLucyModelId();
-      const model = models.realtime("lucy-latest" as any);
+      const model = models.realtime("lucy-2.1" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -606,7 +606,7 @@ function StreamPage() {
     // Resolve the model dims/fps up-front — used by both branches so the
     // canvas-captured file stream matches the camera path exactly.
     await refreshLucyModelId();
-    const model = models.realtime("lucy-latest" as any);
+    const model = models.realtime("lucy-2.1" as any);
     const modelFps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
     const modelWidth = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
     const modelHeight = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
@@ -727,7 +727,7 @@ function StreamPage() {
     try {
       const { apiKey } = await getDecartKey();
       await refreshLucyModelId();
-      const model = models.realtime("lucy-latest" as any);
+      const model = models.realtime("lucy-2.1" as any);
       const client = createDecartClient({ apiKey });
       const realtimeClient = await client.realtime.connect(stream, {
         model,
