@@ -11,6 +11,28 @@ import {
   deleteClonedVoice,
   type VoiceSummary,
 } from "@/lib/cartesia.functions";
+import {
+  saveGeneration,
+  listMyGenerations,
+  deleteGeneration,
+  type SavedGeneration,
+} from "@/lib/voice-history.functions";
+
+function SaveButton({ gen, state, onSave }: { gen: Generation; state?: "saving" | "saved"; onSave: () => void }) {
+  void gen;
+  return (
+    <button
+      onClick={onSave}
+      disabled={Boolean(state)}
+      className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] text-[#9aa08c] transition-colors duration-150 hover:text-[#f2f4ec] disabled:opacity-50"
+      style={{ borderColor: "#262b1c" }}
+    >
+      {state === "saved" ? <><Check size={12} color="#c6f24e" /> Saved</>
+        : state === "saving" ? <><Loader2 size={12} className="animate-spin" /> Saving…</>
+        : <><Download size={12} /> Save</>}
+    </button>
+  );
+}
 
 export const Route = createFileRoute("/_app/voice")({
   head: () => ({
