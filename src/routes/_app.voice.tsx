@@ -82,7 +82,7 @@ function pcmToWavBlob(pcm: Uint8Array, sampleRate: number) {
   view.setUint16(34, 16, true);
   wstr(36, "data");
   view.setUint32(40, pcm.length, true);
-  return new Blob([header, pcm], { type: "audio/wav" });
+  return new Blob([header, pcm.slice().buffer as ArrayBuffer], { type: "audio/wav" });
 }
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
