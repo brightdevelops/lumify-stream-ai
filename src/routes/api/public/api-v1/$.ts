@@ -265,32 +265,52 @@ async function handle(request: Request): Promise<Response> {
         ? { container: "wav", encoding: "pcm_s16le", sample_rate: 44100 }
         : { container: "mp3", sample_rate: 44100, bit_rate: 128000 };
 
-    const res = await fetch(`${CARTESIA_API}/tts/bytes`, {
-      method: "POST",
-      headers: { ...cartesiaHeaders, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model_id: "sonic-3.5",
-        transcript: text,
-        voice: { mode: "id", id: voice_id },
-        generation_config,
-        output_format,
-      }),
-    });
+    let refunded = false;
+    const refund = async (why: string) => {
+      if (refunded) return;
+      refunded = true;
+      try {
+        await supabaseAdmin.rpc("api_refund_credits", {
+          p_user_id: keyRow.user_id,
+          p_amount: cost,
+          p_description: `API speech refund (${why})`,
+        });
+      } catch (e) {
+        console.error("[api] speech refund failed", { user_id: keyRow.user_id, why, error: e });
+      }
+    };
 
-    if (!res.ok) {
-      const msg = await cartesiaError(res);
-      await supabaseAdmin.rpc("api_refund_credits", {
-        p_user_id: keyRow.user_id,
-        p_amount: cost,
-        p_description: "API speech refund (provider error)",
+    let bytes: ArrayBuffer;
+    try {
+      const res = await fetch(`${CARTESIA_API}/tts/bytes`, {
+        method: "POST",
+        headers: { ...cartesiaHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model_id: "sonic-3.5",
+          transcript: text,
+          voice: { mode: "id", id: voice_id },
+          generation_config,
+          output_format,
+        }),
       });
+
+      if (!res.ok) {
+        const msg = await cartesiaError(res);
+        await refund("provider error");
+        await log(502, 0);
+        return errorResponse(502, "upstream_error", msg);
+      }
+
+      bytes = await res.arrayBuffer();
+    } catch (e) {
+      console.error("[api] speech request failed", { user_id: keyRow.user_id, error: e });
+      await refund("network error");
       await log(502, 0);
-      return errorResponse(502, "upstream_error", msg);
+      return errorResponse(502, "upstream_error", "Voice provider request failed. You were not charged.");
     }
 
-    const bytes = await res.arrayBuffer();
     try {
-      await supabaseAdmin.from("voice_usage").insert({
+      const { error: usageErr } = await supabaseAdmin.from("voice_usage").insert({
         user_id: keyRow.user_id,
         kind: "generation",
         characters: text.length,
@@ -298,9 +318,18 @@ async function handle(request: Request): Promise<Response> {
         voice_id: voice_id,
         source: "api",
       });
+      if (usageErr) {
+        console.error("[voice_usage] api log failed", {
+          user_id: keyRow.user_id,
+          kind: "generation",
+          voice_id,
+          error: usageErr,
+        });
+      }
     } catch (e) {
-      console.error("[voice_usage] api log failed", e);
+      console.error("[voice_usage] api log failed", { user_id: keyRow.user_id, kind: "generation", voice_id, error: e });
     }
+
     await log(200, cost);
     return new Response(bytes, {
       status: 200,
