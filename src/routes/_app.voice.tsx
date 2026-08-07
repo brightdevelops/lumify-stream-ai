@@ -997,7 +997,6 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const text = transcript.trim();
     setBusy(true);
     setError(null);
-    setTtfa(null);
 
     let started = false;
     try {
