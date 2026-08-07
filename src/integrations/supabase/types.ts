@@ -954,6 +954,45 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_generations: {
+        Row: {
+          bytes: number | null
+          characters: number | null
+          created_at: string
+          format: string | null
+          id: string
+          storage_path: string
+          transcript_preview: string | null
+          user_id: string
+          voice_id: string | null
+          voice_name: string | null
+        }
+        Insert: {
+          bytes?: number | null
+          characters?: number | null
+          created_at?: string
+          format?: string | null
+          id?: string
+          storage_path: string
+          transcript_preview?: string | null
+          user_id: string
+          voice_id?: string | null
+          voice_name?: string | null
+        }
+        Update: {
+          bytes?: number | null
+          characters?: number | null
+          created_at?: string
+          format?: string | null
+          id?: string
+          storage_path?: string
+          transcript_preview?: string | null
+          user_id?: string
+          voice_id?: string | null
+          voice_name?: string | null
+        }
+        Relationships: []
+      }
       voice_usage: {
         Row: {
           characters: number
