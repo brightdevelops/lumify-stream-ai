@@ -1206,10 +1206,13 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
           ) : current ? (
             <>
               <AudioPlayer key={current.id} src={current.url} autoPlay={autoplay} onAutoPlayed={() => {}} filename={current.filename} />
-              <div className="mt-2 text-[12px] text-[#6b7160]">
-                {current.summary}
-                
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[12px] text-[#6b7160]">
+                <span>{current.summary}</span>
+                <SaveButton gen={current} state={saveState[current.id]} onSave={() => void saveGen(current)} />
               </div>
+              {saveError && (
+                <div className="mt-2 rounded-xl p-2 text-[11.5px]" style={{ background: "rgba(255,122,107,.12)", color: "#ff7a6b" }}>{saveError}</div>
+              )}
             </>
           ) : null}
         </section>
@@ -1242,10 +1245,83 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
                 >
                   <Download size={12} />
                 </a>
+                <SaveButton gen={g} state={saveState[g.id]} onSave={() => void saveGen(g)} />
               </div>
             ))}
           </div>
         </section>
+      )}
+
+      <section className={CARD} style={CARD_STYLE}>
+        <div className="flex items-center justify-between">
+          <div className={TITLE}>Saved</div>
+          <span className="text-[11px] text-[#6b7160]">{saved.length} saved</span>
+        </div>
+        {savedLoading ? (
+          <div className="mt-3 flex items-center gap-2 text-[12px] text-[#9aa08c]"><Loader2 size={13} className="animate-spin" /> Loading…</div>
+        ) : saved.length === 0 ? (
+          <div className="mt-3 text-[12px] text-[#6b7160]">Nothing saved yet. Click Save on a generation to keep it here.</div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {saved.map((s) => (
+              <div key={s.id} className="rounded-xl border px-3 py-2.5" style={{ background: "#101309", borderColor: "#262b1c" }}>
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#f2f4ec]">{s.transcript_preview || "Untitled"}</span>
+                  <span className="rounded-full border px-1.5 py-0.5 font-mono text-[10px] uppercase text-[#9aa08c]" style={{ borderColor: "#262b1c", background: "rgba(0,0,0,.55)" }}>
+                    {s.format}
+                  </span>
+                  <button
+                    aria-label="Delete"
+                    onClick={() => setConfirmSaved(s)}
+                    className="grid h-7 w-7 place-items-center rounded-full border text-[#9aa08c] transition-colors duration-150 hover:text-[#ff7a6b]"
+                    style={{ borderColor: "#262b1c" }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+                <div className="mt-1 text-[11px] text-[#6b7160]">
+                  {s.voice_name ?? "Voice"} · {new Date(s.created_at).toLocaleString()}
+                </div>
+                {s.url && (
+                  <AudioPlayer
+                    key={s.id}
+                    src={s.url}
+                    autoPlay={false}
+                    onAutoPlayed={() => {}}
+                    filename={`lumify-voice-${s.id}.${s.format ?? "mp3"}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {confirmSaved && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4" style={{ background: "rgba(0,0,0,.6)" }}>
+          <div className="w-full max-w-[380px] rounded-2xl border p-5" style={{ background: "#14170f", borderColor: "#262b1c" }}>
+            <div className="text-[14px] font-semibold text-[#f2f4ec]">Delete saved generation?</div>
+            <div className="mt-2 text-[12.5px] text-[#9aa08c]">
+              This audio will be deleted permanently. This can&rsquo;t be undone.
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmSaved(null)}
+                className="rounded-xl border px-3.5 py-2 text-[12.5px] text-[#9aa08c]"
+                style={{ borderColor: "#262b1c" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void removeSaved()}
+                className="rounded-xl px-3.5 py-2 text-[12.5px] font-semibold"
+                style={{ background: "#ff7a6b", color: "#1a0f0d" }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
