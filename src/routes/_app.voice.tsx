@@ -1004,7 +1004,6 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       const token = sess.session?.access_token;
       if (!token) throw new Error("no-session");
 
-      const t0 = performance.now();
       const res = await fetch("/api/voice/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
