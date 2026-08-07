@@ -9,6 +9,7 @@ import {
   generateCartesiaSpeech,
   listMyClonedVoices,
   deleteClonedVoice,
+  convertVoice,
   type VoiceSummary,
 } from "@/lib/cartesia.functions";
 import {
@@ -983,6 +984,78 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [history, setHistory] = useState<Generation[]>([]);
   const [autoplay] = useState(false);
 
+  /* --- Convert my voice (speech-to-speech) --- */
+  const convertFn = useServerFn(convertVoice);
+  const [mode, setMode] = useState<"tts" | "convert">("tts");
+  const [srcClip, setSrcClip] = useState<Clip | null>(null);
+  const [cvRecording, setCvRecording] = useState(false);
+  const [cvRecSec, setCvRecSec] = useState(0);
+  const cvRecRef = useRef<MediaRecorder | null>(null);
+  const cvFileRef = useRef<HTMLInputElement | null>(null);
+
+  const setSrcFromBlob = async (blob: Blob, fname: string) => {
+    const url = URL.createObjectURL(blob);
+    let duration = 0;
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new Ctx();
+      const buf = await ctx.decodeAudioData(await blob.slice(0).arrayBuffer());
+      duration = buf.duration;
+      await ctx.close();
+    } catch {
+      duration = await new Promise<number>((resolve) => {
+        const a = new Audio(url);
+        a.onloadedmetadata = () => resolve(Number.isFinite(a.duration) ? a.duration : 0);
+        a.onerror = () => resolve(0);
+      });
+    }
+    setSrcClip({ blob, name: fname, url, duration, fromVideo: false });
+  };
+
+  const handleConvertFile = async (file: File) => {
+    setError(null);
+    if (file.size > AUDIO_MAX) { setError("Audio clips must be under 15 MB."); return; }
+    await setSrcFromBlob(file, file.name);
+  };
+
+  const startConvertRecording = async () => {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const chunks: BlobPart[] = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        await setSrcFromBlob(new Blob(chunks, { type: "audio/webm" }), "recording.webm");
+        setCvRecording(false);
+      };
+      cvRecRef.current = rec;
+      rec.start();
+      setCvRecording(true);
+      setCvRecSec(0);
+    } catch {
+      setError("Microphone access was blocked.");
+    }
+  };
+
+  useEffect(() => {
+    if (!cvRecording) return;
+    const id = window.setInterval(() => {
+      setCvRecSec((s) => {
+        if (s + 1 >= 60) { cvRecRef.current?.stop(); return 60; }
+        return s + 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [cvRecording]);
+
+  const convertCost = useMemo(
+    () => Math.max(15, Math.ceil(Math.min(60, Math.max(0.5, srcClip?.duration ?? 0)) * 3)),
+    [srcClip],
+  );
+
+
   const saveFn = useServerFn(saveGeneration);
   const listSavedFn = useServerFn(listMyGenerations);
   const deleteSavedFn = useServerFn(deleteGeneration);
@@ -1188,12 +1261,75 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   };
 
 
+  const canConvert = Boolean(selected && srcClip && !busy && !cvRecording);
+
+  const convert = async () => {
+    if (!selected || !srcClip || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await convertFn({
+        data: {
+          clipBase64: await blobToBase64(srcClip.blob),
+          clipType: srcClip.blob.type || "audio/wav",
+          clipName: srcClip.name,
+          voice_id: selected.id,
+          durationSeconds: srcClip.duration || 0.5,
+          format,
+        },
+      });
+      if (res.error) {
+        setError(res.error);
+        setCurrent(null);
+        return;
+      }
+      const bin = atob(res.audioBase64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const blob = new Blob([arr], { type: res.contentType });
+      const gen: Generation = {
+        id: `${Date.now()}`,
+        transcript: `Voice conversion · ${fmtTime(srcClip.duration)}`,
+        voiceName: selected.name,
+        voiceId: selected.id,
+        blob,
+        ext: format,
+        url: URL.createObjectURL(blob),
+        filename: `lumify-voice-${selected.name.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${format}`,
+        summary: `${selected.name} · Converted · ${fmtTime(srcClip.duration)} · ${format.toUpperCase()} · ${fmtSize(res.bytes)}`,
+      };
+      window.dispatchEvent(new Event("lumify:credits-changed"));
+      setCurrent(gen);
+      setHistory((h) => [gen, ...h].slice(0, 5));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Voice conversion failed.");
+      setCurrent(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const counterColor = transcript.length > 4500 ? "#ffd28a" : "#6b7160";
 
   return (
     <div className="space-y-4">
       <section className={CARD} style={CARD_STYLE}>
-        <div className={TITLE}>Script</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className={TITLE}>{mode === "tts" ? "Script" : "Your recording"}</div>
+          <div className="flex h-9 items-center rounded-full p-[3px]" style={{ background: "#101309" }}>
+            {([["tts", "Write text"], ["convert", "Convert my voice"]] as const).map(([m, label]) => (
+              <button
+                key={m}
+                disabled={busy}
+                onClick={() => { setMode(m); setError(null); }}
+                className="h-full rounded-full px-3 text-[12px] font-semibold transition-colors duration-150"
+                style={mode === m ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="mt-3">
           <span
             className="inline-block rounded-full border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em]"
@@ -1206,21 +1342,83 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             {selected ? `◉ Voice — ${selected.name}${selected.language ? ` (${selected.language})` : ""}` : "Select a voice on the left"}
           </span>
         </div>
-        <textarea
-          value={transcript}
-          maxLength={5000}
-          onChange={(e) => setTranscript(e.target.value)}
-          placeholder="Type what you want this voice to say…"
-          className="mt-3 min-h-[180px] w-full rounded-xl border p-[14px] text-[15px] leading-[1.6] text-[#f2f4ec] outline-none transition-colors duration-150 placeholder:text-[#6b7160] focus:border-[#3a4229]"
-          style={INPUT_STYLE}
-        />
-        <div className="mt-1 text-right font-mono text-[11px]" style={{ color: counterColor }}>
-          {transcript.length} / 5000
-        </div>
+        {mode === "tts" ? (
+          <>
+            <textarea
+              value={transcript}
+              maxLength={5000}
+              onChange={(e) => setTranscript(e.target.value)}
+              placeholder="Type what you want this voice to say…"
+              className="mt-3 min-h-[180px] w-full rounded-xl border p-[14px] text-[15px] leading-[1.6] text-[#f2f4ec] outline-none transition-colors duration-150 placeholder:text-[#6b7160] focus:border-[#3a4229]"
+              style={INPUT_STYLE}
+            />
+            <div className="mt-1 text-right font-mono text-[11px]" style={{ color: counterColor }}>
+              {transcript.length} / 5000
+            </div>
+          </>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <input
+              ref={cvFileRef}
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleConvertFile(f); e.target.value = ""; }}
+            />
+            {!srcClip && (
+              <>
+                <div
+                  onClick={() => cvFileRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) void handleConvertFile(f); }}
+                  className="cursor-pointer rounded-xl border border-dashed p-6 text-center transition-colors duration-150"
+                  style={{ borderColor: "#262b1c" }}
+                >
+                  <Upload size={20} className="mx-auto" color="#9aa08c" />
+                  <div className="mt-2 text-[13px] text-[#f2f4ec]">Drop an audio clip, or click to browse</div>
+                  <div className="mt-1 text-[11px] text-[#6b7160]">
+                    mp3, wav, ogg, flac, webm · up to 15 MB · 60 seconds max
+                  </div>
+                </div>
+                <button
+                  onClick={() => (cvRecording ? cvRecRef.current?.stop() : void startConvertRecording())}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-full border text-[12.5px] transition-colors duration-150"
+                  style={{ borderColor: "#262b1c", color: cvRecording ? "#ff7a6b" : "#9aa08c" }}
+                >
+                  {cvRecording ? (
+                    <>
+                      <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: "#ff7a6b" }} />
+                      <span className="font-mono">{fmtTime(cvRecSec)}</span> Stop
+                    </>
+                  ) : (
+                    <>● Record</>
+                  )}
+                </button>
+              </>
+            )}
+            {srcClip && (
+              <div className="rounded-xl border p-3" style={{ background: "#101309", borderColor: "#262b1c" }}>
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#f2f4ec]">{srcClip.name}</span>
+                  <span className="font-mono text-[11px] text-[#6b7160]">{fmtTime(srcClip.duration)}</span>
+                  <button onClick={() => setSrcClip(null)} aria-label="Remove clip" className="text-[#9aa08c] hover:text-[#f2f4ec]">
+                    <X size={14} />
+                  </button>
+                </div>
+                <audio controls src={srcClip.url} className="mt-2 w-full" style={{ height: 36 }} />
+              </div>
+            )}
+            <div className="text-[11px] leading-relaxed text-[#6b7160]">
+              Your delivery, emotion and timing are kept — only the voice changes.
+            </div>
+          </div>
+        )}
       </section>
 
       <section className={CARD} style={CARD_STYLE}>
         <div className="voice-dock flex flex-wrap items-end gap-4">
+          {mode === "tts" && (
+          <>
           <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
           <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
           <div className="shrink-0">
@@ -1238,6 +1436,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
             </select>
           </div>
           <div className="voice-dock-divider h-10 w-px self-end" style={{ background: "#262b1c" }} />
+          </>
+          )}
           <div className="shrink-0">
             <div className={FIELD_LABEL}>Format</div>
             <div className="mt-2 flex h-10 items-center rounded-full p-[3px]" style={{ background: "#101309" }}>
@@ -1260,15 +1460,17 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
           <button
-            onClick={generate}
-            disabled={!canGenerate}
+            onClick={mode === "tts" ? generate : convert}
+            disabled={mode === "tts" ? !canGenerate : !canConvert}
             className="flex w-full items-center justify-center gap-2 rounded-xl px-[30px] py-[14px] text-[15px] font-bold transition-colors duration-150 disabled:opacity-40 md:w-auto"
             style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
           >
-            {busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>}
+            {mode === "tts"
+              ? (busy ? <><Loader2 size={16} className="animate-spin" /> Generating…</> : <><Sparkles size={16} /> Generate speech</>)
+              : (busy ? <><Loader2 size={16} className="animate-spin" /> Converting…</> : <><Sparkles size={16} /> Convert</>)}
           </button>
           <span className="flex items-center gap-1.5 text-[12px] text-[#9aa08c]">
-            ≈ {estimatedCost} credits
+            ≈ {mode === "tts" ? estimatedCost : convertCost} credits
             <span className="group relative inline-flex" tabIndex={0} onClick={() => setTipOpen((v: boolean) => !v)}>
               <Info size={12} color="#6b7160" className="cursor-pointer" />
               <span
@@ -1276,7 +1478,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
                 style={{ background: "#101309", borderColor: "#262b1c", display: tipOpen ? "block" : undefined }}
                 data-tip
               >
-                1 credit per 10 characters · 15 credit minimum
+                {mode === "tts" ? "1 credit per 10 characters · 15 credit minimum" : "3 credits per second of audio · 15 credit minimum"}
               </span>
             </span>
           </span>
