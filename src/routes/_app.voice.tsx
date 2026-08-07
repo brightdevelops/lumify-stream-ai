@@ -950,6 +950,9 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [current, setCurrent] = useState<Generation | null>(null);
   const [history, setHistory] = useState<Generation[]>([]);
   const [autoplay, setAutoplay] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+  const [ttfa, setTtfa] = useState<number | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const [tipOpen, setTipOpen] = useState(false);
   const canGenerate = Boolean(selected && transcript.trim() && !busy);
@@ -958,43 +961,154 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     [transcript],
   );
 
+  const finish = (blob: Blob, ext: string, sizeLabel: number, voiceName: string, text: string) => {
+    const gen: Generation = {
+      id: `${Date.now()}`,
+      transcript: text,
+      voiceName,
+      url: URL.createObjectURL(blob),
+      filename: `lumify-voice-${voiceName.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${ext}`,
+      summary: `${voiceName} · ${emotion[0].toUpperCase()}${emotion.slice(1)} · ${speed.toFixed(1)}× · ${ext.toUpperCase()} · ${fmtSize(sizeLabel)}`,
+    };
+    window.dispatchEvent(new Event("lumify:credits-changed"));
+    setCurrent(gen);
+    setHistory((h) => [gen, ...h].slice(0, 5));
+    return gen;
+  };
+
+  /** Fallback: existing blocking bytes path. */
+  const generateBytes = async (text: string, voice: VoiceSummary) => {
+    const res = await tts({
+      data: { transcript: text, voice_id: voice.id, speed, volume, emotion, format },
+    });
+    if (res.error) {
+      setError(res.error);
+      setCurrent(null);
+      return;
+    }
+    const bin = atob(res.audioBase64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text);
+    setAutoplay(true);
+  };
 
   const generate = async () => {
     if (!selected || !canGenerate) return;
+    const voice = selected;
+    const text = transcript.trim();
     setBusy(true);
     setError(null);
+    setTtfa(null);
+
+    let started = false;
     try {
-      const res = await tts({
-        data: { transcript: transcript.trim(), voice_id: selected.id, speed, volume, emotion, format },
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("no-session");
+
+      const t0 = performance.now();
+      const res = await fetch("/api/voice/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ transcript: text, voice_id: voice.id, speed, volume, emotion }),
       });
-      if (res.error) {
-        setError(res.error);
-        setCurrent(null);
-        return;
+
+      if (!res.ok || !res.body) {
+        if (res.status === 402 || res.status === 403) {
+          let msg = "Generation failed.";
+          try {
+            msg = String(((await res.json()) as { error?: string }).error ?? msg);
+          } catch {
+            /* ignore */
+          }
+          setError(msg);
+          setCurrent(null);
+          return;
+        }
+        throw new Error("stream-unavailable");
       }
-      const bin = atob(res.audioBase64);
-      const arr = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      const blob = new Blob([arr], { type: res.contentType });
-      const gen: Generation = {
-        id: `${Date.now()}`,
-        transcript: transcript.trim(),
-        voiceName: selected.name,
-        url: URL.createObjectURL(blob),
-        filename: `lumify-voice-${selected.name.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${format}`,
-        summary: `${selected.name} · ${emotion[0].toUpperCase()}${emotion.slice(1)} · ${speed.toFixed(1)}× · ${format.toUpperCase()} · ${fmtSize(res.bytes)}`,
-      };
-      window.dispatchEvent(new Event("lumify:credits-changed"));
-      setCurrent(gen);
-      setAutoplay(true);
-      setHistory((h) => [gen, ...h].slice(0, 5));
+
+      started = true;
+      setStreaming(true);
+
+      const sampleRate = Number(res.headers.get("X-Sample-Rate") ?? 44100) || 44100;
+      const ctx =
+        audioCtxRef.current && audioCtxRef.current.state !== "closed"
+          ? audioCtxRef.current
+          : new AudioContext();
+      audioCtxRef.current = ctx;
+      if (ctx.state === "suspended") await ctx.resume();
+
+      let playhead = ctx.currentTime + 0.12;
+      const reader = res.body.getReader();
+      const parts: Uint8Array[] = [];
+      let carry = new Uint8Array(0);
+      let total = 0;
+
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value || value.length === 0) continue;
+        if (ttfa === null && total === 0) setTtfa(Math.round(performance.now() - t0));
+
+        let bytes = value;
+        if (carry.length) {
+          const merged = new Uint8Array(carry.length + value.length);
+          merged.set(carry, 0);
+          merged.set(value, carry.length);
+          bytes = merged;
+          carry = new Uint8Array(0);
+        }
+        if (bytes.length % 2 === 1) {
+          carry = bytes.slice(bytes.length - 1);
+          bytes = bytes.slice(0, bytes.length - 1);
+        }
+        if (!bytes.length) continue;
+
+        parts.push(bytes);
+        total += bytes.length;
+
+        const samples = bytes.length / 2;
+        const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        const buffer = ctx.createBuffer(1, samples, sampleRate);
+        const channel = buffer.getChannelData(0);
+        for (let i = 0; i < samples; i++) channel[i] = dv.getInt16(i * 2, true) / 32768;
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(ctx.destination);
+        const startAt = Math.max(playhead, ctx.currentTime + 0.02);
+        src.start(startAt);
+        playhead = startAt + buffer.duration;
+      }
+
+      if (total === 0) throw new Error("stream-empty");
+
+      const pcm = new Uint8Array(total);
+      let off = 0;
+      for (const p of parts) {
+        pcm.set(p, off);
+        off += p.length;
+      }
+      finish(pcmToWavBlob(pcm, sampleRate), "wav", pcm.length + 44, voice.name, text);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed.");
-      setCurrent(null);
+      if (started) {
+        setError(e instanceof Error && e.message !== "stream-empty" ? e.message : "Generation failed.");
+        setCurrent(null);
+      } else {
+        try {
+          await generateBytes(text, voice);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Generation failed.");
+          setCurrent(null);
+        }
+      }
     } finally {
+      setStreaming(false);
       setBusy(false);
     }
   };
+
 
   const counterColor = transcript.length > 4500 ? "#ffd28a" : "#6b7160";
 
