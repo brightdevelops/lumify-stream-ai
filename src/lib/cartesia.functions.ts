@@ -412,37 +412,51 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
         ? { container: "wav", encoding: "pcm_s16le", sample_rate: 44100 }
         : { container: "mp3", sample_rate: 44100, bit_rate: 128000 };
 
-    const res = await fetch(`${API}/tts/bytes`, {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model_id: "sonic-3.5",
-        transcript: data.transcript,
-        voice: { mode: "id", id: data.voice_id },
-        ...(data.language ? { language: data.language } : {}),
-        generation_config,
-        output_format,
-      }),
-    });
-    if (!res.ok) {
-      const msg = await cartesiaError(res);
-      if (cost > 0) {
+    let genRefunded = false;
+    const refundGeneration = async (why: string) => {
+      if (genRefunded || cost <= 0) return;
+      genRefunded = true;
+      try {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin.rpc("api_refund_credits", {
           p_user_id: context.userId,
           p_amount: cost,
-          p_description: "Voice generation refund (provider error)",
+          p_description: `Voice generation refund (${why})`,
         });
+      } catch (e) {
+        console.error("[cartesia] generation refund failed", { user_id: context.userId, why, error: e });
       }
-      throw new Error(msg);
-    }
+    };
 
-    const buf = new Uint8Array(await res.arrayBuffer());
+    let buf: Uint8Array;
+    try {
+      const res = await fetch(`${API}/tts/bytes`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model_id: "sonic-3.5",
+          transcript: data.transcript,
+          voice: { mode: "id", id: data.voice_id },
+          ...(data.language ? { language: data.language } : {}),
+          generation_config,
+          output_format,
+        }),
+      });
+      if (!res.ok) {
+        const msg = await cartesiaError(res);
+        await refundGeneration("provider error");
+        throw new Error(msg);
+      }
+      buf = new Uint8Array(await res.arrayBuffer());
+    } catch (e) {
+      await refundGeneration("network error");
+      throw e instanceof Error ? e : new Error("Voice generation failed. Please try again.");
+    }
 
     if (!isPreview) {
       try {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await supabaseAdmin.from("voice_usage").insert({
+        const { error: usageErr } = await supabaseAdmin.from("voice_usage").insert({
           user_id: context.userId,
           kind: "generation",
           characters: data.transcript.length,
@@ -450,10 +464,24 @@ export const generateCartesiaSpeech = createServerFn({ method: "POST" })
           voice_id: data.voice_id,
           source: "dashboard",
         });
+        if (usageErr) {
+          console.error("[voice_usage] generation log failed", {
+            user_id: context.userId,
+            kind: "generation",
+            voice_id: data.voice_id,
+            error: usageErr,
+          });
+        }
       } catch (e) {
-        console.error("[voice_usage] generation log failed", e);
+        console.error("[voice_usage] generation log failed", {
+          user_id: context.userId,
+          kind: "generation",
+          voice_id: data.voice_id,
+          error: e,
+        });
       }
     }
+
 
     if (isPreview) {
       try {
