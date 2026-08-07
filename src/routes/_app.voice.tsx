@@ -961,6 +961,71 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   const [history, setHistory] = useState<Generation[]>([]);
   const [autoplay] = useState(false);
 
+  const saveFn = useServerFn(saveGeneration);
+  const listSavedFn = useServerFn(listMyGenerations);
+  const deleteSavedFn = useServerFn(deleteGeneration);
+  const [saved, setSaved] = useState<SavedGeneration[]>([]);
+  const [savedLoading, setSavedLoading] = useState(true);
+  const [saveState, setSaveState] = useState<Record<string, "saving" | "saved">>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmSaved, setConfirmSaved] = useState<SavedGeneration | null>(null);
+
+  const refreshSaved = useCallback(async () => {
+    try {
+      const res = await listSavedFn({});
+      setSaved(res.data);
+    } catch {
+      /* non-fatal */
+    } finally {
+      setSavedLoading(false);
+    }
+  }, [listSavedFn]);
+
+  useEffect(() => {
+    void refreshSaved();
+  }, [refreshSaved]);
+
+  const saveGen = async (gen: Generation) => {
+    if (saveState[gen.id]) return;
+    setSaveError(null);
+    setSaveState((s) => ({ ...s, [gen.id]: "saving" }));
+    try {
+      const audioBase64 = await blobToBase64(gen.blob);
+      await saveFn({
+        data: {
+          audioBase64,
+          format: gen.ext,
+          voice_id: gen.voiceId,
+          voice_name: gen.voiceName,
+          transcript: gen.transcript,
+          characters: gen.transcript.length,
+        },
+      });
+      setSaveState((s) => ({ ...s, [gen.id]: "saved" }));
+      await refreshSaved();
+    } catch (e) {
+      setSaveState((s) => {
+        const next = { ...s };
+        delete next[gen.id];
+        return next;
+      });
+      setSaveError(e instanceof Error ? e.message : "Could not save this generation.");
+    }
+  };
+
+  const removeSaved = async () => {
+    const row = confirmSaved;
+    setConfirmSaved(null);
+    if (!row) return;
+    try {
+      await deleteSavedFn({ data: { id: row.id } });
+      setSaved((list) => list.filter((s) => s.id !== row.id));
+      await refreshSaved();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Could not delete this generation.");
+    }
+  };
+
 
   const [tipOpen, setTipOpen] = useState(false);
   const canGenerate = Boolean(selected && transcript.trim() && !busy);
