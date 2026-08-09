@@ -4,7 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { SupportWidget } from "@/components/SupportWidget";
 import { AppTour } from "@/components/AppTour";
-import { AutoRefresh } from "@/components/AutoRefresh";
+
 import { AppBackground } from "@/components/app/AppBackground";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -55,7 +55,7 @@ function AppLayout() {
       </div>
       <SupportWidget />
       <AppTour />
-      <AutoRefresh />
+      
 
     </div>
   );
