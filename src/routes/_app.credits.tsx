@@ -5,8 +5,8 @@ import { Check, Wallet as WalletIcon, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  createKorapayCheckout,
-  verifyKorapayAndCredit,
+  createFlutterwaveCheckout,
+  verifyFlutterwaveAndCredit,
 } from "@/lib/payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 import { StatusBadge } from "./_app.dashboard";
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_app/credits")({
   head: () => ({
     meta: [
       { title: "Wallet — Lumify" },
-      { name: "description", content: "Top up your Lumify balance with Korapay. Card, bank transfer, mobile money." },
+      { name: "description", content: "Top up your Lumify balance with Flutterwave. Card, bank transfer, mobile money." },
     ],
   }),
 });
@@ -95,18 +95,19 @@ function WalletPage() {
   useEffect(() => {
     if (typeof window === "undefined" || !user) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("korapay") === "1") {
-      const reference = params.get("reference") || params.get("ref");
+    if (params.get("flutterwave") === "1") {
+      const txRef = params.get("tx_ref");
+      const transactionId = params.get("transaction_id");
       const status = params.get("status");
       window.history.replaceState({}, "", "/credits");
-      if (!reference) {
-        if (status && status !== "success" && status !== "successful") setError("Payment was cancelled or did not complete.");
+      if (!txRef || !transactionId || (status && status !== "successful" && status !== "completed")) {
+        if (status && status !== "successful" && status !== "completed") setError("Payment was cancelled or did not complete.");
         return;
       }
       setProcessing(true);
       (async () => {
         try {
-          await verifyKorapayAndCredit({ data: { reference } });
+          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
           navigate({ to: "/dashboard" });
         } catch (e: any) {
           setProcessing(false);
