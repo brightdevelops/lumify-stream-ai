@@ -4,6 +4,7 @@ import { Copy, Check, RefreshCw, Compass } from "lucide-react";
 import { getMyStreamToken, regenerateMyStreamToken } from "@/lib/stream-token.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { startTour, resetTour } from "@/components/AppTour";
+import ApiKeysCard from "@/components/settings/ApiKeysCard";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -169,6 +170,8 @@ function SettingsPage() {
           </div>
         </section>
       </div>
+
+      <ApiKeysCard />
     </div>
   );
 }
