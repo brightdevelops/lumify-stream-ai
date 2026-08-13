@@ -123,7 +123,7 @@ function WalletPage() {
     setProcessing(true);
     try {
       const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
-      const { checkoutUrl } = await createKorapayCheckout({ data: { packId } });
+      const { checkoutUrl } = await createFlutterwaveCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
@@ -136,7 +136,7 @@ function WalletPage() {
       <div className="mb-8">
         <h1 className="font-display text-[38px] leading-tight">Wallet</h1>
         <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)] flex items-center gap-2">
-          Top up your balance — payments secured by <span className="text-foreground font-semibold">Korapay</span>.
+          Top up your balance — payments secured by <span className="text-foreground font-semibold">Flutterwave</span>.
           <ShieldCheck size={14} className="text-primary" />
         </p>
       </div>
@@ -197,7 +197,7 @@ function WalletPage() {
             className="btn-primary w-full mt-6"
           >
             <WalletIcon size={15} />
-            {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Korapay`}
+            {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Flutterwave`}
           </button>
           <p className="mt-3 text-center text-[12px] text-[color:var(--faint)]">
             Card · Bank transfer · Mobile money
