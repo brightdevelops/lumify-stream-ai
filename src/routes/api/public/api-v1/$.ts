@@ -88,6 +88,19 @@ async function handle(request: Request): Promise<Response> {
     return errorResponse(403, "insufficient_scope", "This key does not have the 'voice' scope.");
   }
 
+  const isBodySwapPath = path === "/v1/face" || path.startsWith("/v1/face/") || path.startsWith("/v1/body-swap");
+  if (isBodySwapPath) {
+    if (!(keyRow.scopes ?? []).includes("face")) {
+      return errorResponse(403, "insufficient_scope", "This key does not have the 'face' scope.");
+    }
+    return errorResponse(
+      503,
+      "coming_soon",
+      "The Body Swap API isn't live yet. Your key is valid and will start working at launch.",
+    );
+  }
+
+
   const log = async (status: number, credits: number) => {
     await supabaseAdmin.from("api_requests").insert({
       api_key_id: keyRow.id,
