@@ -16,7 +16,8 @@ type ErrCode =
   | "rate_limited"
   | "invalid_request"
   | "upstream_error"
-  | "not_found";
+  | "not_found"
+  | "coming_soon";
 
 function errorResponse(status: number, code: ErrCode, message: string, extra?: Record<string, string>) {
   return new Response(JSON.stringify({ error: { code, message } }), {
@@ -87,6 +88,19 @@ async function handle(request: Request): Promise<Response> {
   if (isVoicePath && !(keyRow.scopes ?? []).includes("voice")) {
     return errorResponse(403, "insufficient_scope", "This key does not have the 'voice' scope.");
   }
+
+  const isBodySwapPath = path === "/v1/face" || path.startsWith("/v1/face/") || path.startsWith("/v1/body-swap");
+  if (isBodySwapPath) {
+    if (!(keyRow.scopes ?? []).includes("face")) {
+      return errorResponse(403, "insufficient_scope", "This key does not have the 'face' scope.");
+    }
+    return errorResponse(
+      503,
+      "coming_soon",
+      "The Body Swap API isn't live yet. Your key is valid and will start working at launch.",
+    );
+  }
+
 
   const log = async (status: number, credits: number) => {
     await supabaseAdmin.from("api_requests").insert({
