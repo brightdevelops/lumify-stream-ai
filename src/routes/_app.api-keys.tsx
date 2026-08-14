@@ -242,39 +242,12 @@ function ApiKeysPage() {
         </div>
       </div>
 
-      {/* YOUR KEYS */}
-      <div style={{ ...card, marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <span style={cardTitle}>Your keys</span>
-          {keys.length > 0 && createBtn}
-        </div>
+      {/* VOICE KEYS */}
+      {(() => {
+        const voiceKeys = keys.filter((k) => (k.scopes ?? []).includes("voice"));
+        const swapKeys = keys.filter((k) => (k.scopes ?? []).includes("body_swap"));
 
-        {error && <p style={{ fontSize: 12, color: "#ff7a6b", marginTop: 10 }}>{error}</p>}
-
-        {loading ? (
-          <p style={{ fontSize: 12.5, color: "#6b7160", marginTop: 16 }}>Loading…</p>
-        ) : keys.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "28px 0" }}>
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 14,
-                background: "rgba(198,242,78,.12)",
-                display: "grid",
-                placeItems: "center",
-                margin: "0 auto 12px",
-              }}
-            >
-              <KeyRound size={22} color="#c6f24e" />
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 600 }}>No API keys yet</div>
-            <div style={{ fontSize: 12.5, color: "#6b7160", margin: "6px 0 16px" }}>
-              Create a key to start building with Lumify Voice
-            </div>
-            {createBtn}
-          </div>
-        ) : (
+        const table = (rows: KeyRow[]) => (
           <div style={{ overflowX: "auto", marginTop: 14 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
               <thead>
@@ -296,7 +269,7 @@ function ApiKeysPage() {
                 </tr>
               </thead>
               <tbody>
-                {keys.map((k) => {
+                {rows.map((k) => {
                   const revoked = !!k.revoked_at;
                   return (
                     <tr key={k.id} style={{ opacity: revoked ? 0.5 : 1 }}>
@@ -363,8 +336,124 @@ function ApiKeysPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        );
+
+        return (
+          <>
+            <div style={{ ...card, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={cardTitle}>Lumify Voice keys</span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontFamily: "ui-monospace, monospace",
+                      textTransform: "uppercase",
+                      background: "rgba(198,242,78,.12)",
+                      color: "#c6f24e",
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    Live
+                  </span>
+                </div>
+                {voiceKeys.length > 0 && createBtn}
+              </div>
+
+              {error && <p style={{ fontSize: 12, color: "#ff7a6b", marginTop: 10 }}>{error}</p>}
+
+              {loading ? (
+                <p style={{ fontSize: 12.5, color: "#6b7160", marginTop: 16 }}>Loading…</p>
+              ) : voiceKeys.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "28px 0" }}>
+                  <div
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 14,
+                      background: "rgba(198,242,78,.12)",
+                      display: "grid",
+                      placeItems: "center",
+                      margin: "0 auto 12px",
+                    }}
+                  >
+                    <KeyRound size={22} color="#c6f24e" />
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>No voice keys yet</div>
+                  <div style={{ fontSize: 12.5, color: "#6b7160", margin: "6px 0 16px" }}>
+                    Create a key to start building with Lumify Voice
+                  </div>
+                  {createBtn}
+                </div>
+              ) : (
+                table(voiceKeys)
+              )}
+            </div>
+
+            {/* BODY SWAP KEYS */}
+            <div style={{ ...card, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={cardTitle}>AI Body Swap keys</span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontFamily: "ui-monospace, monospace",
+                    textTransform: "uppercase",
+                    background: "#101309",
+                    color: "#6b7160",
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                  }}
+                >
+                  Coming soon
+                </span>
+              </div>
+
+              {swapKeys.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "28px 0" }}>
+                  <div
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 14,
+                      background: "#101309",
+                      display: "grid",
+                      placeItems: "center",
+                      margin: "0 auto 12px",
+                    }}
+                  >
+                    <KeyRound size={22} color="#6b7160" />
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "#9aa08c" }}>Not available yet</div>
+                  <div style={{ fontSize: 12.5, color: "#6b7160", margin: "6px 0 16px" }}>
+                    Body Swap keys open up when the API goes live. Voice keys won't work on it.
+                  </div>
+                  <button
+                    disabled
+                    style={{
+                      background: "#101309",
+                      color: "#6b7160",
+                      fontWeight: 600,
+                      fontSize: 13,
+                      height: 40,
+                      padding: "0 16px",
+                      borderRadius: 12,
+                      border: "1px solid #262b1c",
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    + Create key
+                  </button>
+                </div>
+              ) : (
+                table(swapKeys)
+              )}
+            </div>
+          </>
+        );
+      })()}
+
 
       {/* QUICK START */}
       <div style={card}>
