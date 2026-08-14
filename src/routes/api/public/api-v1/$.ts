@@ -16,7 +16,8 @@ type ErrCode =
   | "rate_limited"
   | "invalid_request"
   | "upstream_error"
-  | "not_found";
+  | "not_found"
+  | "coming_soon";
 
 function errorResponse(status: number, code: ErrCode, message: string, extra?: Record<string, string>) {
   return new Response(JSON.stringify({ error: { code, message } }), {
