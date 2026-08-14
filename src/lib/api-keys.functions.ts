@@ -61,7 +61,7 @@ export const createApiKey = createServerFn({ method: "POST" })
         name: data.name,
         key_prefix: key.slice(0, 16),
         key_hash,
-        scopes: ["voice"],
+        scopes: [data.product ?? "voice"],
       })
       .select("id, name, key_prefix")
       .single();
