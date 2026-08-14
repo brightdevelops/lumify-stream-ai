@@ -32,7 +32,14 @@ export const listMyApiKeys = createServerFn({ method: "POST" })
 
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ name: z.string().trim().min(1).max(60) }).parse(input))
+  .inputValidator((input) =>
+    z
+      .object({
+        name: z.string().trim().min(1).max(60),
+        product: z.enum(["voice", "face"]).optional(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -54,7 +61,7 @@ export const createApiKey = createServerFn({ method: "POST" })
         name: data.name,
         key_prefix: key.slice(0, 16),
         key_hash,
-        scopes: ["voice"],
+        scopes: [data.product ?? "voice"],
       })
       .select("id, name, key_prefix")
       .single();
