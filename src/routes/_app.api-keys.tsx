@@ -29,6 +29,8 @@ const CURL_SPEECH = `curl ${API_BASE}/v1/voice/speech \\
   -d '{"text":"Hello from Lumify","voice_id":"<voice-id>","format":"mp3"}' \\
   --output speech.mp3`;
 
+type Product = "voice" | "face";
+
 type KeyRow = {
   id: string;
   name: string;
@@ -50,12 +52,31 @@ const cardTitle: React.CSSProperties = {
   fontSize: 11,
   textTransform: "uppercase",
   letterSpacing: ".12em",
+  fontWeight: 600,
   color: "#9aa08c",
+};
+
+const divider: React.CSSProperties = {
+  height: 1,
+  background: "#1e2316",
+  margin: "16px 0",
 };
 
 function fmtDate(iso: string | null) {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function fmtAgo(iso: string | null) {
+  if (!iso) return "never";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} d ago`;
 }
 
 function CopyButton({ text, label = "Copy", lime = false }: { text: string; label?: string; lime?: boolean }) {
@@ -96,7 +117,7 @@ function ApiKeysPage() {
 
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalProduct, setModalProduct] = useState<Product | null>(null);
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [rawKey, setRawKey] = useState<string | null>(null);
@@ -121,7 +142,7 @@ function ApiKeysPage() {
   }, [refresh]);
 
   const closeModal = () => {
-    setModalOpen(false);
+    setModalProduct(null);
     setRawKey(null);
     setName("");
     setError(null);
@@ -129,11 +150,11 @@ function ApiKeysPage() {
   };
 
   const onCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !modalProduct) return;
     setCreating(true);
     setError(null);
     try {
-      const res = (await create({ data: { name: name.trim() } })) as { key: string };
+      const res = (await create({ data: { name: name.trim(), product: modalProduct } })) as { key: string };
       setRawKey(res.key);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create key.");
@@ -164,18 +185,17 @@ function ApiKeysPage() {
     }
   };
 
-
-
-  const createBtn = (
+  const createBtn = (product: Product) => (
     <button
-      onClick={() => setModalOpen(true)}
+      className="lime-btn"
+      onClick={() => setModalProduct(product)}
       style={{
+        width: "100%",
         background: "#c6f24e",
         color: "#111406",
         fontWeight: 700,
         fontSize: 13,
         height: 40,
-        padding: "0 16px",
         borderRadius: 12,
         boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)",
         transition: "all 150ms",
@@ -185,24 +205,155 @@ function ApiKeysPage() {
     </button>
   );
 
+  const keyRow = (k: KeyRow) => {
+    const revoked = !!k.revoked_at;
+    return (
+      <div
+        key={k.id}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          minHeight: 52,
+          padding: "10px 0",
+          borderBottom: "1px solid #1e2316",
+          opacity: revoked ? 0.55 : 1,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 14, color: "#f2f4ec" }}>{k.name}</span>
+            <span
+              style={{
+                fontSize: 10,
+                fontFamily: "ui-monospace, monospace",
+                textTransform: "uppercase",
+                padding: "2px 8px",
+                borderRadius: 999,
+                background: revoked ? "rgba(255,122,107,.12)" : "rgba(198,242,78,.12)",
+                color: revoked ? "#ff7a6b" : "#c6f24e",
+              }}
+            >
+              {revoked ? "Revoked" : "Active"}
+            </span>
+          </div>
+          <div style={{ marginTop: 4, fontSize: 12, color: "#6b7160", display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <span style={{ fontFamily: "ui-monospace, monospace", color: "#9aa08c" }}>{k.key_prefix}••••••••</span>
+            <span>· created {fmtDate(k.created_at)}</span>
+            <span>· last used {fmtAgo(k.last_used_at)}</span>
+          </div>
+        </div>
+        {revoked ? (
+          <button
+            onClick={() => setDeleteId(k.id)}
+            style={{
+              flexShrink: 0,
+              fontSize: 12,
+              color: "#ff7a6b",
+              background: "transparent",
+              border: "1px solid rgba(255,122,107,.3)",
+              borderRadius: 10,
+              padding: "6px 12px",
+              transition: "all 150ms",
+            }}
+          >
+            Delete
+          </button>
+        ) : (
+          <button
+            onClick={() => setConfirmId(k.id)}
+            style={{
+              flexShrink: 0,
+              fontSize: 12,
+              color: "#ff7a6b",
+              background: "transparent",
+              border: "1px solid rgba(255,122,107,.3)",
+              borderRadius: 10,
+              padding: "6px 12px",
+              transition: "all 150ms",
+            }}
+          >
+            Revoke
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const emptyState = (product: Product) => (
+    <div style={{ textAlign: "center", padding: "32px 0" }}>
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          background: "rgba(198,242,78,.12)",
+          display: "grid",
+          placeItems: "center",
+          margin: "0 auto 12px",
+        }}
+      >
+        <KeyRound size={18} color="#c6f24e" />
+      </div>
+      <div style={{ fontSize: 14, color: "#9aa08c" }}>
+        {product === "voice" ? "No voice keys yet" : "No Body Swap keys yet"}
+      </div>
+      <div style={{ fontSize: 13, color: "#6b7160", marginTop: 6 }}>
+        {product === "voice"
+          ? "Create a key to start building with Lumify Voice."
+          : "Create a key now — it activates at launch."}
+      </div>
+    </div>
+  );
+
+  const codeRow = (snippet: string) => (
+    <div key={snippet} style={{ position: "relative", marginBottom: 10 }}>
+      <div style={{ position: "absolute", top: 8, right: 8 }}>
+        <CopyButton text={snippet} />
+      </div>
+      <pre
+        style={{
+          fontFamily: "ui-monospace, monospace",
+          fontSize: 12,
+          background: "#101309",
+          border: "1px solid #262b1c",
+          borderRadius: 10,
+          padding: 14,
+          paddingRight: 84,
+          overflowX: "auto",
+          color: "#9aa08c",
+          margin: 0,
+        }}
+      >
+        {snippet}
+      </pre>
+    </div>
+  );
+
+  const voiceKeys = keys.filter((k) => (k.scopes ?? []).includes("voice"));
+  const faceKeys = keys.filter((k) => (k.scopes ?? []).includes("face"));
+
   return (
     <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 28px", color: "#f2f4ec" }}>
       <header style={{ marginBottom: 24 }}>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 400 }}>API keys</h1>
         <p style={{ fontSize: 13, color: "#6b7160", marginTop: 6 }}>
-          Control Lumify from your own code. Requests are billed from your credit wallet.
+          One key per product — voice keys don't work on Body Swap, and vice versa.
         </p>
       </header>
 
-      {/* PRODUCTS */}
-      <div className="api-products" style={{ display: "grid", gap: 16, marginBottom: 16 }}>
-        <div style={card}>
+      {error && <p style={{ fontSize: 12, color: "#ff7a6b", marginBottom: 12 }}>{error}</p>}
+
+      <div className="api-columns" style={{ display: "grid", gap: 20, alignItems: "stretch" }}>
+        {/* LUMIFY VOICE */}
+        <div style={{ ...card, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={cardTitle}>Lumify Voice</span>
             <span
               style={{
-                fontSize: 10,
-                fontFamily: "ui-monospace, monospace",
+                fontSize: 11,
+                fontWeight: 700,
                 textTransform: "uppercase",
                 background: "rgba(198,242,78,.12)",
                 color: "#c6f24e",
@@ -213,22 +364,47 @@ function ApiKeysPage() {
               Live
             </span>
           </div>
-          <p style={{ fontSize: 13, color: "#9aa08c", marginTop: 10 }}>
+          <p style={{ fontSize: 14, color: "#9aa08c", marginTop: 10 }}>
             Text to speech with any Lumify voice — yours or cloned. 1 credit per 10 characters.
           </p>
-          <p style={{ fontSize: 11, color: "#6b7160", marginTop: 8 }}>Scope: voice</p>
+          <p style={{ fontSize: 12, fontFamily: "ui-monospace, monospace", color: "#6b7160", marginTop: 8 }}>
+            Scope: voice
+          </p>
+
+          <div style={divider} />
+
+          <span style={cardTitle}>Your keys</span>
+          <div style={{ marginTop: 8 }}>
+            {loading ? (
+              <p style={{ fontSize: 12.5, color: "#6b7160", padding: "16px 0" }}>Loading…</p>
+            ) : voiceKeys.length === 0 ? (
+              emptyState("voice")
+            ) : (
+              voiceKeys.map(keyRow)
+            )}
+          </div>
+          <div style={{ marginTop: 16 }}>{createBtn("voice")}</div>
+
+          <div style={divider} />
+
+          <span style={cardTitle}>Quick start</span>
+          <div style={{ marginTop: 10 }}>
+            {codeRow(CURL_VOICES)}
+            {codeRow(CURL_SPEECH)}
+          </div>
         </div>
 
-        <div style={{ ...card, opacity: 0.65 }}>
+        {/* AI BODY SWAP */}
+        <div style={{ ...card, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={cardTitle}>AI Body Swap</span>
             <span
               style={{
-                fontSize: 10,
-                fontFamily: "ui-monospace, monospace",
+                fontSize: 11,
+                fontWeight: 700,
                 textTransform: "uppercase",
-                background: "#101309",
-                color: "#6b7160",
+                background: "rgba(255,210,138,.1)",
+                color: "#ffd28a",
                 padding: "2px 8px",
                 borderRadius: 999,
               }}
@@ -236,261 +412,53 @@ function ApiKeysPage() {
               Coming soon
             </span>
           </div>
-          <p style={{ fontSize: 13, color: "#6b7160", marginTop: 10 }}>
-            Swap bodies in real time from your own code. Not yet available.
+          <p style={{ fontSize: 14, color: "#9aa08c", marginTop: 10 }}>
+            Swap bodies in real time from your own code. Keys you create now start working the day the API goes live.
           </p>
-        </div>
-      </div>
+          <p style={{ fontSize: 12, fontFamily: "ui-monospace, monospace", color: "#6b7160", marginTop: 8 }}>
+            Scope: face
+          </p>
 
-      {/* VOICE KEYS */}
-      {(() => {
-        const voiceKeys = keys.filter((k) => (k.scopes ?? []).includes("voice"));
-        const swapKeys = keys.filter((k) => (k.scopes ?? []).includes("body_swap"));
+          <div style={divider} />
 
-        const table = (rows: KeyRow[]) => (
-          <div style={{ overflowX: "auto", marginTop: 14 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-              <thead>
-                <tr>
-                  {["Name", "Key", "Created", "Last used", "Status", ""].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        ...cardTitle,
-                        textAlign: "left",
-                        padding: "8px 8px",
-                        borderBottom: "1px solid #1e2316",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((k) => {
-                  const revoked = !!k.revoked_at;
-                  return (
-                    <tr key={k.id} style={{ opacity: revoked ? 0.5 : 1 }}>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #1e2316", fontSize: 13, color: "#f2f4ec" }}>
-                        {k.name}
-                      </td>
-                      <td
-                        style={{
-                          padding: "12px 8px",
-                          borderBottom: "1px solid #1e2316",
-                          fontFamily: "ui-monospace, monospace",
-                          fontSize: 12,
-                          color: "#9aa08c",
-                        }}
-                      >
-                        {k.key_prefix}••••
-                      </td>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #1e2316", fontSize: 12.5, color: "#9aa08c" }}>
-                        {fmtDate(k.created_at)}
-                      </td>
-                      <td
-                        style={{
-                          padding: "12px 8px",
-                          borderBottom: "1px solid #1e2316",
-                          fontSize: 12.5,
-                          color: k.last_used_at ? "#9aa08c" : "#6b7160",
-                        }}
-                      >
-                        {fmtDate(k.last_used_at) ?? "Never"}
-                      </td>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #1e2316" }}>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontFamily: "ui-monospace, monospace",
-                            textTransform: "uppercase",
-                            padding: "3px 8px",
-                            borderRadius: 999,
-                            background: revoked ? "rgba(255,122,107,.12)" : "rgba(198,242,78,.12)",
-                            color: revoked ? "#ff7a6b" : "#c6f24e",
-                          }}
-                        >
-                          {revoked ? "Revoked" : "Active"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 8px", borderBottom: "1px solid #1e2316", textAlign: "right" }}>
-                        <button
-                          onClick={() => (revoked ? setDeleteId(k.id) : setConfirmId(k.id))}
-                          style={{
-                            fontSize: 12,
-                            color: "#ff7a6b",
-                            border: "1px solid rgba(255,122,107,.3)",
-                            borderRadius: 8,
-                            padding: "5px 10px",
-                            transition: "all 150ms",
-                          }}
-                        >
-                          {revoked ? "Delete" : "Revoke"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <span style={cardTitle}>Your keys</span>
+          <div style={{ marginTop: 8 }}>
+            {loading ? (
+              <p style={{ fontSize: 12.5, color: "#6b7160", padding: "16px 0" }}>Loading…</p>
+            ) : faceKeys.length === 0 ? (
+              emptyState("face")
+            ) : (
+              faceKeys.map(keyRow)
+            )}
           </div>
-        );
+          <div style={{ marginTop: 16 }}>{createBtn("face")}</div>
+          <p style={{ fontSize: 12, color: "#6b7160", textAlign: "center", marginTop: 8 }}>
+            Won't work until Body Swap launches. You won't be charged before then.
+          </p>
 
-        return (
-          <>
-            <div style={{ ...card, marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={cardTitle}>Lumify Voice keys</span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontFamily: "ui-monospace, monospace",
-                      textTransform: "uppercase",
-                      background: "rgba(198,242,78,.12)",
-                      color: "#c6f24e",
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    Live
-                  </span>
-                </div>
-                {voiceKeys.length > 0 && createBtn}
-              </div>
+          <div style={divider} />
 
-              {error && <p style={{ fontSize: 12, color: "#ff7a6b", marginTop: 10 }}>{error}</p>}
-
-              {loading ? (
-                <p style={{ fontSize: 12.5, color: "#6b7160", marginTop: 16 }}>Loading…</p>
-              ) : voiceKeys.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "28px 0" }}>
-                  <div
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 14,
-                      background: "rgba(198,242,78,.12)",
-                      display: "grid",
-                      placeItems: "center",
-                      margin: "0 auto 12px",
-                    }}
-                  >
-                    <KeyRound size={22} color="#c6f24e" />
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>No voice keys yet</div>
-                  <div style={{ fontSize: 12.5, color: "#6b7160", margin: "6px 0 16px" }}>
-                    Create a key to start building with Lumify Voice
-                  </div>
-                  {createBtn}
-                </div>
-              ) : (
-                table(voiceKeys)
-              )}
-            </div>
-
-            {/* BODY SWAP KEYS */}
-            <div style={{ ...card, marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={cardTitle}>AI Body Swap keys</span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontFamily: "ui-monospace, monospace",
-                    textTransform: "uppercase",
-                    background: "#101309",
-                    color: "#6b7160",
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                  }}
-                >
-                  Coming soon
-                </span>
-              </div>
-
-              {swapKeys.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "28px 0" }}>
-                  <div
-                    style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 14,
-                      background: "#101309",
-                      display: "grid",
-                      placeItems: "center",
-                      margin: "0 auto 12px",
-                    }}
-                  >
-                    <KeyRound size={22} color="#6b7160" />
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: "#9aa08c" }}>Not available yet</div>
-                  <div style={{ fontSize: 12.5, color: "#6b7160", margin: "6px 0 16px" }}>
-                    Body Swap keys open up when the API goes live. Voice keys won't work on it.
-                  </div>
-                  <button
-                    disabled
-                    style={{
-                      background: "#101309",
-                      color: "#6b7160",
-                      fontWeight: 600,
-                      fontSize: 13,
-                      height: 40,
-                      padding: "0 16px",
-                      borderRadius: 12,
-                      border: "1px solid #262b1c",
-                      cursor: "not-allowed",
-                    }}
-                  >
-                    + Create key
-                  </button>
-                </div>
-              ) : (
-                table(swapKeys)
-              )}
-            </div>
-          </>
-        );
-      })()}
-
-
-      {/* QUICK START */}
-      <div style={card}>
-        <span style={cardTitle}>Quick start</span>
-        <p style={{ fontSize: 13, color: "#9aa08c", margin: "10px 0 14px" }}>
-          Authenticate with a Bearer header. Find voice IDs with the voices endpoint, then generate speech.
-        </p>
-        {[CURL_VOICES, CURL_SPEECH].map((snippet) => (
-          <div key={snippet} style={{ position: "relative", marginBottom: 12 }}>
-            <div style={{ position: "absolute", top: 8, right: 8 }}>
-              <CopyButton text={snippet} />
-            </div>
-            <pre
+          <span style={cardTitle}>Quick start</span>
+          <div style={{ marginTop: 10 }}>
+            <div
               style={{
                 fontFamily: "ui-monospace, monospace",
                 fontSize: 12,
                 background: "#101309",
                 border: "1px solid #262b1c",
-                borderRadius: 12,
+                borderRadius: 10,
                 padding: 14,
-                paddingRight: 84,
-                overflowX: "auto",
-                color: "#9aa08c",
-                margin: 0,
+                color: "#6b7160",
               }}
             >
-              {snippet}
-            </pre>
+              Body Swap API docs land here at launch.
+            </div>
           </div>
-        ))}
-        <p style={{ fontSize: 12, color: "#6b7160" }}>
-          Pricing: 1 credit per 10 characters (minimum 15 credits per request) · 1,000 characters ≈ 100 credits.
-        </p>
+        </div>
       </div>
 
       {/* CREATE MODAL */}
-      {modalOpen && (
+      {modalProduct && (
         <div
           style={{
             position: "fixed",
@@ -504,8 +472,23 @@ function ApiKeysPage() {
           onClick={closeModal}
         >
           <div style={{ ...card, width: 420, maxWidth: "100%" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={cardTitle}>{rawKey ? "Your new key" : "Create key"}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 400 }}>
+                  {rawKey
+                    ? "Your new key"
+                    : modalProduct === "voice"
+                      ? "Create Voice key"
+                      : "Create Body Swap key"}
+                </h2>
+                {!rawKey && (
+                  <p style={{ fontSize: 13, color: "#6b7160", marginTop: 6 }}>
+                    {modalProduct === "voice"
+                      ? "Scope: voice — works only on the Voice API."
+                      : "Scope: face — activates when Body Swap launches."}
+                  </p>
+                )}
+              </div>
               <button onClick={closeModal} style={{ color: "#6b7160" }} aria-label="Close">
                 <X size={16} />
               </button>
@@ -558,7 +541,7 @@ function ApiKeysPage() {
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. My voice bot"
+                  placeholder={modalProduct === "voice" ? "e.g. My voice bot" : "e.g. My swap app"}
                   style={{
                     width: "100%",
                     height: 40,
@@ -570,17 +553,6 @@ function ApiKeysPage() {
                     color: "#f2f4ec",
                   }}
                 />
-                <div style={{ ...cardTitle, marginTop: 16, marginBottom: 8 }}>Products</div>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#f2f4ec" }}>
-                  <input type="checkbox" checked readOnly style={{ accentColor: "#c6f24e" }} />
-                  Lumify Voice — text to speech
-                </label>
-                <label
-                  style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7160", marginTop: 8 }}
-                >
-                  <input type="checkbox" disabled />
-                  AI Body Swap — coming soon
-                </label>
 
                 {error && <p style={{ fontSize: 12, color: "#ff7a6b", marginTop: 10 }}>{error}</p>}
 
@@ -723,11 +695,11 @@ function ApiKeysPage() {
         </div>
       )}
 
-
-
       <style>{`
-        .api-products { grid-template-columns: 1fr; }
-        @media (min-width: 720px) { .api-products { grid-template-columns: 1fr 1fr; } }
+        .api-columns { grid-template-columns: 1fr; }
+        @media (min-width: 1100px) { .api-columns { grid-template-columns: 1fr 1fr; } }
+        .lime-btn:hover { background: #d4fa66 !important; }
+        @media (prefers-reduced-motion: reduce) { .api-columns * { transition: none !important; } }
       `}</style>
     </div>
   );
