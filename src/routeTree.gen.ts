@@ -50,6 +50,7 @@ import { Route as InventorTutorialsRouteImport } from './routes/inventor.tutoria
 import { Route as InventorUsersRouteImport } from './routes/inventor.users'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiPublicCryptomusWebhookRouteImport } from './routes/api/public/cryptomus-webhook'
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 import { Route as ApiVoiceStreamRouteImport } from './routes/api/voice/stream'
@@ -268,6 +269,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCryptomusWebhookRoute =
+  ApiPublicCryptomusWebhookRouteImport.update({
+    id: '/api/public/cryptomus-webhook',
+    path: '/api/public/cryptomus-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicResolveStreamTokenRoute =
   ApiPublicResolveStreamTokenRouteImport.update({
     id: '/api/public/resolve-stream-token',
@@ -364,6 +371,7 @@ export interface FileRoutesByFullPath {
   '/inventor/': typeof InventorIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/cryptomus-webhook': typeof ApiPublicCryptomusWebhookRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/api/voice/stream': typeof ApiVoiceStreamRoute
@@ -415,6 +423,7 @@ export interface FileRoutesByTo {
   '/inventor': typeof InventorIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/cryptomus-webhook': typeof ApiPublicCryptomusWebhookRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/api/voice/stream': typeof ApiVoiceStreamRoute
@@ -469,6 +478,7 @@ export interface FileRoutesById {
   '/inventor/': typeof InventorIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/public/cryptomus-webhook': typeof ApiPublicCryptomusWebhookRoute
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/api/voice/stream': typeof ApiVoiceStreamRoute
@@ -523,6 +533,7 @@ export interface FileRouteTypes {
     | '/inventor/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/cryptomus-webhook'
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/api/voice/stream'
@@ -574,6 +585,7 @@ export interface FileRouteTypes {
     | '/inventor'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/cryptomus-webhook'
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/api/voice/stream'
@@ -627,6 +639,7 @@ export interface FileRouteTypes {
     | '/inventor/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/public/cryptomus-webhook'
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/api/voice/stream'
@@ -661,6 +674,7 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicCryptomusWebhookRoute: typeof ApiPublicCryptomusWebhookRoute
   ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   ApiVoiceStreamRoute: typeof ApiVoiceStreamRoute
@@ -962,6 +976,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cryptomus-webhook': {
+      id: '/api/public/cryptomus-webhook'
+      path: '/api/public/cryptomus-webhook'
+      fullPath: '/api/public/cryptomus-webhook'
+      preLoaderRoute: typeof ApiPublicCryptomusWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/resolve-stream-token': {
       id: '/api/public/resolve-stream-token'
       path: '/api/public/resolve-stream-token'
@@ -1116,6 +1137,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicCryptomusWebhookRoute: ApiPublicCryptomusWebhookRoute,
   ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   ApiVoiceStreamRoute: ApiVoiceStreamRoute,
