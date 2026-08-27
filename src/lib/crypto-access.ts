@@ -1,6 +1,6 @@
-/** Accounts allowed to use crypto checkout (lowercase emails). */
-export const CRYPTO_ALLOWED_EMAILS = ["brightsolutionslab@gmail.com"];
+/** Crypto checkout is available to all signed-in accounts. */
+export const CRYPTO_ALLOWED_EMAILS: string[] = [];
 
-export function canUseCrypto(email?: string | null): boolean {
-  return !!email && CRYPTO_ALLOWED_EMAILS.includes(email.toLowerCase());
+export function canUseCrypto(_email?: string | null): boolean {
+  return true;
 }

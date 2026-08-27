@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotInMaintenance } from "@/lib/site-settings.functions";
-import { CRYPTO_ALLOWED_EMAILS } from "@/lib/crypto-access";
 
 /**
  * Creates a Cryptomus hosted invoice.
@@ -19,12 +18,6 @@ export const createCryptomusInvoice = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    // Crypto checkout is limited to a single allowlisted account for now.
-    const email = String((context.claims as { email?: string } | undefined)?.email ?? "").toLowerCase();
-    if (!CRYPTO_ALLOWED_EMAILS.includes(email)) {
-      throw new Error("Crypto payments are not available on this account.");
-    }
-
     await assertNotInMaintenance("purchase", { userId: context.userId });
 
     const {
