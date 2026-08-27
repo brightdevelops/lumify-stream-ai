@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertNotInMaintenance } from "@/lib/site-settings.functions";
+import { CRYPTO_ALLOWED_EMAILS } from "@/lib/crypto-access";
 
 /**
  * Creates a Cryptomus hosted invoice.
