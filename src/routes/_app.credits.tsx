@@ -10,6 +10,7 @@ import {
 } from "@/lib/payments.functions";
 import { createCryptomusInvoice } from "@/lib/crypto-payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
+import { canUseCrypto } from "@/lib/crypto-access";
 import { StatusBadge } from "./_app.dashboard";
 
 export const Route = createFileRoute("/_app/credits")({
@@ -66,6 +67,7 @@ function WalletPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pack = PACKS.find((p) => p.id === selected)!;
+  const cryptoAllowed = canUseCrypto(user?.email);
 
   const { data: balance = 0, refetch: refetchBalance } = useQuery({
     queryKey: ["wallet-balance", user?.id],
@@ -239,6 +241,8 @@ function WalletPage() {
             Card · Bank transfer · Mobile money
           </p>
 
+          {cryptoAllowed && (
+            <>
           <button
             onClick={handleCryptoPayment}
             disabled={cryptoBusy || paused}
@@ -250,6 +254,8 @@ function WalletPage() {
           <p className="mt-2 text-center text-[12px] text-[color:var(--faint)]">
             USDT · BTC · ETH and more, via Cryptomus. Credits arrive after network confirmation.
           </p>
+            </>
+          )}
 
         </div>
 
