@@ -64,7 +64,7 @@ function WalletPage() {
   const [error, setError] = useState<string | null>(null);
   const pack = PACKS.find((p) => p.id === selected)!;
 
-  const { data: balance = 0 } = useQuery({
+  const { data: balance = 0, refetch: refetchBalance } = useQuery({
     queryKey: ["wallet-balance", user?.id],
     enabled: !!user,
     queryFn: async () => {
