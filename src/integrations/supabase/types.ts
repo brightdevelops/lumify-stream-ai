@@ -232,6 +232,54 @@ export type Database = {
         }
         Relationships: []
       }
+      crypto_invoices: {
+        Row: {
+          amount_ngn: number
+          amount_usd: number
+          created_at: string
+          credits: number
+          cryptomus_uuid: string | null
+          order_id: string
+          package_id: string
+          payer_currency: string | null
+          payment_amount: number | null
+          status: string
+          updated_at: string
+          usd_ngn_rate: number
+          user_id: string
+        }
+        Insert: {
+          amount_ngn: number
+          amount_usd: number
+          created_at?: string
+          credits: number
+          cryptomus_uuid?: string | null
+          order_id: string
+          package_id: string
+          payer_currency?: string | null
+          payment_amount?: number | null
+          status?: string
+          updated_at?: string
+          usd_ngn_rate: number
+          user_id: string
+        }
+        Update: {
+          amount_ngn?: number
+          amount_usd?: number
+          created_at?: string
+          credits?: number
+          cryptomus_uuid?: string | null
+          order_id?: string
+          package_id?: string
+          payer_currency?: string | null
+          payment_amount?: number | null
+          status?: string
+          updated_at?: string
+          usd_ngn_rate?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
