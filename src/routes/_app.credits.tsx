@@ -222,6 +222,9 @@ function WalletPage() {
             })}
           </div>
 
+          {notice && (
+            <p className="mt-4 text-[13px] text-[color:var(--primary)]">{notice}</p>
+          )}
           {error && <p className="mt-4 text-[13px] text-[color:var(--destructive)]">{error}</p>}
 
           <button
@@ -235,6 +238,19 @@ function WalletPage() {
           <p className="mt-3 text-center text-[12px] text-[color:var(--faint)]">
             Card · Bank transfer · Mobile money
           </p>
+
+          <button
+            onClick={handleCryptoPayment}
+            disabled={cryptoBusy || paused}
+            className="mt-4 w-full rounded-xl border border-[color:var(--border)] px-4 py-3 text-[14px] text-foreground transition-colors hover:border-[color:var(--primary)] disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Bitcoin size={15} className="text-primary" />
+            {paused ? "Paused" : cryptoBusy ? "Starting…" : "Pay with crypto"}
+          </button>
+          <p className="mt-2 text-center text-[12px] text-[color:var(--faint)]">
+            USDT · BTC · ETH and more, via Cryptomus. Credits arrive after network confirmation.
+          </p>
+
         </div>
 
         {/* Recent top-ups */}
