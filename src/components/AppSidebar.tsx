@@ -11,7 +11,6 @@ const items = [
   { to: "/credits", label: "Wallet", icon: Wallet, tour: "credits" },
   { to: "/billing", label: "Billing", icon: Receipt, tour: "billing" },
   { to: "/voice", label: "Voice Studio", icon: Mic, tour: "voice" },
-  { to: "/api-keys", label: "API keys", icon: KeyRound, tour: "api-keys" },
 ] as const;
 
 
