@@ -1,13 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Wallet as WalletIcon, ShieldCheck } from "lucide-react";
+import { Check, Wallet as WalletIcon, ShieldCheck, Bitcoin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
   createFlutterwaveCheckout,
   verifyFlutterwaveAndCredit,
 } from "@/lib/payments.functions";
+import { createCryptomusInvoice } from "@/lib/crypto-payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
 import { StatusBadge } from "./_app.dashboard";
 
@@ -61,6 +62,8 @@ function WalletPage() {
 
   const [selected, setSelected] = useState("basic");
   const [processing, setProcessing] = useState(false);
+  const [cryptoBusy, setCryptoBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pack = PACKS.find((p) => p.id === selected)!;
 
@@ -117,6 +120,22 @@ function WalletPage() {
     }
   }, [user, navigate]);
 
+  // Crypto credits arrive asynchronously — poll for a while after returning.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("crypto") !== "success") return;
+    window.history.replaceState({}, "", "/credits");
+    setNotice("Payment received — applying your credits, this can take a moment…");
+    let ticks = 0;
+    const id = setInterval(() => {
+      ticks += 1;
+      refetchBalance();
+      if (ticks >= 10) clearInterval(id);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [refetchBalance]);
+
   const handlePayment = async () => {
     if (paused || !user?.email) return;
     setError(null);
@@ -128,6 +147,20 @@ function WalletPage() {
     } catch (e: any) {
       setProcessing(false);
       setError(e?.message ?? "Could not start payment");
+    }
+  };
+
+  const handleCryptoPayment = async () => {
+    if (paused || !user) return;
+    setError(null);
+    setCryptoBusy(true);
+    try {
+      const packageId = pack.id as "starter" | "basic" | "pro" | "enterprise";
+      const { url } = await createCryptomusInvoice({ data: { packageId } });
+      window.location.href = url;
+    } catch (e: any) {
+      setCryptoBusy(false);
+      setError(e?.message ?? "Could not start the crypto payment. Please try again.");
     }
   };
 
