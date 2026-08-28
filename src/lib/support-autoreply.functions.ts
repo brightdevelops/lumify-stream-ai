@@ -41,7 +41,7 @@ WHAT YOU KNOW (answer ONLY from this — never invent features, prices, or polic
 - How it works: sign up at lumifylive.com, top up credits, turn on your camera, pick a style or avatar. The AI transforms your video live. Runs in the browser and connects to OBS, so viewers on TikTok, Instagram, or YouTube see the transformed video.
 - Pricing: prepaid credits at ₦23 per credit, pay-as-you-go, no subscription. Packs: Starter 500 credits ₦11,500 · Basic 1,000 credits ₦23,000 · Pro 2,000 credits ₦46,000 · Enterprise 5,000 credits ₦115,000.
 - Streaming costs 2 credits per second (₦46/sec).
-- Payments: card and bank transfer via Flutterwave. Credits normally appear within a few minutes of a successful payment.
+- Payments: card and bank transfer via Korapay. Credits normally appear within a few minutes of a successful payment.
 - Requirements: a device with a camera, Chrome or Edge, stable internet.
 - Quick fixes: camera not showing → allow camera permission in the browser and refresh. Laggy video → close other tabs and use a stronger network.
 

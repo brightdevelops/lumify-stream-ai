@@ -51,9 +51,9 @@ function RefundsPage() {
               If your card was charged but credits were not added to your account, or if you were
               charged twice for the same order, email{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>{" "}
-              with your Flutterwave transaction reference. We will investigate, credit the missing
+              with your Korapay transaction reference. We will investigate, credit the missing
               balance, and — for confirmed duplicates — reverse the extra charge through
-              Flutterwave.
+              Korapay.
             </p>
           </section>
 
@@ -81,7 +81,7 @@ function RefundsPage() {
             <p className="mt-3">
               Email{" "}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>{" "}
-              with your account email and the Flutterwave transaction reference. We aim to respond
+              with your account email and the Korapay transaction reference. We aim to respond
               within 2 business days.
             </p>
           </section>

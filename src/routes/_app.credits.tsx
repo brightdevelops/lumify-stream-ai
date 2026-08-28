@@ -5,8 +5,8 @@ import { Check, Wallet as WalletIcon, ShieldCheck, Bitcoin } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  createFlutterwaveCheckout,
-  verifyFlutterwaveAndCredit,
+  createKorapayCheckout,
+  verifyKorapayAndCredit,
 } from "@/lib/payments.functions";
 import { createCryptomusInvoice } from "@/lib/crypto-payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_app/credits")({
   head: () => ({
     meta: [
       { title: "Wallet — Lumify" },
-      { name: "description", content: "Top up your Lumify balance with Flutterwave. Card, bank transfer, mobile money." },
+      { name: "description", content: "Top up your Lumify balance with Korapay. Card, bank transfer, mobile money." },
     ],
   }),
 });
@@ -100,19 +100,18 @@ function WalletPage() {
   useEffect(() => {
     if (typeof window === "undefined" || !user) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("flutterwave") === "1") {
-      const txRef = params.get("tx_ref");
-      const transactionId = params.get("transaction_id");
+    if (params.get("korapay") === "1") {
+      const reference = params.get("reference");
       const status = params.get("status");
       window.history.replaceState({}, "", "/credits");
-      if (!txRef || !transactionId || (status && status !== "successful" && status !== "completed")) {
-        if (status && status !== "successful" && status !== "completed") setError("Payment was cancelled or did not complete.");
+      if (!reference || (status && status !== "success" && status !== "successful")) {
+        if (status && status !== "success" && status !== "successful") setError("Payment was cancelled or did not complete.");
         return;
       }
       setProcessing(true);
       (async () => {
         try {
-          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
+          await verifyKorapayAndCredit({ data: { reference } });
           navigate({ to: "/dashboard" });
         } catch (e: any) {
           setProcessing(false);
@@ -144,7 +143,7 @@ function WalletPage() {
     setProcessing(true);
     try {
       const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
-      const { checkoutUrl } = await createFlutterwaveCheckout({ data: { packId } });
+      const { checkoutUrl } = await createKorapayCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
@@ -171,7 +170,7 @@ function WalletPage() {
       <div className="mb-8">
         <h1 className="font-display text-[38px] leading-tight">Wallet</h1>
         <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)] flex items-center gap-2">
-          Top up your balance — payments secured by <span className="text-foreground font-semibold">Flutterwave</span>.
+          Top up your balance — payments secured by <span className="text-foreground font-semibold">Korapay</span>.
           <ShieldCheck size={14} className="text-primary" />
         </p>
       </div>
@@ -235,7 +234,7 @@ function WalletPage() {
             className="btn-primary w-full mt-6"
           >
             <WalletIcon size={15} />
-            {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Flutterwave`}
+            {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Korapay`}
           </button>
           <p className="mt-3 text-center text-[12px] text-[color:var(--faint)]">
             Card · Bank transfer · Mobile money
