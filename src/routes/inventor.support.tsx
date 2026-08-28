@@ -23,7 +23,9 @@ import {
   CircleDot,
   CheckCircle2,
   Layers,
+  ImagePlus,
 } from "lucide-react";
+import { SupportAttachment, uploadSupportImage } from "@/lib/support-attachments";
 
 type Conv = {
   id: string;
@@ -52,6 +54,7 @@ type Msg = {
   message: string;
   sender: "user" | "admin";
   is_auto_reply?: boolean;
+  attachment_path?: string | null;
   created_at: string;
 };
 
@@ -243,7 +246,7 @@ function SupportInbox() {
     let cancelled = false;
     supabase
       .from("support_messages")
-      .select("id, message, sender, is_auto_reply, created_at")
+      .select("id, message, sender, is_auto_reply, attachment_path, created_at")
       .eq("conversation_id", selectedId)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
@@ -320,6 +323,29 @@ function SupportInbox() {
       await loadAutoConfig();
     } catch (e: any) {
       setErr(e?.message ?? String(e));
+    }
+  }
+
+  async function sendAdminImage(file: File) {
+    if (!selected || sending) return;
+    setSending(true);
+    try {
+      const path = await uploadSupportImage(file, selected.user_id, selected.id);
+      const { error } = await supabase.from("support_messages").insert({
+        conversation_id: selected.id,
+        user_id: selected.user_id,
+        user_email: selected.user_email,
+        type: selected.type,
+        subject: selected.subject,
+        message: "📎 Image",
+        sender: "admin",
+        attachment_path: path,
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      setErr(e?.message ?? String(e));
+    } finally {
+      setSending(false);
     }
   }
 
@@ -862,6 +888,23 @@ function SupportInbox() {
                   className="flex-1 bg-transparent text-[13.5px] outline-none resize-none max-h-40"
                   style={{ color: "#e7ecdf" }}
                 />
+                <label
+                  className="h-8 w-8 shrink-0 grid place-items-center rounded-lg cursor-pointer"
+                  style={{ border: `1px solid ${CARD_BORDER}`, color: "#8f978a" }}
+                  title="Attach image"
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void sendAdminImage(f);
+                    }}
+                  />
+                </label>
                 <button
                   onClick={() => sendReply()}
                   disabled={!reply.trim() || sending}
