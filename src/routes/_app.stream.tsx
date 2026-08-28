@@ -245,33 +245,97 @@ function StreamPage() {
     };
   }, []);
 
-  // Enumerate available cameras
+  // Fire-and-forget camera telemetry. Never blocks or throws into camera flow.
+  const cameraPermissionRef = useRef<string>("unknown");
+  useEffect(() => { cameraPermissionRef.current = cameraPermission; }, [cameraPermission]);
+  const camerasCountRef = useRef(0);
+  useEffect(() => { camerasCountRef.current = cameras.length; }, [cameras.length]);
+
+  const logCameraEvent = (phase: "unlock" | "start" | "switch", err?: any) => {
+    try {
+      void supabase
+        .from("camera_events")
+        .insert({
+          user_id: user?.id ?? null,
+          phase,
+          error_name: err?.name ?? null,
+          error_message: err?.message ?? null,
+          permission_state: cameraPermissionRef.current,
+          device_count: camerasCountRef.current,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        })
+        .then(
+          () => undefined,
+          () => undefined,
+        );
+    } catch (e) {
+      console.debug("camera telemetry skipped", e);
+    }
+  };
+
+  // Enumerate available cameras. NEVER calls getUserMedia.
+  const loadCameras = async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === "videoinput");
+      const labelsMissing = videoInputs.length > 0 && videoInputs.every((d) => !d.label);
+      setNeedsCameraUnlock(labelsMissing);
+      setCameras(videoInputs);
+      setSelectedCameraId((prev) => prev || videoInputs[0]?.deviceId || "");
+    } catch (e) {
+      console.error("enumerateDevices failed", e);
+    }
+  };
+
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
-
-    const loadCameras = async () => {
-      try {
-        let devices = await navigator.mediaDevices.enumerateDevices();
-        let videoInputs = devices.filter((d) => d.kind === "videoinput");
-        if (videoInputs.length > 0 && videoInputs.every((d) => !d.label)) {
-          try {
-            const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            tmp.getTracks().forEach((t) => t.stop());
-            devices = await navigator.mediaDevices.enumerateDevices();
-            videoInputs = devices.filter((d) => d.kind === "videoinput");
-          } catch {}
-        }
-        setCameras(videoInputs);
-        setSelectedCameraId((prev) => prev || videoInputs[0]?.deviceId || "");
-      } catch (e) {
-        console.error("enumerateDevices failed", e);
-      }
+    void loadCameras();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onDeviceChange = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { void loadCameras(); }, 500);
     };
-
-    loadCameras();
-    navigator.mediaDevices.addEventListener?.("devicechange", loadCameras);
-    return () => navigator.mediaDevices.removeEventListener?.("devicechange", loadCameras);
+    navigator.mediaDevices.addEventListener?.("devicechange", onDeviceChange);
+    return () => {
+      if (timer) clearTimeout(timer);
+      navigator.mediaDevices.removeEventListener?.("devicechange", onDeviceChange);
+    };
   }, []);
+
+  // Track browser camera permission state (unsupported in some browsers).
+  useEffect(() => {
+    let status: PermissionStatus | null = null;
+    (async () => {
+      try {
+        status = await navigator.permissions.query({ name: "camera" as PermissionName });
+        setCameraPermission(status.state as any);
+        status.onchange = () => {
+          setCameraPermission(status!.state as any);
+          void loadCameras();
+        };
+      } catch (e) {
+        console.debug("permissions.query(camera) unsupported", e);
+        setCameraPermission("unknown");
+      }
+    })();
+    return () => { if (status) status.onchange = null; };
+  }, []);
+
+  // Explicit, gesture-triggered camera unlock. Only call from a real click.
+  const requestCameraAccess = async () => {
+    try {
+      const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      tmp.getTracks().forEach((t) => t.stop());
+      await loadCameras();
+      setNeedsCameraUnlock(false);
+    } catch (err: any) {
+      logCameraEvent("unlock", err);
+      const mapped = mapCameraError(err);
+      setError(`${mapped.title} ${mapped.message}`);
+    }
+  };
+
 
   const findPeerConnection = (): RTCPeerConnection | null => {
     const client = decartClientRef.current as unknown as Record<string, unknown> | null;
