@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the "background-refresh killed a fresh login" race and may be recovered.
   const intentionalSignOutRef = useRef(false);
   const lastSignedInAtRef = useRef(0);
+  const loadingRef = useRef(true);
 
   useEffect(() => {
     let mounted = true;
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.clearTimeout(loadingTimer);
         loadingTimer = undefined;
       }
+      loadingRef.current = false;
       if (mounted) setLoading(false);
     };
 
@@ -144,15 +146,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadingTimer = window.setTimeout(() => {
       loadingTimer = undefined;
       if (!mounted) return;
-      setLoading((stillLoading) => {
-        if (!stillLoading) return stillLoading;
-        const stored = readStoredSession();
-        const nowSec = Math.floor(Date.now() / 1000);
-        const valid = !!stored?.access_token && (stored.expires_at ?? 0) > nowSec;
-        void logAuthEvent("loading_timeout", { had_stored: valid }, stored);
-        applySession(valid ? stored : null);
-        return false;
-      });
+      if (!loadingRef.current) return;
+      const stored = readStoredSession();
+      const nowSec = Math.floor(Date.now() / 1000);
+      const valid = !!stored?.access_token && (stored.expires_at ?? 0) > nowSec;
+      void logAuthEvent("loading_timeout", { had_stored: valid }, stored);
+      applySession(valid ? stored : null);
+      finishLoading();
     }, 8000);
 
     // 2. Let the SDK emit INITIAL_SESSION from storage. Calling getSession()
