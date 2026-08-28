@@ -388,13 +388,15 @@ function StreamPage() {
     setSelectedCameraId(deviceId);
     if (!mediaStreamRef.current) return;
 
+    let adopted = false;
+    let newStream: MediaStream | null = null;
     try {
       await refreshLucyModelId();
       const model = models.realtime("lucy-2.1" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
-      const newStream = await navigator.mediaDevices.getUserMedia({
+      newStream = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: { exact: deviceId },
           frameRate: { ideal: fps },
@@ -404,7 +406,7 @@ function StreamPage() {
         audio: false,
       });
       const newTrack = newStream.getVideoTracks()[0];
-      if (!newTrack) return;
+      if (!newTrack) throw new Error("The selected camera returned no video track.");
 
       const pc = findPeerConnection();
       if (pc) {
@@ -418,15 +420,22 @@ function StreamPage() {
         t.stop();
       });
       oldStream.addTrack(newTrack);
+      adopted = true;
       if (inputVideoRef.current) {
         inputVideoRef.current.srcObject = oldStream;
         inputVideoRef.current.play().catch(() => {});
       }
-    } catch (e) {
-      console.error("Camera switch failed", e);
-      setError("Could not switch to that camera.");
+    } catch (err: any) {
+      console.error("Camera switch failed", err);
+      logCameraEvent("switch", err);
+      const mapped = mapCameraError(err);
+      setError(`${mapped.title} ${mapped.message}`);
+      void loadCameras();
+    } finally {
+      if (!adopted) newStream?.getTracks().forEach((t) => t.stop());
     }
   };
+
 
 
   // Wall-clock metering: charges for actual elapsed time, not assumed 1-sec
