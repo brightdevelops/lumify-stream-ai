@@ -7,6 +7,7 @@ import { AppTour } from "@/components/AppTour";
 
 import { AppBackground } from "@/components/app/AppBackground";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuthEvent } from "@/lib/auth-telemetry";
 
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
@@ -24,6 +25,7 @@ function AppLayout() {
 
   useEffect(() => {
     if (!loading && !user) {
+      void logAuthEvent("guard_redirect", {});
       window.setTimeout(() => navigate({ to: "/login" }), 0);
     }
   }, [loading, user, navigate]);
