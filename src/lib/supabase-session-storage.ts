@@ -16,6 +16,21 @@ export function parseStoredSupabaseSession(raw: string | null): Session | null {
   }
 }
 
+/** Pure localStorage read of the stored Supabase session. Never refreshes. */
+export function getStoredSupabaseSession(): Session | null {
+  if (typeof window === "undefined") return null;
+
+  for (let i = 0; i < window.localStorage.length; i += 1) {
+    const key = window.localStorage.key(i);
+    if (!key?.startsWith("sb-") || !key.endsWith("-auth-token")) continue;
+
+    const session = parseStoredSupabaseSession(window.localStorage.getItem(key));
+    if (session) return session;
+  }
+
+  return null;
+}
+
 export function getStoredSupabaseAccessToken() {
   if (typeof window === "undefined") return null;
 
