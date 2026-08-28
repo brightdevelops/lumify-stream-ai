@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
 import { tryAutoReply } from "@/lib/support-autoreply.functions";
+import { SupportAttachment, uploadSupportImage } from "@/lib/support-attachments";
 
 type Msg = {
   id: string;
   message: string;
   sender: "user" | "admin";
   is_auto_reply?: boolean;
+  attachment_path?: string | null;
   created_at: string;
 };
 
@@ -54,7 +56,7 @@ export function SupportWidget() {
     let cancelled = false;
     supabase
       .from("support_messages")
-      .select("id, message, sender, is_auto_reply, created_at")
+      .select("id, message, sender, is_auto_reply, attachment_path, created_at")
       .eq("conversation_id", convId)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
@@ -93,6 +95,42 @@ export function SupportWidget() {
       supabase.rpc("mark_my_conversation_read", { p_conversation_id: convId }).then(() => setUnread(0));
     }
   }, [open, convId, unread]);
+
+  async function ensureConversation(): Promise<string> {
+    if (convId) return convId;
+    const { data, error } = await supabase
+      .from("support_conversations")
+      .insert({ user_id: user!.id, user_email: user!.email, type: "chat" })
+      .select("id")
+      .single();
+    if (error) throw error;
+    setConvId(data.id);
+    return data.id;
+  }
+
+  async function sendImage(file: File) {
+    if (!user || sending) return;
+    setSending(true);
+    try {
+      const cid = await ensureConversation();
+      const path = await uploadSupportImage(file, user.id, cid);
+      const { error } = await supabase.from("support_messages").insert({
+        conversation_id: cid,
+        user_id: user.id,
+        user_email: user.email,
+        type: "chat",
+        message: "📎 Image",
+        sender: "user",
+        attachment_path: path,
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Could not send image");
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function send() {
     if (!user || !text.trim() || sending) return;
@@ -258,6 +296,11 @@ export function SupportWidget() {
                   }`}
                 >
                   {m.message}
+                  {m.attachment_path && (
+                    <div className="mt-2">
+                      <SupportAttachment path={m.attachment_path} />
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -277,6 +320,22 @@ export function SupportWidget() {
               placeholder="Type a message…"
               className="flex-1 rounded-md bg-background border border-input px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             />
+            <label
+              className="h-9 w-9 grid place-items-center rounded-md border border-input text-muted-foreground cursor-pointer hover:text-foreground"
+              title="Send an image"
+            >
+              <ImagePlus className="h-4 w-4" />
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) void sendImage(f);
+                }}
+              />
+            </label>
             <button
               type="submit"
               disabled={!text.trim() || sending}

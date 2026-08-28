@@ -865,6 +865,7 @@ export type Database = {
       }
       support_messages: {
         Row: {
+          attachment_path: string | null
           conversation_id: string
           created_at: string
           id: string
@@ -878,6 +879,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachment_path?: string | null
           conversation_id: string
           created_at?: string
           id?: string
@@ -891,6 +893,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachment_path?: string | null
           conversation_id?: string
           created_at?: string
           id?: string
