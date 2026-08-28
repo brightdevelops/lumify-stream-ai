@@ -1406,6 +1406,8 @@ function StudioLayout(p: StudioProps) {
   const {
     user, streaming, connecting,
     inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
+    needsCameraUnlock, cameraPermission, requestCameraAccess,
+
     mode, setMode, realism, setRealism, background, setBackground,
     referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
     selectedPreset, selectPreset,
