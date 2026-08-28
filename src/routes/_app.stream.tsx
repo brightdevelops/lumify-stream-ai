@@ -20,6 +20,33 @@ export const Route = createFileRoute("/_app/stream")({
   component: StreamPage,
 });
 
+/** Shared camera error mapping used by unlock, start-stream and camera switch. */
+export function mapCameraError(err: any): { title: string; message: string } {
+  const name = err?.name || "";
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return {
+      title: "Camera access was denied.",
+      message: "Please allow camera access in your browser settings, then reload the page.",
+    };
+  }
+  if (name === "NotFoundError" || name === "OverconstrainedError") {
+    return {
+      title: "No compatible camera was found.",
+      message: "Try selecting a different camera from the dropdown.",
+    };
+  }
+  if (name === "NotReadableError" || name === "AbortError") {
+    return {
+      title: "That camera is already in use by another app.",
+      message: "Close Zoom, OBS, Teams or any other app using it and try again.",
+    };
+  }
+  return {
+    title: `Could not start camera: ${err?.message || name || "unknown error"}.`,
+    message: "Try reloading the page.",
+  };
+}
+
 const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "Sketch"];
 const RATE = 2; // credits/sec
 const NAIRA_PER_CREDIT = 23;
