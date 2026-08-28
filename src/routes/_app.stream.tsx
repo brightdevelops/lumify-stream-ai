@@ -1402,6 +1402,56 @@ function Chip({ children, accent, danger }: { children: React.ReactNode; accent?
   );
 }
 
+function CameraBlockedPanel() {
+  const [why, setWhy] = useState(false);
+  return (
+    <div
+      style={{
+        background: "rgba(255, 210, 138, .08)",
+        border: "1px solid rgba(255, 210, 138, .3)",
+        borderRadius: 12,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        maxWidth: 420,
+      }}
+    >
+      <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600, color: "#ffd28a" }}>
+        Camera blocked
+      </span>
+      <p style={{ fontSize: 14, color: "#9aa08c", maxWidth: "46ch", margin: 0 }}>
+        Your browser is blocking camera access for this site. Lumify can't request it again until you allow it in your browser.
+      </p>
+      <ol style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "#f2f4ec", margin: 0, paddingLeft: 18 }}>
+        <li>Click the camera or lock icon in your browser's address bar.</li>
+        <li>Set Camera to <strong>Allow</strong>.</li>
+        <li>Reload this page.</li>
+      </ol>
+      <button
+        type="button"
+        onClick={() => setWhy((v) => !v)}
+        style={{
+          background: "transparent",
+          border: "1px solid #262b1c",
+          borderRadius: 10,
+          color: "#9aa08c",
+          fontSize: 13,
+          padding: "8px 12px",
+          alignSelf: "flex-start",
+        }}
+      >
+        Why am I seeing this?
+      </button>
+      {why && (
+        <span style={{ fontSize: 13, color: "#6b7160" }}>
+          This usually happens when a camera prompt was dismissed a few times.
+        </span>
+      )}
+    </div>
+  );
+}
+
 function StudioLayout(p: StudioProps) {
   const {
     user, streaming, connecting,
