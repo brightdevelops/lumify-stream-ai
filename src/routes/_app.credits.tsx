@@ -5,8 +5,8 @@ import { Check, Wallet as WalletIcon, ShieldCheck, Bitcoin } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  createFlutterwaveCheckout,
-  verifyFlutterwaveAndCredit,
+  createKorapayCheckout,
+  verifyKorapayAndCredit,
 } from "@/lib/payments.functions";
 import { createCryptomusInvoice } from "@/lib/crypto-payments.functions";
 import { useMaintenanceMode, MAINTENANCE_PURCHASE_MESSAGE } from "@/hooks/use-maintenance-mode";
