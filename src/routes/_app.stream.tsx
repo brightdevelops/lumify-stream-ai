@@ -1076,6 +1076,10 @@ function StreamPage() {
     cameras={cameras}
     selectedCameraId={selectedCameraId}
     handleCameraChange={handleCameraChange}
+    needsCameraUnlock={needsCameraUnlock}
+    cameraPermission={cameraPermission}
+    requestCameraAccess={requestCameraAccess}
+
     mode={mode}
     setMode={setMode}
     realism={realism}
