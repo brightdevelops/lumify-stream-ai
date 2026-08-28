@@ -329,12 +329,19 @@ export const createKorapayCheckout = createServerFn({ method: "POST" })
       );
     }
 
-
-    const payload = (await res.json()) as {
+    let payload: {
       status: boolean;
       message?: string;
       data?: { checkout_url?: string; reference?: string };
     };
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(
+        "Our payment provider returned an unexpected response. Please try again in a moment.",
+      );
+    }
+
     if (!payload.status || !payload.data?.checkout_url) {
       throw new Error(payload.message || "Korapay returned no checkout URL");
     }
