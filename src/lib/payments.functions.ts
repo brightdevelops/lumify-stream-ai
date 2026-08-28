@@ -274,42 +274,74 @@ export const createKorapayCheckout = createServerFn({ method: "POST" })
     // Bind reference to the caller (verify enforces the same rule).
     const reference = `lumify_${data.packId}_${userId.slice(0, 8)}_${Date.now()}`;
 
-    const res = await fetch("https://api.korapay.com/merchant/api/v1/charges/initialize", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secret}`,
-        "Content-Type": "application/json",
+    const body = JSON.stringify({
+      amount: pack.amountNgn,
+      redirect_url: `${appUrl}/credits?korapay=1`,
+      currency: "NGN",
+      reference,
+      narration: `Lumify ${pack.name} pack - ${pack.credits} credits`,
+      channels: ["card", "bank_transfer", "mobile_money"],
+      customer: {
+        email,
+        name: profile?.full_name || email,
       },
-      body: JSON.stringify({
-        amount: pack.amountNgn,
-        redirect_url: `${appUrl}/credits?korapay=1`,
-        currency: "NGN",
-        reference,
-        narration: `Lumify ${pack.name} pack — ${pack.credits} credits`,
-        channels: ["card", "bank_transfer", "mobile_money"],
-        customer: {
-          email,
-          name: profile?.full_name || email,
-        },
-        metadata: {
-          user_id: userId,
-          pack_id: data.packId,
-          credits: pack.credits,
-          amount_ngn: pack.amountNgn,
-        },
-      }),
+      metadata: {
+        user_id: userId,
+        pack_id: data.packId,
+        credits: pack.credits,
+        amount_ngn: pack.amountNgn,
+      },
     });
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Korapay init failed (${res.status}) ${text.slice(0, 200)}`);
+    // Korapay's edge occasionally answers an HTML "Access temporarily
+    // unavailable" page (403/5xx) instead of JSON. Retry a couple of times
+    // and never surface raw HTML to the buyer.
+    let res: Response | null = null;
+    let text = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 400 * attempt));
+      try {
+        res = await fetch("https://api.korapay.com/merchant/api/v1/charges/initialize", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${secret}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "User-Agent": "Lumify/1.0 (+https://lumifylive.com)",
+          },
+          body,
+        });
+      } catch (err) {
+        console.error("[korapay] network error:", err);
+        continue;
+      }
+      text = await res.text().catch(() => "");
+      const looksHtml = text.trimStart().startsWith("<");
+      if (res.ok && !looksHtml) break;
+      console.error(`[korapay] init attempt ${attempt + 1} failed (${res.status}) ${text.slice(0, 200)}`);
+      if (!looksHtml && res.status !== 429 && res.status < 500) break;
+      res = null;
     }
 
-    const payload = (await res.json()) as {
+    if (!res || !res.ok || text.trimStart().startsWith("<")) {
+      throw new Error(
+        "Our payment provider is temporarily unavailable. Please try again in a moment — you have not been charged.",
+      );
+    }
+
+    let payload: {
       status: boolean;
       message?: string;
       data?: { checkout_url?: string; reference?: string };
     };
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new Error(
+        "Our payment provider returned an unexpected response. Please try again in a moment.",
+      );
+    }
+
     if (!payload.status || !payload.data?.checkout_url) {
       throw new Error(payload.message || "Korapay returned no checkout URL");
     }
