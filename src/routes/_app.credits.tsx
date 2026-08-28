@@ -251,7 +251,7 @@ function WalletPage() {
             {paused ? "Paused" : cryptoBusy ? "Starting…" : "Pay with crypto"}
           </button>
           <p className="mt-2 text-center text-[12px] text-[color:var(--faint)]">
-            USDT · BTC · ETH and more, via Cryptomus. Credits arrive after network confirmation.
+            USDT · BTC · ETH and more. Credits arrive after network confirmation.
           </p>
             </>
           )}
