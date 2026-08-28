@@ -113,6 +113,9 @@ function StreamPage() {
   const [showOutOfCredits, setShowOutOfCredits] = useState(false);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [needsCameraUnlock, setNeedsCameraUnlock] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
+
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
   const [background, setBackground] = useState<string>("");
