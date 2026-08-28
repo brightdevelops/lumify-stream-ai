@@ -100,19 +100,18 @@ function WalletPage() {
   useEffect(() => {
     if (typeof window === "undefined" || !user) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("flutterwave") === "1") {
-      const txRef = params.get("tx_ref");
-      const transactionId = params.get("transaction_id");
+    if (params.get("korapay") === "1") {
+      const reference = params.get("reference");
       const status = params.get("status");
       window.history.replaceState({}, "", "/credits");
-      if (!txRef || !transactionId || (status && status !== "successful" && status !== "completed")) {
-        if (status && status !== "successful" && status !== "completed") setError("Payment was cancelled or did not complete.");
+      if (!reference || (status && status !== "success" && status !== "successful")) {
+        if (status && status !== "success" && status !== "successful") setError("Payment was cancelled or did not complete.");
         return;
       }
       setProcessing(true);
       (async () => {
         try {
-          await verifyFlutterwaveAndCredit({ data: { txRef, transactionId } });
+          await verifyKorapayAndCredit({ data: { reference } });
           navigate({ to: "/dashboard" });
         } catch (e: any) {
           setProcessing(false);
