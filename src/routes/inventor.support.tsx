@@ -796,6 +796,11 @@ function SupportInbox() {
                           </div>
                         )}
                         {m.message}
+                        {m.attachment_path && (
+                          <div className="mt-2">
+                            <SupportAttachment path={m.attachment_path} />
+                          </div>
+                        )}
                       </div>
                       <div
                         className={admin ? "text-right" : ""}
