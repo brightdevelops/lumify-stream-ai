@@ -805,16 +805,10 @@ function StreamPage() {
         console.error("getUserMedia failed", e?.name, e?.message, e);
         setConnecting(false);
         startingRef.current = false;
-        const name = e?.name || "";
-        if (name === "NotAllowedError" || name === "SecurityError") {
-          setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
-        } else if (name === "NotFoundError" || name === "OverconstrainedError") {
-          setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
-        } else if (name === "NotReadableError") {
-          setError("Your camera is already in use by another app (Zoom, OBS, Teams, etc.). Close it and try again.");
-        } else {
-          setError(`Could not start camera: ${e?.message || name || "unknown error"}. Try reloading the page.`);
-        }
+        logCameraEvent("start", e);
+        const mapped = mapCameraError(e);
+        setError(`${mapped.title} ${mapped.message}`);
+
         return;
       }
     }
