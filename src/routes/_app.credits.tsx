@@ -143,7 +143,7 @@ function WalletPage() {
     setProcessing(true);
     try {
       const packId = pack.id as "starter" | "basic" | "pro" | "enterprise";
-      const { checkoutUrl } = await createFlutterwaveCheckout({ data: { packId } });
+      const { checkoutUrl } = await createKorapayCheckout({ data: { packId } });
       window.location.href = checkoutUrl;
     } catch (e: any) {
       setProcessing(false);
