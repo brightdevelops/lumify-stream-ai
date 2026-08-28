@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
+import { getStoredSupabaseAccessToken, getStoredSupabaseSession } from "@/lib/supabase-session-storage";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
 
@@ -147,8 +147,10 @@ function VisitTracker() {
     const beat = async () => {
       if (document.visibilityState !== "visible") return;
       try {
-        const { data } = await supabase.auth.getUser();
-        await supabase.from("site_visits").insert({ session_id: sid, user_id: data.user?.id ?? null });
+        // Local read only — getUser() is a network round-trip and a recurring
+        // failure surface for something that is purely analytics.
+        const stored = getStoredSupabaseSession();
+        await supabase.from("site_visits").insert({ session_id: sid, user_id: stored?.user?.id ?? null });
       } catch {
         // ignore
       }

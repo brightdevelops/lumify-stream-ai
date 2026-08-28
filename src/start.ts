@@ -2,13 +2,13 @@ import { createStart, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
 import { attachStoredSupabaseAuth } from "@/lib/safe-auth-attacher";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
-// NOTE: Do NOT import or re-add `attachSupabaseAuth` from
-// `@/integrations/supabase/auth-attacher` here. It calls
-// supabase.auth.refreshSession() on near-expiry tokens and races the SDK's
-// built-in autoRefresh, causing rotating-refresh-token revocation and
-// force-logout right after login (especially on Windows Chrome/Edge).
-// Use attachStoredSupabaseAuth only — it is expiry-aware.
+// DO NOT re-add `attachSupabaseAuth` from `@/integrations/supabase/auth-attacher`.
+// It is auto-generated and calls supabase.auth.refreshSession() on near-expiry
+// tokens. Running it alongside attachStoredSupabaseAuth means every server
+// function performs the auth dance twice, which races the SDK's own autoRefresh
+// against rotating refresh tokens and force-logs users out.
+// `attachStoredSupabaseAuth` is expiry-aware and is the ONLY auth middleware
+// this app should register. If a regeneration re-adds the import, remove it again.
 
 
 
@@ -34,5 +34,5 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [errorMiddleware],
-  functionMiddleware: [attachSupabaseAuth, attachStoredSupabaseAuth],
+  functionMiddleware: [attachStoredSupabaseAuth],
 }));

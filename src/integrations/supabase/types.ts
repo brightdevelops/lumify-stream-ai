@@ -178,6 +178,39 @@ export type Database = {
           },
         ]
       }
+      auth_events: {
+        Row: {
+          clock_skew_seconds: number | null
+          created_at: string
+          detail: Json | null
+          event: string
+          id: string
+          user_agent: string | null
+          user_id: string | null
+          visibility_state: string | null
+        }
+        Insert: {
+          clock_skew_seconds?: number | null
+          created_at?: string
+          detail?: Json | null
+          event: string
+          id?: string
+          user_agent?: string | null
+          user_id?: string | null
+          visibility_state?: string | null
+        }
+        Update: {
+          clock_skew_seconds?: number | null
+          created_at?: string
+          detail?: Json | null
+          event?: string
+          id?: string
+          user_agent?: string | null
+          user_id?: string | null
+          visibility_state?: string | null
+        }
+        Relationships: []
+      }
       camera_events: {
         Row: {
           created_at: string

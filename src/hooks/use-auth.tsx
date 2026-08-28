@@ -1,7 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { parseStoredSupabaseSession } from "@/lib/supabase-session-storage";
+import {
+  getStoredSupabaseSession,
+  parseStoredSupabaseSession,
+} from "@/lib/supabase-session-storage";
+import { logAuthEvent } from "@/lib/auth-telemetry";
 
 type AuthCtx = {
   user: User | null;
@@ -16,6 +20,11 @@ const Ctx = createContext<AuthCtx>({
   loading: true,
   signOut: async () => {},
 });
+
+/** Pure localStorage read — reuses the single shared parser. */
+function readStoredSession(): Session | null {
+  return getStoredSupabaseSession();
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -32,10 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the "background-refresh killed a fresh login" race and may be recovered.
   const intentionalSignOutRef = useRef(false);
   const lastSignedInAtRef = useRef(0);
-  const recoveryAttemptedRef = useRef(false);
+  const loadingRef = useRef(true);
 
   useEffect(() => {
     let mounted = true;
+    let loadingTimer: number | undefined;
 
     const applySession = (s: Session | null) => {
       if (!mounted) return;
@@ -45,6 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const finishLoading = () => {
+      if (loadingTimer !== undefined) {
+        window.clearTimeout(loadingTimer);
+        loadingTimer = undefined;
+      }
+      loadingRef.current = false;
       if (mounted) setLoading(false);
     };
 
@@ -56,35 +71,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const handleUnexpectedSignOut = () => {
       const current = sessionRef.current;
-      const withinWindow = Date.now() - lastSignedInAtRef.current < 30_000;
-      if (
-        withinWindow &&
-        !recoveryAttemptedRef.current &&
-        current?.access_token &&
-        current?.refresh_token
-      ) {
-        recoveryAttemptedRef.current = true;
-        const access_token = current.access_token;
-        const refresh_token = current.refresh_token;
-        // Defer — never call auth methods synchronously inside
-        // onAuthStateChange; the SDK holds an internal lock.
-        setTimeout(async () => {
-          try {
-            const { data, error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-            if (error || !data.session) {
-              clearSignedOut();
-            }
-            // On success, SIGNED_IN will re-sync everything.
-          } catch {
-            clearSignedOut();
-          }
-        }, 0);
-        // Do NOT clear state here — wait for setSession result.
+      void logAuthEvent("unexpected_signout", {
+        had_session: !!current,
+        session_age_seconds: Math.round((Date.now() - lastSignedInAtRef.current) / 1000),
+      });
+
+      // NEVER call setSession()/refreshSession() with the tokens we already hold.
+      // If the refresh token was consumed, replaying it triggers Supabase's reuse
+      // detection and revokes the whole token family.
+      const stored = readStoredSession();
+      const nowSec = Math.floor(Date.now() / 1000);
+      const storedIsNewer =
+        !!stored?.access_token &&
+        (stored.expires_at ?? 0) > nowSec &&
+        stored.access_token !== current?.access_token;
+
+      if (storedIsNewer) {
+        // Another tab, or the SDK itself, already wrote a fresh session. Adopt it.
+        void logAuthEvent("recovery_adopted", {});
+        lastSignedInAtRef.current = Date.now();
+        applySession(stored);
+        finishLoading();
         return;
       }
+
+      void logAuthEvent("recovery_failed", {});
       clearSignedOut();
     };
 
@@ -104,7 +115,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION).
       if (s) {
         lastSignedInAtRef.current = Date.now();
-        recoveryAttemptedRef.current = false;
+        // Keep the realtime socket's token fresh through long sessions.
+        try {
+          supabase.realtime.setAuth(s.access_token);
+        } catch (err) {
+          void logAuthEvent("refresh_failed", {
+            where: "realtime_setauth",
+            message: (err as Error)?.message ?? String(err),
+          }, s);
+        }
         applySession(s);
         finishLoading();
         return;
@@ -121,6 +140,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       applySession(null);
       finishLoading();
     });
+
+    // 1b. Loading-timeout fallback: if the SDK never emits, don't park the
+    //     user on "Loading…" forever. Read-only, never redirects.
+    loadingTimer = window.setTimeout(() => {
+      loadingTimer = undefined;
+      if (!mounted) return;
+      if (!loadingRef.current) return;
+      const stored = readStoredSession();
+      const nowSec = Math.floor(Date.now() / 1000);
+      const valid = !!stored?.access_token && (stored.expires_at ?? 0) > nowSec;
+      void logAuthEvent("loading_timeout", { had_stored: valid }, stored);
+      applySession(valid ? stored : null);
+      finishLoading();
+    }, 8000);
 
     // 2. Let the SDK emit INITIAL_SESSION from storage. Calling getSession()
     // here can also start a proactive refresh and race the SDK's own startup
@@ -141,7 +174,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const parsed = parseStoredSupabaseSession(e.newValue);
       if (parsed) {
         lastSignedInAtRef.current = Date.now();
-        recoveryAttemptedRef.current = false;
       }
       applySession(parsed);
     };
@@ -155,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      if (loadingTimer !== undefined) window.clearTimeout(loadingTimer);
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
     };
@@ -165,9 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     intentionalSignOutRef.current = true;
     try {
       await supabase.auth.signOut();
-    } catch {
+    } catch (err) {
       // If signOut throws, reset the flag so a later unexpected SIGNED_OUT
       // can still be evaluated by the race guard.
+      void logAuthEvent("refresh_failed", {
+        where: "sign_out",
+        message: (err as Error)?.message ?? String(err),
+      });
       intentionalSignOutRef.current = false;
     }
   }, []);
