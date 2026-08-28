@@ -178,6 +178,42 @@ export type Database = {
           },
         ]
       }
+      camera_events: {
+        Row: {
+          created_at: string
+          device_count: number | null
+          error_message: string | null
+          error_name: string | null
+          id: string
+          permission_state: string | null
+          phase: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_count?: number | null
+          error_message?: string | null
+          error_name?: string | null
+          id?: string
+          permission_state?: string | null
+          phase: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_count?: number | null
+          error_message?: string | null
+          error_name?: string | null
+          id?: string
+          permission_state?: string | null
+          phase?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           balance_after: number

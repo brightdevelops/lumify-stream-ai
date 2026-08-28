@@ -20,6 +20,33 @@ export const Route = createFileRoute("/_app/stream")({
   component: StreamPage,
 });
 
+/** Shared camera error mapping used by unlock, start-stream and camera switch. */
+export function mapCameraError(err: any): { title: string; message: string } {
+  const name = err?.name || "";
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return {
+      title: "Camera access was denied.",
+      message: "Please allow camera access in your browser settings, then reload the page.",
+    };
+  }
+  if (name === "NotFoundError" || name === "OverconstrainedError") {
+    return {
+      title: "No compatible camera was found.",
+      message: "Try selecting a different camera from the dropdown.",
+    };
+  }
+  if (name === "NotReadableError" || name === "AbortError") {
+    return {
+      title: "That camera is already in use by another app.",
+      message: "Close Zoom, OBS, Teams or any other app using it and try again.",
+    };
+  }
+  return {
+    title: `Could not start camera: ${err?.message || name || "unknown error"}.`,
+    message: "Try reloading the page.",
+  };
+}
+
 const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "Sketch"];
 const RATE = 2; // credits/sec
 const NAIRA_PER_CREDIT = 23;
@@ -113,6 +140,9 @@ function StreamPage() {
   const [showOutOfCredits, setShowOutOfCredits] = useState(false);
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [needsCameraUnlock, setNeedsCameraUnlock] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
+
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
   const [background, setBackground] = useState<string>("");
@@ -242,33 +272,97 @@ function StreamPage() {
     };
   }, []);
 
-  // Enumerate available cameras
+  // Fire-and-forget camera telemetry. Never blocks or throws into camera flow.
+  const cameraPermissionRef = useRef<string>("unknown");
+  useEffect(() => { cameraPermissionRef.current = cameraPermission; }, [cameraPermission]);
+  const camerasCountRef = useRef(0);
+  useEffect(() => { camerasCountRef.current = cameras.length; }, [cameras.length]);
+
+  const logCameraEvent = (phase: "unlock" | "start" | "switch", err?: any) => {
+    try {
+      void supabase
+        .from("camera_events")
+        .insert({
+          user_id: user?.id ?? null,
+          phase,
+          error_name: err?.name ?? null,
+          error_message: err?.message ?? null,
+          permission_state: cameraPermissionRef.current,
+          device_count: camerasCountRef.current,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        })
+        .then(
+          () => undefined,
+          () => undefined,
+        );
+    } catch (e) {
+      console.debug("camera telemetry skipped", e);
+    }
+  };
+
+  // Enumerate available cameras. NEVER calls getUserMedia.
+  const loadCameras = async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === "videoinput");
+      const labelsMissing = videoInputs.length > 0 && videoInputs.every((d) => !d.label);
+      setNeedsCameraUnlock(labelsMissing);
+      setCameras(videoInputs);
+      setSelectedCameraId((prev) => prev || videoInputs[0]?.deviceId || "");
+    } catch (e) {
+      console.error("enumerateDevices failed", e);
+    }
+  };
+
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.enumerateDevices) return;
-
-    const loadCameras = async () => {
-      try {
-        let devices = await navigator.mediaDevices.enumerateDevices();
-        let videoInputs = devices.filter((d) => d.kind === "videoinput");
-        if (videoInputs.length > 0 && videoInputs.every((d) => !d.label)) {
-          try {
-            const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            tmp.getTracks().forEach((t) => t.stop());
-            devices = await navigator.mediaDevices.enumerateDevices();
-            videoInputs = devices.filter((d) => d.kind === "videoinput");
-          } catch {}
-        }
-        setCameras(videoInputs);
-        setSelectedCameraId((prev) => prev || videoInputs[0]?.deviceId || "");
-      } catch (e) {
-        console.error("enumerateDevices failed", e);
-      }
+    void loadCameras();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onDeviceChange = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { void loadCameras(); }, 500);
     };
-
-    loadCameras();
-    navigator.mediaDevices.addEventListener?.("devicechange", loadCameras);
-    return () => navigator.mediaDevices.removeEventListener?.("devicechange", loadCameras);
+    navigator.mediaDevices.addEventListener?.("devicechange", onDeviceChange);
+    return () => {
+      if (timer) clearTimeout(timer);
+      navigator.mediaDevices.removeEventListener?.("devicechange", onDeviceChange);
+    };
   }, []);
+
+  // Track browser camera permission state (unsupported in some browsers).
+  useEffect(() => {
+    let status: PermissionStatus | null = null;
+    (async () => {
+      try {
+        status = await navigator.permissions.query({ name: "camera" as PermissionName });
+        setCameraPermission(status.state as any);
+        status.onchange = () => {
+          setCameraPermission(status!.state as any);
+          void loadCameras();
+        };
+      } catch (e) {
+        console.debug("permissions.query(camera) unsupported", e);
+        setCameraPermission("unknown");
+      }
+    })();
+    return () => { if (status) status.onchange = null; };
+  }, []);
+
+  // Explicit, gesture-triggered camera unlock. Only call from a real click.
+  const requestCameraAccess = async () => {
+    try {
+      const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      tmp.getTracks().forEach((t) => t.stop());
+      await loadCameras();
+      setNeedsCameraUnlock(false);
+    } catch (err: any) {
+      logCameraEvent("unlock", err);
+      const mapped = mapCameraError(err);
+      setError(`${mapped.title} ${mapped.message}`);
+    }
+  };
+
 
   const findPeerConnection = (): RTCPeerConnection | null => {
     const client = decartClientRef.current as unknown as Record<string, unknown> | null;
@@ -294,13 +388,15 @@ function StreamPage() {
     setSelectedCameraId(deviceId);
     if (!mediaStreamRef.current) return;
 
+    let adopted = false;
+    let newStream: MediaStream | null = null;
     try {
       await refreshLucyModelId();
       const model = models.realtime("lucy-2.1" as any);
       const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
       const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
-      const newStream = await navigator.mediaDevices.getUserMedia({
+      newStream = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: { exact: deviceId },
           frameRate: { ideal: fps },
@@ -310,7 +406,7 @@ function StreamPage() {
         audio: false,
       });
       const newTrack = newStream.getVideoTracks()[0];
-      if (!newTrack) return;
+      if (!newTrack) throw new Error("The selected camera returned no video track.");
 
       const pc = findPeerConnection();
       if (pc) {
@@ -324,15 +420,22 @@ function StreamPage() {
         t.stop();
       });
       oldStream.addTrack(newTrack);
+      adopted = true;
       if (inputVideoRef.current) {
         inputVideoRef.current.srcObject = oldStream;
         inputVideoRef.current.play().catch(() => {});
       }
-    } catch (e) {
-      console.error("Camera switch failed", e);
-      setError("Could not switch to that camera.");
+    } catch (err: any) {
+      console.error("Camera switch failed", err);
+      logCameraEvent("switch", err);
+      const mapped = mapCameraError(err);
+      setError(`${mapped.title} ${mapped.message}`);
+      void loadCameras();
+    } finally {
+      if (!adopted) newStream?.getTracks().forEach((t) => t.stop());
     }
   };
+
 
 
   // Wall-clock metering: charges for actual elapsed time, not assumed 1-sec
@@ -702,16 +805,10 @@ function StreamPage() {
         console.error("getUserMedia failed", e?.name, e?.message, e);
         setConnecting(false);
         startingRef.current = false;
-        const name = e?.name || "";
-        if (name === "NotAllowedError" || name === "SecurityError") {
-          setError("Camera access was denied. Please allow camera access in your browser settings, then reload the page.");
-        } else if (name === "NotFoundError" || name === "OverconstrainedError") {
-          setError("No compatible camera was found. Try selecting a different camera from the dropdown.");
-        } else if (name === "NotReadableError") {
-          setError("Your camera is already in use by another app (Zoom, OBS, Teams, etc.). Close it and try again.");
-        } else {
-          setError(`Could not start camera: ${e?.message || name || "unknown error"}. Try reloading the page.`);
-        }
+        logCameraEvent("start", e);
+        const mapped = mapCameraError(e);
+        setError(`${mapped.title} ${mapped.message}`);
+
         return;
       }
     }
@@ -979,6 +1076,10 @@ function StreamPage() {
     cameras={cameras}
     selectedCameraId={selectedCameraId}
     handleCameraChange={handleCameraChange}
+    needsCameraUnlock={needsCameraUnlock}
+    cameraPermission={cameraPermission}
+    requestCameraAccess={requestCameraAccess}
+
     mode={mode}
     setMode={setMode}
     realism={realism}
@@ -1301,10 +1402,62 @@ function Chip({ children, accent, danger }: { children: React.ReactNode; accent?
   );
 }
 
+function CameraBlockedPanel() {
+  const [why, setWhy] = useState(false);
+  return (
+    <div
+      style={{
+        background: "rgba(255, 210, 138, .08)",
+        border: "1px solid rgba(255, 210, 138, .3)",
+        borderRadius: 12,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        maxWidth: 420,
+      }}
+    >
+      <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600, color: "#ffd28a" }}>
+        Camera blocked
+      </span>
+      <p style={{ fontSize: 14, color: "#9aa08c", maxWidth: "46ch", margin: 0 }}>
+        Your browser is blocking camera access for this site. Lumify can't request it again until you allow it in your browser.
+      </p>
+      <ol style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "#f2f4ec", margin: 0, paddingLeft: 18 }}>
+        <li>Click the camera or lock icon in your browser's address bar.</li>
+        <li>Set Camera to <strong>Allow</strong>.</li>
+        <li>Reload this page.</li>
+      </ol>
+      <button
+        type="button"
+        onClick={() => setWhy((v) => !v)}
+        style={{
+          background: "transparent",
+          border: "1px solid #262b1c",
+          borderRadius: 10,
+          color: "#9aa08c",
+          fontSize: 13,
+          padding: "8px 12px",
+          alignSelf: "flex-start",
+        }}
+      >
+        Why am I seeing this?
+      </button>
+      {why && (
+        <span style={{ fontSize: 13, color: "#6b7160" }}>
+          This usually happens when a camera prompt was dismissed a few times.
+        </span>
+      )}
+    </div>
+  );
+}
+
 function StudioLayout(p: StudioProps) {
   const {
     user, streaming, connecting,
     inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
+    needsCameraUnlock, cameraPermission, requestCameraAccess,
+
     mode, setMode, realism, setRealism, background, setBackground,
     referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
     selectedPreset, selectPreset,
@@ -1490,25 +1643,60 @@ function StudioLayout(p: StudioProps) {
               <div className="flex flex-wrap items-end" style={{ gap: 16 }}>
                 {/* CAMERA / SOURCE */}
                 <div className="flex flex-col" style={{ gap: 8, minWidth: 210 }}>
-                  <span style={fieldLabel} className="inline-flex items-center gap-1.5">
-                    Camera
-                    <Info size={11} aria-label="Pick the device Lumify should capture">
-                      <title>Pick the device Lumify should capture</title>
-                    </Info>
-                  </span>
+                  {!(inputSource === "camera" && cameraPermission === "denied") && (
+                    <span style={fieldLabel} className="inline-flex items-center gap-1.5">
+                      Camera
+                      <Info size={11} aria-label="Pick the device Lumify should capture">
+                        <title>Pick the device Lumify should capture</title>
+                      </Info>
+                    </span>
+                  )}
                   {inputSource === "camera" ? (
-                    <select
-                      value={selectedCameraId}
-                      onChange={(e) => handleCameraChange(e.target.value)}
-                      title="Pick the device Lumify should capture"
-                      className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
-                      style={{ height: 40, minWidth: 210 }}
-                    >
-                      {cameras.length === 0 && <option value="">No camera detected</option>}
-                      {cameras.map((cam: MediaDeviceInfo, i: number) => (
-                        <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
-                      ))}
-                    </select>
+                    <div style={{ minHeight: 40, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {cameraPermission === "denied" ? (
+                        <CameraBlockedPanel />
+                      ) : (
+                        <>
+                          <select
+                            value={selectedCameraId}
+                            onChange={(e) => handleCameraChange(e.target.value)}
+                            disabled={needsCameraUnlock}
+                            title="Pick the device Lumify should capture"
+                            className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
+                            style={{ height: 40, minWidth: 210, opacity: needsCameraUnlock ? 0.6 : 1 }}
+                          >
+                            {cameras.length === 0 && <option value="">No camera detected</option>}
+                            {cameras.map((cam: MediaDeviceInfo, i: number) => (
+                              <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
+                            ))}
+                          </select>
+                          {needsCameraUnlock && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={requestCameraAccess}
+                                className="rounded-[10px]"
+                                style={{
+                                  height: 40,
+                                  background: "#c6f24e",
+                                  color: "#111406",
+                                  fontWeight: 700,
+                                  fontSize: 13,
+                                  boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)",
+                                }}
+                                onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#d4fa66"; }}
+                                onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#c6f24e"; }}
+                              >
+                                Enable camera
+                              </button>
+                              <span style={{ fontSize: 13, color: "#6b7160", maxWidth: "46ch" }}>
+                                We'll ask your browser for permission so we can show your camera names.
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <div className="segmented items-center" style={{ height: 40 }}>
                       <button type="button" disabled={streaming} data-active={false} onClick={() => changeInputSource("camera")}>
@@ -1520,6 +1708,7 @@ function StudioLayout(p: StudioProps) {
                     </div>
                   )}
                 </div>
+
 
                 {inputSource === "camera" && (
                   <div className="flex flex-col" style={{ gap: 8 }}>
