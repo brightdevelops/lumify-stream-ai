@@ -1593,25 +1593,60 @@ function StudioLayout(p: StudioProps) {
               <div className="flex flex-wrap items-end" style={{ gap: 16 }}>
                 {/* CAMERA / SOURCE */}
                 <div className="flex flex-col" style={{ gap: 8, minWidth: 210 }}>
-                  <span style={fieldLabel} className="inline-flex items-center gap-1.5">
-                    Camera
-                    <Info size={11} aria-label="Pick the device Lumify should capture">
-                      <title>Pick the device Lumify should capture</title>
-                    </Info>
-                  </span>
+                  {!(inputSource === "camera" && cameraPermission === "denied") && (
+                    <span style={fieldLabel} className="inline-flex items-center gap-1.5">
+                      Camera
+                      <Info size={11} aria-label="Pick the device Lumify should capture">
+                        <title>Pick the device Lumify should capture</title>
+                      </Info>
+                    </span>
+                  )}
                   {inputSource === "camera" ? (
-                    <select
-                      value={selectedCameraId}
-                      onChange={(e) => handleCameraChange(e.target.value)}
-                      title="Pick the device Lumify should capture"
-                      className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
-                      style={{ height: 40, minWidth: 210 }}
-                    >
-                      {cameras.length === 0 && <option value="">No camera detected</option>}
-                      {cameras.map((cam: MediaDeviceInfo, i: number) => (
-                        <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
-                      ))}
-                    </select>
+                    <div style={{ minHeight: 40, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {cameraPermission === "denied" ? (
+                        <CameraBlockedPanel />
+                      ) : (
+                        <>
+                          <select
+                            value={selectedCameraId}
+                            onChange={(e) => handleCameraChange(e.target.value)}
+                            disabled={needsCameraUnlock}
+                            title="Pick the device Lumify should capture"
+                            className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
+                            style={{ height: 40, minWidth: 210, opacity: needsCameraUnlock ? 0.6 : 1 }}
+                          >
+                            {cameras.length === 0 && <option value="">No camera detected</option>}
+                            {cameras.map((cam: MediaDeviceInfo, i: number) => (
+                              <option key={cam.deviceId || i} value={cam.deviceId}>{cam.label || `Camera ${i + 1}`}</option>
+                            ))}
+                          </select>
+                          {needsCameraUnlock && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={requestCameraAccess}
+                                className="rounded-[10px]"
+                                style={{
+                                  height: 40,
+                                  background: "#c6f24e",
+                                  color: "#111406",
+                                  fontWeight: 700,
+                                  fontSize: 13,
+                                  boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)",
+                                }}
+                                onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#d4fa66"; }}
+                                onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#c6f24e"; }}
+                              >
+                                Enable camera
+                              </button>
+                              <span style={{ fontSize: 13, color: "#6b7160", maxWidth: "46ch" }}>
+                                We'll ask your browser for permission so we can show your camera names.
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   ) : (
                     <div className="segmented items-center" style={{ height: 40 }}>
                       <button type="button" disabled={streaming} data-active={false} onClick={() => changeInputSource("camera")}>
@@ -1623,6 +1658,7 @@ function StudioLayout(p: StudioProps) {
                     </div>
                   )}
                 </div>
+
 
                 {inputSource === "camera" && (
                   <div className="flex flex-col" style={{ gap: 8 }}>
