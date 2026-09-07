@@ -127,8 +127,8 @@ export function SupportWidget() {
       });
       if (error) throw error;
     } catch (e: any) {
-      console.error(e);
-      alert(e?.message ?? "Could not send image");
+      console.error("Support image upload failed", e);
+      setImgErr("Couldn't send the image — try again.");
     } finally {
       setSending(false);
     }
