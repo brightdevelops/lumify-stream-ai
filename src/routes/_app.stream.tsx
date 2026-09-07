@@ -47,9 +47,10 @@ export function mapCameraError(err: any): { title: string; message: string } {
   };
 }
 
+import { NAIRA_PER_CREDIT } from "@/lib/pricing";
+
 const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "Sketch"];
 const RATE = 2; // credits/sec
-const NAIRA_PER_CREDIT = 23;
 const MIN_CREDITS_TO_START = 10;
 const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
 // Decart API key is fetched at stream start from an authenticated server function.

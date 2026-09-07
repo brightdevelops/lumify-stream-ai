@@ -3,6 +3,7 @@ import { Play, Wallet, Video, AlertTriangle, Receipt, Monitor } from "lucide-rea
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { NAIRA_PER_CREDIT } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
@@ -24,7 +25,7 @@ type Txn = {
 };
 
 const RATE = 2;
-const NAIRA_PER_CREDIT = 23;
+
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
