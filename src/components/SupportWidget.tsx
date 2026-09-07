@@ -112,6 +112,7 @@ export function SupportWidget() {
   async function sendImage(file: File) {
     if (!user || sending) return;
     setSending(true);
+    setImgErr(null);
     try {
       const cid = await ensureConversation();
       const path = await uploadSupportImage(file, user.id, cid);
