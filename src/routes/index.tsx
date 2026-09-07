@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LandingBackground } from "@/components/landing/LandingBackground";
 import { HeroDemo } from "@/components/landing/HeroDemo";
+import { VoiceSection } from "@/components/landing/VoiceSection";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Play, Sparkles, Zap, Palette, Monitor, CreditCard, Lock,
-  Camera, Check, Plus, Minus,
+  Camera, Check, Plus, Minus, Mic,
 } from "lucide-react";
+
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -40,9 +42,11 @@ const FAQS = [
   { q: "Do I need a powerful computer?", a: "No. All the AI work happens on Lumify's servers. Any modern laptop and a webcam is enough — you just need a stable internet connection." },
   { q: "How much does it cost?", a: "Streaming costs 2 credits per second (₦46/sec). You only pay while you're live — there's no monthly fee and credits never expire." },
   { q: "Does it work with Twitch, YouTube, TikTok?", a: "Yes. Lumify gives you a private OBS Browser Source URL. Once it's in OBS, you can push to any platform OBS supports." },
+  { q: "What is Voice Studio?", a: "Voice Studio lets you clone your own voice from a short clip (with the speaker's consent) or use our library of realistic voices. Type your script, listen, and download it as MP3 or WAV. Generation costs credits from the same wallet you use for streaming — previewing voices is free." },
   { q: "Is my camera feed stored?", a: "No. Your camera stream is processed in real time and not retained. Only your session metadata (duration, credits used) is stored for billing." },
   { q: "How do I pay?", a: "Top-ups are handled by Korapay — card, bank transfer, and mobile money in NGN. Payments are processed securely and credits are added the moment payment confirms." },
 ];
+
 
 const PLATFORMS = ["STREAMS EVERYWHERE OBS GOES", "TWITCH", "YOUTUBE LIVE", "TIKTOK LIVE", "KICK", "FACEBOOK LIVE", "TROVO"];
 
@@ -201,6 +205,7 @@ function Landing() {
             { icon: Monitor, t: "OBS in one URL", d: "Add a Browser Source, paste your private URL, done. Works with Twitch, YouTube, TikTok." },
             { icon: CreditCard, t: "Pay as you stream", d: "2 credits per second, only while you're live. No monthly fee. Credits never expire." },
             { icon: Lock, t: "Private by design", d: "Your camera feed is processed in real time and not retained. Only session metadata is stored." },
+            { icon: Mic, t: "Voice Studio", d: "Clone your voice or pick a realistic one — type anything and download the audio." },
           ].map((f) => (
             <div key={f.t} className="card-surface card-lift">
               <div className="grid h-10 w-10 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--primary)" }}>
@@ -212,6 +217,11 @@ function Landing() {
           ))}
         </div>
       </section></Reveal>
+
+      {/* VOICE */}
+      <VoiceSection />
+
+
 
       {/* PRICING */}
       <Reveal><section id="pricing" className="mx-auto max-w-[1080px] px-6 py-20">
