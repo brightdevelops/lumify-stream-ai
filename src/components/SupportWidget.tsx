@@ -24,6 +24,7 @@ export function SupportWidget() {
   const [text, setText] = useState("");
   const [unread, setUnread] = useState(0);
   const [sending, setSending] = useState(false);
+  const [imgErr, setImgErr] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Find or create chat conversation
