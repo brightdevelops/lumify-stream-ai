@@ -205,6 +205,7 @@ function Landing() {
             { icon: Monitor, t: "OBS in one URL", d: "Add a Browser Source, paste your private URL, done. Works with Twitch, YouTube, TikTok." },
             { icon: CreditCard, t: "Pay as you stream", d: "2 credits per second, only while you're live. No monthly fee. Credits never expire." },
             { icon: Lock, t: "Private by design", d: "Your camera feed is processed in real time and not retained. Only session metadata is stored." },
+            { icon: Mic, t: "Voice Studio", d: "Clone your voice or pick a realistic one — type anything and download the audio." },
           ].map((f) => (
             <div key={f.t} className="card-surface card-lift">
               <div className="grid h-10 w-10 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--primary)" }}>
@@ -216,6 +217,11 @@ function Landing() {
           ))}
         </div>
       </section></Reveal>
+
+      {/* VOICE */}
+      <VoiceSection />
+
+
 
       {/* PRICING */}
       <Reveal><section id="pricing" className="mx-auto max-w-[1080px] px-6 py-20">
