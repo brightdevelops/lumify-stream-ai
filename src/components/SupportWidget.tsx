@@ -24,6 +24,7 @@ export function SupportWidget() {
   const [text, setText] = useState("");
   const [unread, setUnread] = useState(0);
   const [sending, setSending] = useState(false);
+  const [imgErr, setImgErr] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Find or create chat conversation
@@ -111,6 +112,7 @@ export function SupportWidget() {
   async function sendImage(file: File) {
     if (!user || sending) return;
     setSending(true);
+    setImgErr(null);
     try {
       const cid = await ensureConversation();
       const path = await uploadSupportImage(file, user.id, cid);
@@ -125,8 +127,8 @@ export function SupportWidget() {
       });
       if (error) throw error;
     } catch (e: any) {
-      console.error(e);
-      alert(e?.message ?? "Could not send image");
+      console.error("Support image upload failed", e);
+      setImgErr("Couldn't send the image — try again.");
     } finally {
       setSending(false);
     }
@@ -306,6 +308,15 @@ export function SupportWidget() {
             ))}
 
           </div>
+
+          {imgErr && (
+            <div
+              className="mx-2 mt-2 rounded-md px-3 py-2 text-[11px]"
+              style={{ color: "#ff7a6b", background: "rgba(255,122,107,.12)" }}
+            >
+              {imgErr}
+            </div>
+          )}
 
           <form
             onSubmit={(e) => {
