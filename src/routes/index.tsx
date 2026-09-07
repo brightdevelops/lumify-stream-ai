@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { LandingBackground } from "@/components/landing/LandingBackground";
 import { HeroDemo } from "@/components/landing/HeroDemo";
+import { VoiceSection } from "@/components/landing/VoiceSection";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Play, Sparkles, Zap, Palette, Monitor, CreditCard, Lock,
-  Camera, Check, Plus, Minus,
+  Camera, Check, Plus, Minus, Mic,
 } from "lucide-react";
+
 
 export const Route = createFileRoute("/")({
   component: Landing,
