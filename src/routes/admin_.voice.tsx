@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { amIAdmin } from "@/lib/admin.functions";
+import { NAIRA_PER_CREDIT } from "@/lib/pricing";
 import { voiceAdminStats, type VoiceAdminStats, type VoiceRange } from "@/lib/voice-admin.functions";
 
 export const Route = createFileRoute("/admin_/voice")({
@@ -36,7 +37,7 @@ const CARD = "rounded-2xl border border-[#262b1c] bg-[#14170f] p-5";
 const TITLE = "text-[11px] uppercase tracking-[0.14em] text-[#9aa08c]";
 const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" } as const;
 const MONO = "font-mono";
-const NAIRA_PER_CREDIT = 1.5;
+
 
 const nf = (n: number) => Math.round(Number(n) || 0).toLocaleString();
 const money = (n: number) => `₦${Math.round(Number(n) || 0).toLocaleString()}`;
@@ -127,7 +128,7 @@ function VoiceAdminPage() {
         {/* Tiles */}
         <div className="mt-6 grid grid-cols-2 gap-4 min-[900px]:grid-cols-5">
           <Tile label="Generations" value={nf(t?.generations ?? 0)} sub={`≈ ${nf(t?.characters ?? 0)} characters`} loading={loading} />
-          <Tile label="Credits earned" value={nf(t?.credits ?? 0)} sub={`≈ ${money((t?.credits ?? 0) * NAIRA_PER_CREDIT)} at ₦1.50/cr`} loading={loading} />
+          <Tile label="Credits earned" value={nf(t?.credits ?? 0)} sub={`≈ ${money((t?.credits ?? 0) * NAIRA_PER_CREDIT)} at ₦${NAIRA_PER_CREDIT}/cr`} loading={loading} />
           <Tile label="Voice clones" value={nf(t?.clones ?? 0)} sub={`${nf((t?.clones ?? 0) * 150)} credits earned`} loading={loading} />
           <Tile label="Active users" value={nf(data?.active_users ?? 0)} sub={`${nf(data?.new_users ?? 0)} new vs previous period`} loading={loading} />
           <Tile label="API share" value={`${apiShare}%`} sub={`${100 - apiShare}% from dashboard`} loading={loading} />
