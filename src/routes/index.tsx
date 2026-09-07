@@ -42,9 +42,11 @@ const FAQS = [
   { q: "Do I need a powerful computer?", a: "No. All the AI work happens on Lumify's servers. Any modern laptop and a webcam is enough — you just need a stable internet connection." },
   { q: "How much does it cost?", a: "Streaming costs 2 credits per second (₦46/sec). You only pay while you're live — there's no monthly fee and credits never expire." },
   { q: "Does it work with Twitch, YouTube, TikTok?", a: "Yes. Lumify gives you a private OBS Browser Source URL. Once it's in OBS, you can push to any platform OBS supports." },
+  { q: "What is Voice Studio?", a: "Voice Studio lets you clone your own voice from a short clip (with the speaker's consent) or use our library of realistic voices. Type your script, listen, and download it as MP3 or WAV. Generation costs credits from the same wallet you use for streaming — previewing voices is free." },
   { q: "Is my camera feed stored?", a: "No. Your camera stream is processed in real time and not retained. Only your session metadata (duration, credits used) is stored for billing." },
   { q: "How do I pay?", a: "Top-ups are handled by Korapay — card, bank transfer, and mobile money in NGN. Payments are processed securely and credits are added the moment payment confirms." },
 ];
+
 
 const PLATFORMS = ["STREAMS EVERYWHERE OBS GOES", "TWITCH", "YOUTUBE LIVE", "TIKTOK LIVE", "KICK", "FACEBOOK LIVE", "TROVO"];
 
