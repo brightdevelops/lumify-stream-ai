@@ -309,6 +309,15 @@ export function SupportWidget() {
 
           </div>
 
+          {imgErr && (
+            <div
+              className="mx-2 mt-2 rounded-md px-3 py-2 text-[11px]"
+              style={{ color: "#ff7a6b", background: "rgba(255,122,107,.12)" }}
+            >
+              {imgErr}
+            </div>
+          )}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
