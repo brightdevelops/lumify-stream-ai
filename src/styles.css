@@ -768,3 +768,24 @@ body.stream-live *::after {
 @media (max-width: 360px) {
   .lumi-turnstile { transform: scale(0.9); transform-origin: center; }
 }
+
+/* ── Square corners: no border radius anywhere ───────────────── */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+/* Keep genuinely circular controls circular */
+.status-dot,
+.toggle-switch,
+.toggle-switch::after,
+.lime-range,
+.lime-range::-webkit-slider-runnable-track,
+.lime-range::-webkit-slider-thumb,
+.lime-range::-moz-range-thumb,
+.voice-slider,
+.voice-slider::-webkit-slider-thumb,
+.voice-slider::-moz-range-thumb,
+.rounded-full[role="progressbar"] {
+  border-radius: 999px !important;
+}
