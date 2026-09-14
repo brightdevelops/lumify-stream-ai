@@ -405,7 +405,7 @@
   .lumi-studio-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 700px) {
-  .lumi-preview-grid { grid-template-columns: 1fr; }
+  .lumi-preview-grid { grid-template-columns: 1fr; position: relative; }
 }
 
 /* App page enter */
@@ -554,7 +554,7 @@ body.stream-live *::after {
     padding-bottom: 190px !important;
   }
   /* Single column: AI output is the stage, camera becomes a PiP inside it */
-  .lumi-preview-grid { grid-template-columns: 1fr; }
+  .lumi-preview-grid { grid-template-columns: 1fr; position: relative; }
   .lumi-out-panel { aspect-ratio: 16 / 9 !important; order: -1; }
   .lumi-cam-panel {
     position: absolute !important;
