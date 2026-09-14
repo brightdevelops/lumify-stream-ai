@@ -769,11 +769,11 @@ body.stream-live *::after {
   .lumi-turnstile { transform: scale(0.9); transform-origin: center; }
 }
 
-/* ── Square corners: no border radius anywhere ───────────────── */
+/* ── Subtle corners: small radius everywhere ─────────────────── */
 *,
 *::before,
 *::after {
-  border-radius: 0 !important;
+  border-radius: 6px !important;
 }
 /* Keep genuinely circular controls circular */
 .status-dot,
