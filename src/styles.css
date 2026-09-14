@@ -728,6 +728,11 @@ body.stream-live *::after {
 /* ── Voice Studio ────────────────────────────────────────────── */
 @media (max-width: 960px) {
   .lumi-voice-page { padding-left: 0 !important; padding-right: 0 !important; }
+  .lumi-voice-page .grid { grid-template-columns: minmax(0, 1fr); }
+  .lumi-voice-page .grid > * { min-width: 0; }
+  .lumi-voice-page section,
+  .lumi-voice-page .flex { min-width: 0; }
+  .lumi-voice-page * { max-width: 100%; }
 }
 @media (max-width: 640px) {
   .voice-dock { flex-direction: column; align-items: stretch; }
