@@ -105,6 +105,17 @@ export const Route = createFileRoute("/api/public/cryptomus-webhook")({
           });
           if (rpcErr) {
             console.error("[cryptomus] purchase_credits_for_user failed", rpcErr.message);
+            // Compensating delete: without it the receipt row survives, the
+            // retry sees 23505, assumes the wallet was already topped up and
+            // closes the invoice — leaving a paid order with zero credits.
+            const { error: cleanupErr } = await supabaseAdmin
+              .from("payment_receipts")
+              .delete()
+              .eq("provider", "cryptomus")
+              .eq("reference", orderId);
+            if (cleanupErr) {
+              console.error("[cryptomus] receipt rollback failed", cleanupErr.message);
+            }
             // Real failure on a real payment: 500 so Cryptomus retries.
             return new Response("credit failed", { status: 500 });
           }
