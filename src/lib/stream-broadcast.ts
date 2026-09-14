@@ -136,7 +136,14 @@ export function startViewer(
       announce();
     } else if (msg.kind === "offer" && msg.viewerId === viewerId) {
       pc?.close();
-      pc = new RTCPeerConnection(RTC_CONFIG);
+      pc = new RTCPeerConnection(rtcConfig(options?.iceServers));
+      logIce("viewer", pc);
+      pc.addEventListener("iceconnectionstatechange", () => {
+        const state = pc?.iceConnectionState;
+        if (state === "failed" || state === "disconnected") {
+          options?.onIceFailed?.();
+        }
+      });
       pc.ontrack = (ev) => {
         if (ev.streams[0]) onStream(ev.streams[0]);
       };
