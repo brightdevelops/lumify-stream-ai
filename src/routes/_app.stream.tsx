@@ -144,6 +144,61 @@ function StreamPage() {
   const [needsCameraUnlock, setNeedsCameraUnlock] = useState(false);
   const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
 
+  // ── Phone support ───────────────────────────────────────────────────────
+  const [isTouch, setIsTouch] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment" | null>(null);
+  const facingModeRef = useRef<"user" | "environment" | null>(null);
+  const [showAwakeHint, setShowAwakeHint] = useState(false);
+  const wakeLockRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const coarse =
+      window.matchMedia?.("(pointer: coarse)").matches || "ontouchstart" in window;
+    setIsTouch(!!coarse);
+    if (coarse && !facingModeRef.current) {
+      facingModeRef.current = "user";
+      setFacingMode("user");
+    }
+  }, []);
+
+  const acquireWakeLock = async () => {
+    try {
+      const nav = navigator as any;
+      if (!nav.wakeLock?.request || wakeLockRef.current) return;
+      wakeLockRef.current = await nav.wakeLock.request("screen");
+      wakeLockRef.current.addEventListener?.("release", () => {
+        wakeLockRef.current = null;
+      });
+    } catch (e) {
+      console.debug("wake lock unavailable", e);
+    }
+  };
+
+  const releaseWakeLock = () => {
+    try {
+      wakeLockRef.current?.release?.();
+    } catch (e) {
+      console.debug("wake lock release failed", e);
+    }
+    wakeLockRef.current = null;
+  };
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && streamingRef.current) {
+        void acquireWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      releaseWakeLock();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
   const [background, setBackground] = useState<string>("");
@@ -385,8 +440,8 @@ function StreamPage() {
     return walk(client, 0);
   };
 
-  const handleCameraChange = async (deviceId: string) => {
-    setSelectedCameraId(deviceId);
+  /** Swap the live video track for one from `videoConstraints` (leak-safe). */
+  const swapVideoTrack = async (videoConstraints: MediaTrackConstraints) => {
     if (!mediaStreamRef.current) return;
 
     let adopted = false;
@@ -399,7 +454,7 @@ function StreamPage() {
       const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
       newStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          deviceId: { exact: deviceId },
+          ...videoConstraints,
           frameRate: { ideal: fps },
           width: { ideal: width },
           height: { ideal: height },
@@ -436,6 +491,24 @@ function StreamPage() {
       if (!adopted) newStream?.getTracks().forEach((t) => t.stop());
     }
   };
+
+  const handleCameraChange = async (deviceId: string) => {
+    setSelectedCameraId(deviceId);
+    setFacingMode(null);
+    facingModeRef.current = null;
+    await swapVideoTrack({ deviceId: { exact: deviceId } });
+  };
+
+  /** Phone front/back switch — `ideal` so single-camera devices still work. */
+  const applyFacingMode = async (next: "user" | "environment") => {
+    setFacingMode(next);
+    facingModeRef.current = next;
+    await swapVideoTrack({ facingMode: { ideal: next } });
+  };
+
+  const flipCamera = () =>
+    applyFacingMode(facingModeRef.current === "environment" ? "user" : "environment");
+
 
 
 
@@ -787,7 +860,11 @@ function StreamPage() {
       // ── Camera path (unchanged behaviour) ──────────────────────────────
       try {
         const baseVideo: MediaTrackConstraints = {
-          ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
+          ...(facingModeRef.current
+            ? { facingMode: { ideal: facingModeRef.current } }
+            : selectedCameraId
+              ? { deviceId: { ideal: selectedCameraId } }
+              : {}),
           frameRate: { ideal: modelFps },
           width: { ideal: modelWidth },
           height: { ideal: modelHeight },
@@ -942,6 +1019,8 @@ function StreamPage() {
     streamingRef.current = true;
     setStreaming(true);
     startingRef.current = false;
+    void acquireWakeLock();
+    if (isTouch) setShowAwakeHint(true);
   };
 
   const endStream = async (outOfCredits = false) => {
@@ -953,6 +1032,8 @@ function StreamPage() {
     streamingRef.current = false;
     teardownStream();
     setStreaming(false);
+    releaseWakeLock();
+    setShowAwakeHint(false);
     accessTokenRef.current = null;
 
     const totalUsed = usedRef.current;
@@ -1080,6 +1161,12 @@ function StreamPage() {
     needsCameraUnlock={needsCameraUnlock}
     cameraPermission={cameraPermission}
     requestCameraAccess={requestCameraAccess}
+    isTouch={isTouch}
+    facingMode={facingMode}
+    applyFacingMode={applyFacingMode}
+    flipCamera={flipCamera}
+    showAwakeHint={showAwakeHint}
+    dismissAwakeHint={() => setShowAwakeHint(false)}
 
     mode={mode}
     setMode={setMode}
@@ -1458,6 +1545,7 @@ function StudioLayout(p: StudioProps) {
     user, streaming, connecting,
     inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
     needsCameraUnlock, cameraPermission, requestCameraAccess,
+    isTouch, facingMode, applyFacingMode, flipCamera, showAwakeHint, dismissAwakeHint,
 
     mode, setMode, realism, setRealism, background, setBackground,
     referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
@@ -1476,6 +1564,11 @@ function StudioLayout(p: StudioProps) {
   } = p;
 
   const [dragOver, setDragOver] = useState(false);
+  const [showCamTip, setShowCamTip] = useState(false);
+  const [showPhoneHelp, setShowPhoneHelp] = useState(false);
+  // Phones rarely expose useful device labels — offer front/back instead.
+  const useFacingPicker =
+    cameras.length === 0 || cameras.every((c: MediaDeviceInfo) => !c.label);
 
   const fieldLabel: React.CSSProperties = {
     ...MONO,
@@ -1492,7 +1585,7 @@ function StudioLayout(p: StudioProps) {
     : "Generating your private URL…";
 
   return (
-    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 30px" }}>
+    <div className="lumi-studio-page" style={{ maxWidth: 1240, margin: "0 auto", padding: "0 30px" }}>
       {/* ── Page header ─────────────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-4" style={{ marginBottom: 24 }}>
         <div>
@@ -1535,16 +1628,24 @@ function StudioLayout(p: StudioProps) {
             <div className="lumi-preview-grid">
               {/* YOUR CAMERA */}
               <div
-                className="relative overflow-hidden"
+                className="lumi-cam-panel relative overflow-hidden"
                 style={{ aspectRatio: "16 / 10", borderRadius: 10, border: "1px solid #262b1c", background: "#0b0d0a" }}
               >
                 {!streaming && <SilhouetteBg variant="camera" />}
                 <video
                   ref={inputVideoRef}
                   muted
+                  autoPlay
                   playsInline
+                  {...({ "webkit-playsinline": "true" } as Record<string, string>)}
                   className="absolute inset-0 z-[1] h-full w-full"
-                  style={{ objectFit: "cover", background: "#000", opacity: streaming ? 1 : 0 }}
+                  style={{
+                    objectFit: "cover",
+                    background: "#000",
+                    opacity: streaming ? 1 : 0,
+                    transform:
+                      inputSource === "camera" && facingMode === "user" ? "scaleX(-1)" : undefined,
+                  }}
                   onLoadedMetadata={(e) => {
                     if (inputSourceRef.current === "file") setVideoDuration(e.currentTarget.duration || 0);
                   }}
@@ -1559,28 +1660,50 @@ function StudioLayout(p: StudioProps) {
                     }
                   }}
                 />
-                <div className="absolute top-3 left-3 z-[4]">
+                <div className="lumi-panel-chips absolute top-3 left-3 z-[4]">
                   <Chip>Your camera</Chip>
                 </div>
-                <div className="absolute top-3 right-3 z-[4] flex items-center gap-1.5">
+                <div className="lumi-panel-chips absolute top-3 right-3 z-[4] flex items-center gap-1.5">
                   <Chip danger>
                     <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: 999, background: "var(--destructive)" }} />
                     Rec
                   </Chip>
                   <Chip>720p</Chip>
                 </div>
+                {isTouch && inputSource === "camera" && (
+                  <button
+                    type="button"
+                    onClick={() => flipCamera()}
+                    aria-label="Flip camera"
+                    className="absolute bottom-1.5 right-1.5 z-[6] grid place-items-center"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      background: "rgba(0,0,0,.55)",
+                      border: "1px solid rgba(198,242,78,.35)",
+                      color: "var(--primary)",
+                      fontSize: 13,
+                      transition: "all 150ms ease",
+                    }}
+                  >
+                    ⟲
+                  </button>
+                )}
                 {!streaming && (
-                  <PanelEmpty
-                    icon={<CameraIcon size={19} />}
-                    title="Camera off"
-                    hint="Face a window or lamp for the best AI output"
-                  />
+                  <div className="lumi-panel-empty">
+                    <PanelEmpty
+                      icon={<CameraIcon size={19} />}
+                      title="Camera off"
+                      hint="Face a window or lamp for the best AI output"
+                    />
+                  </div>
                 )}
               </div>
 
               {/* AI OUTPUT */}
               <div
-                className="relative overflow-hidden"
+                className="lumi-out-panel relative overflow-hidden"
                 style={{
                   aspectRatio: "16 / 10",
                   borderRadius: 10,
@@ -1593,7 +1716,9 @@ function StudioLayout(p: StudioProps) {
                 <video
                   ref={outputVideoRef}
                   muted
+                  autoPlay
                   playsInline
+                  {...({ "webkit-playsinline": "true" } as Record<string, string>)}
                   className="absolute inset-0 z-[1] h-full w-full"
                   style={{ objectFit: "cover", opacity: streaming ? 1 : 0 }}
                 />
@@ -1643,19 +1768,49 @@ function StudioLayout(p: StudioProps) {
             <div style={{ borderTop: "1px solid #1e2316", marginTop: 20, paddingTop: 20 }}>
               <div className="flex flex-wrap items-end" style={{ gap: 16 }}>
                 {/* CAMERA / SOURCE */}
-                <div className="flex flex-col" style={{ gap: 8, minWidth: 210 }}>
+                <div className="lumi-full-row flex flex-col" style={{ gap: 8, minWidth: 210 }}>
                   {!(inputSource === "camera" && cameraPermission === "denied") && (
                     <span style={fieldLabel} className="inline-flex items-center gap-1.5">
                       Camera
-                      <Info size={11} aria-label="Pick the device Lumify should capture">
-                        <title>Pick the device Lumify should capture</title>
-                      </Info>
+                      <button
+                        type="button"
+                        onClick={() => setShowCamTip((v: boolean) => !v)}
+                        aria-label="Pick the device Lumify should capture"
+                        aria-expanded={showCamTip}
+                        style={{ display: "inline-flex", color: "inherit" }}
+                      >
+                        <Info size={11} />
+                      </button>
+                    </span>
+                  )}
+                  {showCamTip && (
+                    <span style={{ fontSize: 12, color: "#6b7160" }}>
+                      Pick the device Lumify should capture.
                     </span>
                   )}
                   {inputSource === "camera" ? (
                     <div style={{ minHeight: 40, display: "flex", flexDirection: "column", gap: 8 }}>
                       {cameraPermission === "denied" ? (
                         <CameraBlockedPanel />
+                      ) : isTouch && useFacingPicker ? (
+                        <div className="segmented items-center lumi-full-row" style={{ minHeight: 44 }}>
+                          <button
+                            type="button"
+                            data-active={facingMode !== "environment"}
+                            onClick={() => applyFacingMode("user")}
+                            style={{ minHeight: 44, flex: 1 }}
+                          >
+                            Front camera
+                          </button>
+                          <button
+                            type="button"
+                            data-active={facingMode === "environment"}
+                            onClick={() => applyFacingMode("environment")}
+                            style={{ minHeight: 44, flex: 1 }}
+                          >
+                            Back camera
+                          </button>
+                        </div>
                       ) : (
                         <>
                           <select
@@ -1663,7 +1818,7 @@ function StudioLayout(p: StudioProps) {
                             onChange={(e) => handleCameraChange(e.target.value)}
                             disabled={needsCameraUnlock}
                             title="Pick the device Lumify should capture"
-                            className="rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
+                            className="lumi-touch-tall rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
                             style={{ height: 40, minWidth: 210, opacity: needsCameraUnlock ? 0.6 : 1 }}
                           >
                             {cameras.length === 0 && <option value="">No camera detected</option>}
@@ -1728,9 +1883,9 @@ function StudioLayout(p: StudioProps) {
 
                 {/* MODE */}
 
-                <div className="flex flex-col" style={{ gap: 8 }}>
+                <div className="lumi-full-row flex flex-col" style={{ gap: 8 }}>
                   <span style={fieldLabel}>Mode</span>
-                  <div className="segmented items-center" style={{ height: 40 }}>
+                  <div className="segmented items-center lumi-seg-wide" style={{ height: 40 }}>
                     <button type="button" data-active={mode === "realistic"} onClick={() => setMode("realistic")}>Realistic</button>
                     <button type="button" data-active={mode === "stylized"} onClick={() => setMode("stylized")}>Stylized</button>
                   </div>
@@ -1758,7 +1913,7 @@ function StudioLayout(p: StudioProps) {
 
                 {/* REALISM */}
                 {mode === "realistic" && (
-                  <div className="flex flex-col flex-1" style={{ gap: 8, minWidth: 210 }}>
+                  <div className="lumi-full-row flex flex-col flex-1" style={{ gap: 8, minWidth: 210 }}>
                     <span style={fieldLabel}>Realism</span>
                     <div className="flex items-center gap-3" style={{ height: 40 }}>
                       <input
@@ -1945,7 +2100,7 @@ function StudioLayout(p: StudioProps) {
           )}
 
           {/* 3. Action bar */}
-          <div style={cardStyle}>
+          <div className="lumi-action-inline" style={cardStyle}>
             <div className="flex flex-wrap items-center justify-between" style={{ gap: 16 }}>
               <div className="flex items-center" style={{ gap: 12 }}>
                 <button
@@ -2138,6 +2293,56 @@ function StudioLayout(p: StudioProps) {
                 </div>
               ))}
             </div>
+
+            {/* Second-phone workflow */}
+            <button
+              type="button"
+              onClick={() => setShowPhoneHelp((v: boolean) => !v)}
+              aria-expanded={showPhoneHelp}
+              className="flex w-full items-center justify-between"
+              style={{
+                marginTop: 14,
+                minHeight: 44,
+                background: "#0b0d0a",
+                border: "1px solid #262b1c",
+                borderRadius: 10,
+                padding: "10px 12px",
+                fontSize: 12.5,
+                color: "var(--foreground)",
+                transition: "all 150ms ease",
+              }}
+            >
+              <span>📱 Using a second phone?</span>
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${showPhoneHelp ? "rotate-180" : ""}`}
+                style={{ color: "#9aa08c" }}
+              />
+            </button>
+            {showPhoneHelp && (
+              <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
+                {[
+                  "Copy your private output link below.",
+                  "Open it in the browser on your second phone and tap to watch — it goes fullscreen.",
+                  "Go live on TikTok with screen sharing (or a screen-broadcast app like Prism Live Studio) and your Lumify output is what viewers see.",
+                ].map((step, i) => (
+                  <div key={i} className="flex items-start gap-3" style={{ fontSize: 12.5, color: "#9aa08c" }}>
+                    <span
+                      className="grid place-items-center shrink-0"
+                      style={{
+                        width: 18, height: 18, borderRadius: 5,
+                        background: "var(--accent-soft)",
+                        color: "var(--primary)",
+                        fontSize: 10.5, fontWeight: 700,
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span>{step}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div
               className="flex items-center gap-2"
               style={{
@@ -2183,6 +2388,51 @@ function StudioLayout(p: StudioProps) {
           </div>
         </div>
       </div>
+
+      {/* ── Sticky mobile action bar (≤768px only) ───────────────── */}
+      <div className="lumi-mobile-bar">
+        {showAwakeHint && (
+          <div className="lumi-mobile-hint">
+            <span>Keep this screen on while live — switching apps can interrupt your stream.</span>
+            <button type="button" onClick={dismissAwakeHint} aria-label="Dismiss">
+              <X size={12} />
+            </button>
+          </div>
+        )}
+        <div className="lumi-mobile-bar-inner">
+          <button
+            type="button"
+            onClick={streaming ? stop : start}
+            disabled={connecting || (!streaming && (STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))))}
+            className="inline-flex flex-1 items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              background: "var(--primary)",
+              color: "#111406",
+              fontWeight: 700,
+              fontSize: 14,
+              borderRadius: 12,
+              minHeight: 48,
+              padding: "12px 20px",
+              transition: "all 150ms ease",
+            }}
+          >
+            {streaming ? <><Square size={14} /> Streaming…</> : <><Play size={14} /> Start stream</>}
+          </button>
+          <button
+            type="button"
+            onClick={stop}
+            disabled={!streaming}
+            className="btn-ghost disabled:opacity-50"
+            style={{ minHeight: 48, padding: "12px 18px", transition: "all 150ms ease" }}
+          >
+            Stop
+          </button>
+        </div>
+        <div style={{ fontSize: 12, color: "#9aa08c", marginTop: 8 }}>
+          {RATE} credits/sec · ≈ {timeLeftLabel} on your balance
+        </div>
+      </div>
+
 
       {showOutOfCredits && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur p-4">

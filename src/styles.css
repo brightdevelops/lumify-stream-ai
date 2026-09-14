@@ -405,7 +405,7 @@
   .lumi-studio-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 700px) {
-  .lumi-preview-grid { grid-template-columns: 1fr; }
+  .lumi-preview-grid { grid-template-columns: 1fr; position: relative; }
 }
 
 /* App page enter */
@@ -541,4 +541,64 @@ body.stream-live *::after {
 .voice-del:hover {
   color: #ff7a6b;
   border-color: rgba(255, 122, 107, 0.3);
+}
+
+/* ── Stream studio: phone layout (≤768px) ─────────────────────── */
+.lumi-mobile-bar { display: none; }
+
+@media (max-width: 768px) {
+  .lumi-studio-page {
+    padding: 0 16px !important;
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: max(16px, env(safe-area-inset-right)) !important;
+    padding-bottom: 190px !important;
+  }
+  /* Single column: AI output is the stage, camera becomes a PiP inside it */
+  .lumi-preview-grid { grid-template-columns: 1fr; position: relative; }
+  .lumi-out-panel { aspect-ratio: 16 / 9 !important; order: -1; }
+  .lumi-cam-panel {
+    position: absolute !important;
+    z-index: 7;
+    top: 8px;
+    left: 8px;
+    width: 96px;
+    aspect-ratio: 16 / 10 !important;
+    border-radius: 8px !important;
+  }
+  .lumi-cam-panel .lumi-panel-chips,
+  .lumi-cam-panel .lumi-panel-empty { display: none !important; }
+
+  .lumi-full-row { width: 100%; flex: 1 0 100% !important; }
+  .lumi-seg-wide { display: flex; width: 100%; }
+  .lumi-seg-wide > button { flex: 1; min-height: 44px; }
+  .lumi-touch-tall { height: 44px !important; min-width: 0 !important; width: 100%; }
+
+  .lumi-action-inline { display: none !important; }
+
+  .lumi-mobile-bar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background: #101309;
+    border-top: 1px solid #1e2316;
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .lumi-mobile-bar-inner { display: flex; gap: 10px; align-items: center; }
+  .lumi-mobile-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: #9aa08c;
+    margin-bottom: 10px;
+  }
+}
+
+@media (pointer: coarse) {
+  .lime-range::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
+  .lime-range::-moz-range-thumb { width: 24px; height: 24px; }
 }
