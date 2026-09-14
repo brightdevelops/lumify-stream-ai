@@ -8,11 +8,22 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-  ],
+import { getIceServers } from "@/lib/ice.functions";
+
+const FALLBACK_ICE: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
+
+const rtcConfig = (iceServers?: RTCIceServer[]): RTCConfiguration => ({
+  iceServers: iceServers?.length ? iceServers : FALLBACK_ICE,
+});
+
+const logIce = (side: string, pc: RTCPeerConnection) => {
+  pc.oniceconnectionstatechange = () =>
+    console.log(`[webrtc:${side}] iceConnectionState =`, pc.iceConnectionState);
+  pc.onicegatheringstatechange = () =>
+    console.log(`[webrtc:${side}] iceGatheringState =`, pc.iceGatheringState);
 };
 
 const channelName = (streamToken: string) => `stream-output:${streamToken}`;
