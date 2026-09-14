@@ -24,7 +24,8 @@ export const Route = createFileRoute("/api/public/resolve-stream-token")({
             headers: { "content-type": "application/json" },
           });
         }
-        return new Response(JSON.stringify({ userId: data.id }), {
+        const { buildIceServers } = await import("@/lib/ice.server");
+        return new Response(JSON.stringify({ userId: data.id, iceServers: buildIceServers() }), {
           status: 200,
           headers: {
             "content-type": "application/json",

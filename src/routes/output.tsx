@@ -173,15 +173,29 @@ function OutputPage() {
       }
     };
 
+    let iceServers: RTCIceServer[] | undefined;
+
     const connect = () => {
       try {
         stopViewerRef.current?.();
       } catch (e) {
         console.debug("viewer teardown", e);
       }
-      stopViewerRef.current = startViewer(token, (stream) => {
-        if (!cancelled) attachStream(stream);
-      });
+      stopViewerRef.current = startViewer(
+        token,
+        (stream) => {
+          if (!cancelled) attachStream(stream);
+        },
+        {
+          iceServers,
+          onIceFailed: () => {
+            if (cancelled) return;
+            console.warn("output: ICE connection failed — retrying");
+            setStatus("reconnecting");
+            scheduleRetry();
+          },
+        },
+      );
     };
 
     const scheduleRetry = () => {
@@ -199,6 +213,8 @@ function OutputPage() {
           `/api/public/resolve-stream-token?token=${encodeURIComponent(token)}`,
         );
         if (!res.ok) throw new Error("Invalid stream token");
+        const body = (await res.json()) as { iceServers?: RTCIceServer[] };
+        if (body.iceServers?.length) iceServers = body.iceServers;
         if (cancelled) return;
         connect();
       } catch (e) {

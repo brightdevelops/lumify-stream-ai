@@ -8,11 +8,22 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-  ],
+import { getIceServers } from "@/lib/ice.functions";
+
+const FALLBACK_ICE: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
+
+const rtcConfig = (iceServers?: RTCIceServer[]): RTCConfiguration => ({
+  iceServers: iceServers?.length ? iceServers : FALLBACK_ICE,
+});
+
+const logIce = (side: string, pc: RTCPeerConnection) => {
+  pc.oniceconnectionstatechange = () =>
+    console.log(`[webrtc:${side}] iceConnectionState =`, pc.iceConnectionState);
+  pc.onicegatheringstatechange = () =>
+    console.log(`[webrtc:${side}] iceGatheringState =`, pc.iceGatheringState);
 };
 
 const channelName = (streamToken: string) => `stream-output:${streamToken}`;
@@ -37,9 +48,18 @@ export function startBroadcaster(streamToken: string, stream: MediaStream) {
   });
   const peers = new Map<string, RTCPeerConnection>();
 
+  // Fetched once; TURN credentials stay server-side until this call.
+  const icePromise: Promise<RTCIceServer[]> = getIceServers()
+    .then((r) => r.iceServers as RTCIceServer[])
+    .catch((e) => {
+      console.warn("[webrtc:broadcaster] ICE fetch failed, using STUN only", e);
+      return FALLBACK_ICE;
+    });
+
   const createPeer = async (viewerId: string) => {
     peers.get(viewerId)?.close();
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+    const pc = new RTCPeerConnection(rtcConfig(await icePromise));
+    logIce("broadcaster", pc);
     peers.set(viewerId, pc);
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
     pc.onicecandidate = (e) => {
@@ -96,7 +116,11 @@ export function startBroadcaster(streamToken: string, stream: MediaStream) {
   };
 }
 
-export function startViewer(streamToken: string, onStream: (stream: MediaStream) => void) {
+export function startViewer(
+  streamToken: string,
+  onStream: (stream: MediaStream) => void,
+  options?: { iceServers?: RTCIceServer[]; onIceFailed?: () => void },
+) {
   const ch = supabase.channel(channelName(streamToken), {
 
     config: { broadcast: { self: false, ack: false } },
@@ -112,7 +136,14 @@ export function startViewer(streamToken: string, onStream: (stream: MediaStream)
       announce();
     } else if (msg.kind === "offer" && msg.viewerId === viewerId) {
       pc?.close();
-      pc = new RTCPeerConnection(RTC_CONFIG);
+      pc = new RTCPeerConnection(rtcConfig(options?.iceServers));
+      logIce("viewer", pc);
+      pc.addEventListener("iceconnectionstatechange", () => {
+        const state = pc?.iceConnectionState;
+        if (state === "failed" || state === "disconnected") {
+          options?.onIceFailed?.();
+        }
+      });
       pc.ontrack = (ev) => {
         if (ev.streams[0]) onStream(ev.streams[0]);
       };
