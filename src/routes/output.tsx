@@ -213,6 +213,8 @@ function OutputPage() {
           `/api/public/resolve-stream-token?token=${encodeURIComponent(token)}`,
         );
         if (!res.ok) throw new Error("Invalid stream token");
+        const body = (await res.json()) as { iceServers?: RTCIceServer[] };
+        if (body.iceServers?.length) iceServers = body.iceServers;
         if (cancelled) return;
         connect();
       } catch (e) {
