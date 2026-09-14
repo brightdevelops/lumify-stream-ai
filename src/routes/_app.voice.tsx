@@ -248,7 +248,7 @@ function VoiceStudio() {
   const [selected, setSelected] = useState<VoiceSummary | null>(null);
 
   return (
-    <div className="mx-auto w-full max-w-[1240px] px-7">
+    <div className="lumi-voice-page mx-auto w-full max-w-[1240px] px-7">
       <header className="mb-6">
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 400 }} className="text-[#f2f4ec]">
           Voice Studio
@@ -258,7 +258,7 @@ function VoiceStudio() {
 
       <PricingNotice />
 
-      <div className="grid gap-4 lg:grid-cols-[400px_minmax(0,1fr)]">
+      <div className="grid gap-4 min-[960px]:grid-cols-[400px_minmax(0,1fr)]">
         <div className="space-y-4">
           <VoicePicker tab={tab} setTab={setTab} selected={selected} setSelected={setSelected} />
           <PricingCard />
@@ -574,7 +574,7 @@ function VoiceList(props: {
         </select>
       </div>
 
-      <div className="mt-3 max-h-[320px] space-y-2 overflow-y-auto pr-1 md:max-h-[520px]">
+      <div className="mt-3 max-h-[320px] space-y-2 overflow-y-auto pr-1 min-[960px]:max-h-[520px]">
         {loading && voices.length === 0 ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-[58px] animate-pulse rounded-xl" style={{ background: "#181c11" }} />
@@ -883,7 +883,7 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
       {!clip && !extracting && (
         <button
           onClick={() => (recording ? recRef.current?.stop() : void startRecording())}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-full border text-[12.5px] transition-colors duration-150"
+          className="lumi-rec-btn flex h-10 w-full items-center justify-center gap-2 rounded-full border text-[12.5px] transition-colors duration-150"
           style={{ borderColor: "#262b1c", color: recording ? "#ff7a6b" : "#9aa08c" }}
         >
           {recording ? (
@@ -1219,7 +1219,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
           maxLength={5000}
           onChange={(e) => setTranscript(e.target.value)}
           placeholder="Type what you want this voice to say…"
-          className="mt-3 min-h-[180px] w-full rounded-xl border p-[14px] text-[15px] leading-[1.6] text-[#f2f4ec] outline-none transition-colors duration-150 placeholder:text-[#6b7160] focus:border-[#3a4229]"
+          className="mt-3 min-h-[140px] sm:min-h-[180px] w-full rounded-xl border p-[14px] text-[15px] leading-[1.6] text-[#f2f4ec] outline-none transition-colors duration-150 placeholder:text-[#6b7160] focus:border-[#3a4229]"
           style={INPUT_STYLE}
         />
         <div className="mt-1 text-right font-mono text-[11px]" style={{ color: counterColor }}>

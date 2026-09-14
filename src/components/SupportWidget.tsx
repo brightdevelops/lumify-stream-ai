@@ -260,7 +260,7 @@ export function SupportWidget() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 flex flex-col w-[92vw] max-w-sm h-[70vh] max-h-[560px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
+        <div className="lumi-chat-panel fixed bottom-5 right-5 z-50 flex flex-col w-[92vw] max-w-sm h-[70vh] max-h-[560px] rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
             <div>
               <div className="text-sm font-semibold">Lumify Support</div>
@@ -282,7 +282,7 @@ export function SupportWidget() {
               ⏳ Chats auto-clear after 42 hours
             </div>
             {messages.map((m) => (
-              <div key={m.id} className={m.sender === "user" ? "ml-auto max-w-[80%]" : "mr-auto max-w-[80%]"}>
+              <div key={m.id} className={`lumi-bubble ${m.sender === "user" ? "ml-auto max-w-[80%]" : "mr-auto max-w-[80%]"}`}>
                 {m.sender === "admin" && m.is_auto_reply && (
                   <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
                     <span>🤖</span> Auto-reply · a human will follow up if needed
@@ -329,10 +329,10 @@ export function SupportWidget() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Type a message…"
-              className="flex-1 rounded-md bg-background border border-input px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              className="min-w-0 flex-1 rounded-md bg-background border border-input px-3 py-2 text-sm h-11 sm:h-9 focus:outline-none focus:ring-1 focus:ring-ring"
             />
             <label
-              className="h-9 w-9 grid place-items-center rounded-md border border-input text-muted-foreground cursor-pointer hover:text-foreground"
+              className="h-11 w-11 sm:h-9 sm:w-9 grid place-items-center rounded-md border border-input text-muted-foreground cursor-pointer hover:text-foreground"
               title="Send an image"
             >
               <ImagePlus className="h-4 w-4" />
@@ -350,7 +350,7 @@ export function SupportWidget() {
             <button
               type="submit"
               disabled={!text.trim() || sending}
-              className="h-9 w-9 grid place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-50"
+              className="h-11 w-11 sm:h-9 sm:w-9 grid place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
             </button>

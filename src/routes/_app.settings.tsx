@@ -64,7 +64,7 @@ function SettingsPage() {
         <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)]">Manage your profile, streaming defaults and OBS access.</p>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 min-[900px]:grid-cols-2">
         {/* Left column */}
         <div className="space-y-5">
           <section className="card-surface">
@@ -119,7 +119,7 @@ function SettingsPage() {
             Paste this URL into an OBS Browser Source to receive your AI output. It's permanent and private to you.
           </p>
 
-          <div className="mt-4 flex items-center gap-2 rounded-lg border bg-[color:var(--sidebar)] p-2">
+          <div className="lumi-code-row mt-4 flex items-center gap-2 rounded-lg border bg-[color:var(--sidebar)] p-2">
             <code className="flex-1 truncate text-[12px] font-mono text-[color:var(--muted-foreground)]">
               {obsUrl || "Loading…"}
             </code>

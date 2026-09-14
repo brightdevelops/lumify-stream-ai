@@ -602,3 +602,169 @@ body.stream-live *::after {
   .lime-range::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
   .lime-range::-moz-range-thumb { width: 24px; height: 24px; }
 }
+
+/* ═══════════ Responsive app shell (phones & tablets) ═══════════ */
+.lumi-topbar { display: none; }
+.lumi-drawer { display: none; }
+.lumi-drawer-overlay { display: none; }
+.lumi-tap { min-height: 44px; min-width: 44px; }
+
+@media (max-width: 980px) {
+  .lumi-desktop-sidebar { display: none !important; }
+
+  .lumi-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    height: calc(56px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+    background: #101309;
+    border-bottom: 1px solid #1e2316;
+  }
+  .lumi-topbar .logo-serif { font-size: 20px; }
+
+  .lumi-drawer-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(5, 6, 4, 0.6);
+  }
+  .lumi-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 61;
+    width: 260px;
+    max-width: 85vw;
+    background: #101309;
+    border-right: 1px solid #1e2316;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    transform: translateX(-100%);
+    transition: transform 200ms ease;
+  }
+  .lumi-drawer[data-open="true"] { transform: translateX(0); }
+
+  .lumi-app-page {
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: max(16px, env(safe-area-inset-right)) !important;
+    padding-top: 20px !important;
+    padding-bottom: 28px !important;
+  }
+  .lumi-app-page h1 { font-size: 28px !important; }
+
+  html, body { overflow-x: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lumi-drawer { transition: none; }
+}
+
+@media (max-width: 980px) and (pointer: coarse) {
+  .btn-primary, .btn-ghost { min-height: 44px; }
+  input, select, textarea { min-height: 44px; }
+  .lumi-topbar a, .lumi-topbar button { min-height: 44px; }
+}
+
+/* ── Dashboard ───────────────────────────────────────────────── */
+@media (max-width: 980px) {
+  .lumi-stat-grid { grid-template-columns: 1fr 1fr !important; }
+  .lumi-split { grid-template-columns: minmax(0, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .lumi-stat-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 640px) {
+  .lumi-stack-table thead { display: none; }
+  .lumi-stack-table, .lumi-stack-table tbody, .lumi-stack-table tr, .lumi-stack-table td { display: block; width: 100%; }
+  .lumi-stack-table tr {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .lumi-stack-table td {
+    padding: 0 !important;
+    border: none !important;
+    text-align: left !important;
+  }
+  .lumi-stack-table td:first-child { font-size: 13.5px; color: var(--foreground); }
+  .lumi-stack-table td:nth-child(2) { font-size: 12px; color: var(--faint); margin-top: 2px; }
+  .lumi-stack-table td:nth-child(n + 3) {
+    display: inline-block;
+    width: auto;
+    font-size: 12px;
+    color: var(--muted-foreground);
+    margin-top: 4px;
+  }
+  .lumi-stack-table td:nth-child(4)::before { content: " · "; color: var(--faint); }
+}
+
+/* ── Wallet / credits ────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .lumi-pay-btn { min-height: 48px; }
+}
+@media (max-width: 480px) {
+  .lumi-txn-row { flex-direction: column; align-items: flex-start !important; gap: 6px; }
+  .lumi-txn-row > div:last-child { text-align: left !important; }
+}
+
+/* ── Billing ledger: scroll with edge fade ───────────────────── */
+@media (max-width: 900px) {
+  .lumi-scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+            mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+  }
+  .lumi-scroll-x table { min-width: 680px; }
+}
+
+/* ── Voice Studio ────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .lumi-voice-page { padding-left: 0 !important; padding-right: 0 !important; }
+}
+@media (max-width: 640px) {
+  .voice-dock { flex-direction: column; align-items: stretch; }
+  .voice-dock > div { width: 100%; min-width: 0 !important; flex: 1 1 auto !important; }
+  .voice-dock-divider { display: none; }
+  .voice-dock select { width: 100% !important; }
+  .lumi-rec-btn { height: 48px !important; }
+}
+
+/* ── Settings ────────────────────────────────────────────────── */
+.lumi-code-row code { word-break: break-all; }
+@media (max-width: 640px) {
+  .lumi-code-row { flex-wrap: wrap; }
+  .lumi-code-row code { white-space: normal; overflow: visible; text-overflow: clip; }
+  .lumi-code-row button { min-height: 44px; }
+}
+
+/* ── Support ─────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .lumi-chat-panel {
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .lumi-chat-panel .lumi-bubble { max-width: 85% !important; }
+}
+
+/* ── Auth pages ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .lumi-auth-card { padding: 20px !important; }
+  .lumi-auth-wrap { padding-left: 16px !important; padding-right: 16px !important; }
+  .lumi-auth-card button[type="submit"], .lumi-auth-card .input { min-height: 48px; }
+}
+@media (max-width: 360px) {
+  .lumi-turnstile { transform: scale(0.9); transform-origin: center; }
+}

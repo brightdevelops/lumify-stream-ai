@@ -61,7 +61,7 @@ function TutorialPage() {
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {items.map((v) => (
             <div key={v.id} className="card-lift rounded-2xl border border-[color:var(--border-soft)] bg-card overflow-hidden">
-              <video src={v.video_url} controls preload="metadata" className="w-full aspect-video bg-[color:var(--sidebar)]" />
+              <video src={v.video_url} controls playsInline preload="metadata" className="w-full aspect-video bg-[color:var(--sidebar)]" />
               <div className="p-4">
                 <div className="font-semibold text-[15px]">{v.title}</div>
                 {v.description && (

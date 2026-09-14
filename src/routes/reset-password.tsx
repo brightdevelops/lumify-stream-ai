@@ -47,10 +47,10 @@ function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center bg-background px-4 py-12">
+    <div className="lumi-auth-wrap min-h-screen grid place-items-center bg-background px-4 py-12">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-10"><Logo /></div>
-        <div className="rounded-xl border border-border bg-card p-8">
+        <div className="lumi-auth-card rounded-xl border border-border bg-card p-8">
           <h1 className="text-3xl">Set new password</h1>
           <p className="mt-2 text-sm text-muted-foreground">Choose a strong password you haven't used before.</p>
 

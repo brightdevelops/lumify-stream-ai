@@ -121,7 +121,7 @@ function BillingPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col min-[900px]:flex-row min-[900px]:items-end min-[900px]:justify-between gap-4 mb-8">
         <div>
           <h1 className="font-display text-[38px] leading-tight">Billing</h1>
           <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)]">Every top-up and every second streamed, in one ledger.</p>
@@ -133,7 +133,7 @@ function BillingPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
+      <div className="lumi-stat-grid grid gap-4 sm:grid-cols-3 mb-6">
         <Stat label="Total spent" value={fmtNGN(stats.spent)} hint="Lifetime" />
         <Stat label="Credits purchased" value={stats.purchased.toLocaleString()} hint="Lifetime" accent />
         <Stat label="Transactions" value={stats.count.toLocaleString()} hint="All time" />
@@ -153,7 +153,7 @@ function BillingPage() {
             {clearing ? "Clearing…" : "Clear history"}
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="lumi-scroll-x overflow-x-auto">
           <table className="ledger-table">
             <thead>
               <tr>
