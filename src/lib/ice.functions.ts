@@ -7,19 +7,10 @@ export type IceServer = {
   credential?: string;
 };
 
-// Shared builder — never exposed to the client bundle directly.
-export function buildIceServers(): IceServer[] {
-  const servers: IceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
-  const url = process.env["TURN_URL"];
-  const username = process.env["TURN_USERNAME"];
-  const credential = process.env["TURN_CREDENTIAL"];
-  if (url && username && credential) {
-    servers.push({ urls: url, username, credential });
-  }
-  return servers;
-}
-
 // Authenticated: used by the broadcaster (signed-in user on /stream).
 export const getIceServers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => ({ iceServers: buildIceServers() }));
+  .handler(async () => {
+    const { buildIceServers } = await import("@/lib/ice.server");
+    return { iceServers: buildIceServers() as IceServer[] };
+  });
