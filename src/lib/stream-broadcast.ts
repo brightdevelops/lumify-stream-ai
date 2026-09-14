@@ -48,9 +48,18 @@ export function startBroadcaster(streamToken: string, stream: MediaStream) {
   });
   const peers = new Map<string, RTCPeerConnection>();
 
+  // Fetched once; TURN credentials stay server-side until this call.
+  const icePromise: Promise<RTCIceServer[]> = getIceServers()
+    .then((r) => r.iceServers as RTCIceServer[])
+    .catch((e) => {
+      console.warn("[webrtc:broadcaster] ICE fetch failed, using STUN only", e);
+      return FALLBACK_ICE;
+    });
+
   const createPeer = async (viewerId: string) => {
     peers.get(viewerId)?.close();
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+    const pc = new RTCPeerConnection(rtcConfig(await icePromise));
+    logIce("broadcaster", pc);
     peers.set(viewerId, pc);
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
     pc.onicecandidate = (e) => {
