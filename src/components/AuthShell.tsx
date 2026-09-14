@@ -124,10 +124,10 @@ export function AuthShell({
 
 
   return (
-    <div className="min-h-screen grid place-items-center bg-background px-4 py-12">
+    <div className="lumi-auth-wrap min-h-screen grid place-items-center bg-background px-4 py-12">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-10"><Logo /></div>
-        <div className="rounded-xl border border-border bg-card p-8">
+        <div className="lumi-auth-card rounded-xl border border-border bg-card p-8">
           <h1 className="text-3xl">{title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
 
@@ -189,7 +189,7 @@ export function AuthShell({
               </label>
             )}
             {captchaRequired && (
-              <div className="flex justify-center">
+              <div className="lumi-turnstile flex justify-center">
                 <Turnstile
                   ref={turnstileRef}
                   siteKey={TURNSTILE_SITE_KEY}

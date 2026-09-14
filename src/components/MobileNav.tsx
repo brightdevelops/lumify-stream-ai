@@ -1,8 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Menu, GraduationCap, Mic } from "lucide-react";
+import { LayoutDashboard, Video, Wallet, Receipt, Settings, LogOut, Shield, Wrench, Menu, GraduationCap, Mic, X, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -16,67 +15,109 @@ const items = [
   { to: "/tutorial", label: "Tutorial", icon: GraduationCap },
 ] as const;
 
-
 export function MobileNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isInventor, setIsInventor] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
+    if (!user) { setIsAdmin(false); setIsInventor(false); setBalance(null); return; }
     let cancelled = false;
     supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
       .then(({ data }) => { if (!cancelled) setIsAdmin(!!data); });
+    supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setIsInventor(!!data?.is_admin); });
+    supabase.from("credits").select("balance").eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setBalance(data?.balance ?? 0); });
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, path]);
 
-  const navItems = isAdmin
-    ? [...items, { to: "/admin" as const, label: "Admin", icon: Shield }]
-    : items;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const navItems = [
+    ...items,
+    ...(isAdmin ? [{ to: "/admin" as const, label: "Admin", icon: Shield }] : []),
+    ...(isInventor ? [{ to: "/inventor" as const, label: "Inventor", icon: Wrench }] : []),
+  ];
 
   return (
-    <header className="md:hidden sticky top-0 z-40 flex items-center gap-3 h-14 px-4 border-b bg-[color:var(--sidebar)]">
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <button aria-label="Open menu" className="p-2 -ml-2 rounded-md text-foreground hover:bg-card">
-            <Menu size={20} />
+    <>
+      <header className="lumi-topbar">
+        <button
+          aria-label="Open menu"
+          onClick={() => setOpen(true)}
+          className="lumi-tap grid place-items-center rounded-lg text-foreground hover:bg-card"
+        >
+          <Menu size={20} />
+        </button>
+        <div className="flex-1 grid place-items-center min-w-0">
+          <Logo />
+        </div>
+        <Link
+          to="/credits"
+          className="shrink-0 rounded-full border border-[color:var(--border)] px-3 py-1.5 text-[12px] font-semibold text-primary"
+        >
+          {balance === null ? "—" : `${balance.toLocaleString()} cr`}
+        </Link>
+      </header>
+
+      {open && (
+        <div className="lumi-drawer-overlay" onClick={() => setOpen(false)} aria-hidden />
+      )}
+      <aside className="lumi-drawer" data-open={open} aria-hidden={!open}>
+        <div className="flex items-center justify-between px-5 py-5">
+          <Logo />
+          <button aria-label="Close menu" onClick={() => setOpen(false)} className="lumi-tap grid place-items-center rounded-lg text-[color:var(--muted-foreground)] hover:text-foreground">
+            <X size={18} />
           </button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0 bg-[color:var(--sidebar)] border-border flex flex-col">
-          <div className="px-6 py-6"><Logo /></div>
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {navItems.map((it) => {
-              const active = path === it.to || path.startsWith(it.to + "/");
-              const Icon = it.icon;
-              return (
-                <Link
-                  key={it.to}
-                  to={it.to}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 rounded-full px-3.5 py-2.5 text-sm transition-colors ${
-                    active
-                      ? "bg-primary text-primary-foreground font-semibold"
-                      : "text-[color:var(--muted-foreground)] hover:text-foreground hover:bg-card"
-                  }`}
-                >
-                  <Icon size={17} strokeWidth={1.75} /> {it.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="p-3 border-t">
-            <button
-              onClick={async () => { setOpen(false); await signOut(); navigate({ to: "/" }); }}
-              className="w-full flex items-center gap-3 rounded-full px-3.5 py-2.5 text-sm text-[color:var(--muted-foreground)] hover:text-foreground hover:bg-card"
-            >
-              <LogOut size={17} /> Log out
-            </button>
+        </div>
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+          {navItems.map((it) => {
+            const active = path === it.to || path.startsWith(it.to + "/");
+            const Icon = it.icon;
+            return (
+              <Link
+                key={it.to}
+                to={it.to}
+                onClick={() => setOpen(false)}
+                className={`flex h-12 items-center gap-3 rounded-full px-3.5 text-[14px] transition-colors ${
+                  active
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-[color:var(--muted-foreground)] hover:text-foreground hover:bg-card"
+                }`}
+              >
+                <Icon size={17} strokeWidth={1.75} /> {it.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="p-3 space-y-2">
+          <div className="rounded-2xl border border-[color:var(--border-soft)] bg-card p-3.5">
+            <div className="eyebrow text-[10px]">Balance</div>
+            <div className="mt-1 font-display text-xl text-foreground">
+              {balance === null ? "—" : balance.toLocaleString()} <span className="text-[11px] text-[color:var(--faint)]">credits</span>
+            </div>
+            <Link to="/credits" onClick={() => setOpen(false)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+              <Plus size={13} /> Top up
+            </Link>
           </div>
-        </SheetContent>
-      </Sheet>
-      <Logo />
-    </header>
+          <button
+            onClick={async () => { setOpen(false); await signOut(); navigate({ to: "/" }); }}
+            className="w-full flex h-12 items-center gap-3 rounded-full px-3.5 text-[14px] text-[color:var(--muted-foreground)] hover:text-foreground hover:bg-card"
+          >
+            <LogOut size={17} /> Log out
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

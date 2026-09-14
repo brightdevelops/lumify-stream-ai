@@ -182,7 +182,7 @@ function WalletPage() {
       )}
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+      <div className="lumi-stat-grid grid gap-4 sm:grid-cols-3 mb-8">
         <div className="accent-card rounded-2xl p-5">
           <div className="eyebrow">Current balance</div>
           <div className="mt-3 font-display text-[34px] leading-none">{balance.toLocaleString()}</div>
@@ -192,7 +192,7 @@ function WalletPage() {
         <StatCard label="Credits purchased" value={totalCreditsPurchased.toLocaleString()} hint="Lifetime" />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="lumi-split grid gap-5 lg:grid-cols-[1fr_360px]">
         {/* Packs */}
         <div className="card-surface">
           <div className="eyebrow mb-5">Choose a pack</div>
@@ -231,7 +231,7 @@ function WalletPage() {
           <button
             onClick={handlePayment}
             disabled={processing || paused}
-            className="btn-primary w-full mt-6"
+            className="btn-primary lumi-pay-btn w-full mt-6"
           >
             <WalletIcon size={15} />
             {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Korapay`}
@@ -245,7 +245,7 @@ function WalletPage() {
           <button
             onClick={handleCryptoPayment}
             disabled={cryptoBusy || paused}
-            className="mt-4 w-full rounded-xl border border-[color:var(--border)] px-4 py-3 text-[14px] text-foreground transition-colors hover:border-[color:var(--primary)] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="lumi-pay-btn mt-4 w-full rounded-xl border border-[color:var(--border)] px-4 py-3 text-[14px] text-foreground transition-colors hover:border-[color:var(--primary)] disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Bitcoin size={15} className="text-primary" />
             {paused ? "Paused" : cryptoBusy ? "Starting…" : "Pay with crypto"}
@@ -269,7 +269,7 @@ function WalletPage() {
             ) : (
               <ul className="divide-y divide-[color:var(--border-soft)]">
                 {txns.map((t) => (
-                  <li key={t.id} className="px-5 py-4 flex items-center justify-between gap-3">
+                  <li key={t.id} className="lumi-txn-row px-5 py-4 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-[13.5px] text-foreground truncate">
                         {t.credits.toLocaleString()} credits

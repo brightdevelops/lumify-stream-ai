@@ -92,7 +92,7 @@ function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="lumi-stat-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <div className="accent-card rounded-2xl p-5">
           <div className="eyebrow">Balance</div>
           <div className="mt-3 font-display text-[34px] leading-none text-foreground">{balance.toLocaleString()}</div>
@@ -104,7 +104,7 @@ function Dashboard() {
       </div>
 
       {/* Split */}
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="lumi-split grid gap-5 lg:grid-cols-[1fr_320px]">
         {/* Recent sessions */}
         <div className="card-surface p-0 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b">
@@ -112,7 +112,7 @@ function Dashboard() {
             <Link to="/billing" className="text-[12px] text-primary hover:underline">View all</Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="ledger-table">
+            <table className="ledger-table lumi-stack-table">
               <thead>
                 <tr>
                   <th>Date</th>
