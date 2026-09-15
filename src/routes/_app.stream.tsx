@@ -932,12 +932,23 @@ function StreamPage() {
 
 
     try {
-      const { apiKey } = await getDecartKey();
-      await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
-      const client = createDecartClient({ apiKey });
-      const realtimeClient = await client.realtime.connect(stream, {
-        model,
+      const { apiKey } = await getXmaxKey();
+      const handleEngineError = (message: string, err: unknown) => {
+        console.error("Engine error", (err as any)?.code, message, err);
+      };
+      const client = createXmaxClient({ apiKey, onError: handleEngineError });
+      xmaxClientRef.current = client;
+
+      const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+      const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
+
+      const session = await client.realtime.connect(stream, {
+        model: models.realtime(XMAX_MODEL),
+        context: {
+          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+          ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
+        },
+        audio: { publish: false, subscribe: false },
         onRemoteStream: (transformedStream: MediaStream) => {
           if (outputVideoRef.current) {
             outputVideoRef.current.srcObject = transformedStream;
