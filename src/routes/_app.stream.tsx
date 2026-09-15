@@ -977,25 +977,26 @@ function StreamPage() {
             });
           }
         },
-        // If the Decart peer drops (network loss, server-side close), stop
-        // immediately so the meter doesn't keep ticking against nothing AND
-        // we don't leave an orphan session locally.
-        onConnectionChange: (state) => {
+        onStateChange: (state) => {
+          console.log("[engine] state =", state);
           if (state === "disconnected" && streamingRef.current) {
             endStream(false).catch(() => {});
           }
         },
+        // If the engine session drops (network loss, overload, server-side
+        // close), stop immediately so the meter doesn't keep ticking against
+        // nothing AND we don't leave an orphan session locally.
+        onDisconnect: (reason) => {
+          console.log("[engine] disconnected:", reason);
+          if (streamingRef.current) {
+            endStream(false).catch(() => {});
+          }
+        },
+        onError: handleEngineError,
       });
-      decartClientRef.current = realtimeClient;
-
-      const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
-      await realtimeClient.set({
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
-        image: photo,
-        enhance: false,
-      } as never);
+      xmaxSessionRef.current = session;
     } catch (e) {
-      console.error("Decart connect failed", e);
+      console.error("Engine connect failed", e);
       teardownStream();
       setConnecting(false);
       startingRef.current = false;
