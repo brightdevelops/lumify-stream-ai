@@ -110,7 +110,11 @@ function StreamPage() {
   const outputVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
+  const xmaxSessionRef = useRef<RealtimeSession | null>(null);
+  const xmaxClientRef = useRef<XmaxClient | null>(null);
+  // Remote (uploaded) URL of the current reference image + the File it maps to.
+  const refImageFileRef = useRef<File | null>(null);
+  const refImageUrlRemoteRef = useRef<string | null>(null);
   const broadcasterStopRef = useRef<(() => void) | null>(null);
   const recorderRef = useRef<RecorderHandle | null>(null);
   const [copied, setCopied] = useState(false);
@@ -454,11 +458,9 @@ function StreamPage() {
     let adopted = false;
     let newStream: MediaStream | null = null;
     try {
-      await refreshLucyModelId();
-      const model = models.realtime("lucy-2.1" as any);
-      const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
-      const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
-      const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
+      const fps = CAPTURE_FPS;
+      const width = CAPTURE_WIDTH;
+      const height = CAPTURE_HEIGHT;
       newStream = await navigator.mediaDevices.getUserMedia({
         video: {
           ...videoConstraints,
