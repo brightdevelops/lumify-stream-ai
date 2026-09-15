@@ -706,16 +706,34 @@ function StreamPage() {
     }
   };
 
+  /**
+   * Uploads a local reference image to the engine (once per File) and returns
+   * the remote URL used as `refImageUrl`.
+   */
+  const ensureRemoteRefImage = async (image: File | null): Promise<string | null> => {
+    if (!image) return null;
+    if (refImageFileRef.current === image && refImageUrlRemoteRef.current) {
+      return refImageUrlRemoteRef.current;
+    }
+    const client = xmaxClientRef.current;
+    if (!client) return null;
+    const result = await client.files.uploadAndCheckImage(image);
+    refImageFileRef.current = image;
+    refImageUrlRemoteRef.current = result.url;
+    return result.url;
+  };
+
   const applyReference = async (preset: string | null, image: File | null) => {
-    if (!decartClientRef.current || !image) return;
+    const session = xmaxSessionRef.current;
+    if (!session || !image) return;
     try {
-      await decartClientRef.current.set({
+      const refImageUrl = await ensureRemoteRefImage(image);
+      await session.set({
         prompt: buildPrompt(preset, mode, realism, !!image, background),
-        image,
-        enhance: false,
-      } as never);
+        ...(refImageUrl ? { refImageUrl } : {}),
+      });
     } catch (e) {
-      console.error("Decart set error", e);
+      console.error("Engine set error", e);
     }
   };
 
@@ -798,11 +816,9 @@ function StreamPage() {
     let stream: MediaStream;
     // Resolve the model dims/fps up-front — used by both branches so the
     // canvas-captured file stream matches the camera path exactly.
-    await refreshLucyModelId();
-    const model = models.realtime("lucy-2.1" as any);
-    const modelFps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
-    const modelWidth = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
-    const modelHeight = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
+    const modelFps = CAPTURE_FPS;
+    const modelWidth = CAPTURE_WIDTH;
+    const modelHeight = CAPTURE_HEIGHT;
 
     if (inputSource === "file") {
       // ── Video-file path ────────────────────────────────────────────────
