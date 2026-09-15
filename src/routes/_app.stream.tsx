@@ -4,7 +4,7 @@ import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, C
 import { createXmaxClient, models, type RealtimeSession, type XmaxClient } from "@xmaxai/sdk-global";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { getDecartKey } from "@/lib/decart.functions";
+import { getXmaxKey } from "@/lib/xmax.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { useMaintenanceMode, MAINTENANCE_STREAMING_MESSAGE } from "@/hooks/use-maintenance-mode";
 import { startBroadcaster } from "@/lib/stream-broadcast";
@@ -53,7 +53,14 @@ const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "
 const RATE = 2; // credits/sec
 const MIN_CREDITS_TO_START = 10;
 const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
-// Decart API key is fetched at stream start from an authenticated server function.
+// A temporary engine API key is minted at stream start by an authenticated
+// server function; the master key never reaches the browser.
+const XMAX_MODEL = "x2.0";
+// Capture targets for our own getUserMedia constraints. The SDK derives its
+// own encode size from the track we hand it — we do not override it.
+const CAPTURE_FPS = 24;
+const CAPTURE_WIDTH = 1472;
+const CAPTURE_HEIGHT = 832;
 
 const buildPrompt = (
   preset: string | null,
