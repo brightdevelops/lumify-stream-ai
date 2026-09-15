@@ -46,6 +46,7 @@
         "@tanstack/react-router": "^1.170.18",
         "@tanstack/react-start": "^1.168.32",
         "@tanstack/router-plugin": "^1.168.23",
+        "@xmaxai/sdk-global": "^1.1.10",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
@@ -796,6 +797,10 @@
 
     "@vitejs/plugin-react": ["@vitejs/plugin-react@5.2.0", "", { "dependencies": { "@babel/core": "^7.29.0", "@babel/plugin-transform-react-jsx-self": "^7.27.1", "@babel/plugin-transform-react-jsx-source": "^7.27.1", "@rolldown/pluginutils": "1.0.0-rc.3", "@types/babel__core": "^7.20.5", "react-refresh": "^0.18.0" }, "peerDependencies": { "vite": "^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0" } }, "sha512-YmKkfhOAi3wsB1PhJq5Scj3GXMn3WvtQ/JC0xoopuHoXSdmtdStOpFrYaT1kie2YgFBcIe64ROzMYRjCrYOdYw=="],
 
+    "@volcengine/rtc": ["@volcengine/rtc@4.69.2", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@volcengine/rtc/-/rtc-4.69.2.tgz", { "dependencies": { "eventemitter3": "^4.0.7" } }, "sha512-xX9WuUAPTKh4oll4MvrrFllpniYKUFIK/9GRV/vTvQ4As1U11t19ehu8xGwaUGhEgCODpAUxbMD3d6OOjv3IPA=="],
+
+    "@xmaxai/sdk-global": ["@xmaxai/sdk-global@1.1.10", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@xmaxai/sdk-global/-/sdk-global-1.1.10.tgz", { "dependencies": { "@volcengine/rtc": "^4.68.5", "cos-js-sdk-v5": "^1.10.1", "heic-to": "^1.5.2" } }, "sha512-8Op7nuexnju5azJzVO+EWqgaZNIxzOn4BLA+oyLisd58kMA6CDd6jQpJO5j8ejBOLGpyLJCSPPCCb1QIAZpjEQ=="],
+
     "accepts": ["accepts@1.3.8", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/accepts/-/accepts-1.3.8.tgz", { "dependencies": { "mime-types": "~2.1.34", "negotiator": "0.6.3" } }, "sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw=="],
 
     "acorn": ["acorn@8.16.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw=="],
@@ -879,6 +884,8 @@
     "cookie-signature": ["cookie-signature@1.2.2", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/cookie-signature/-/cookie-signature-1.2.2.tgz", {}, "sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg=="],
 
     "cors": ["cors@2.8.6", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/cors/-/cors-2.8.6.tgz", { "dependencies": { "object-assign": "^4", "vary": "^1" } }, "sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw=="],
+
+    "cos-js-sdk-v5": ["cos-js-sdk-v5@1.10.1", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/cos-js-sdk-v5/-/cos-js-sdk-v5-1.10.1.tgz", { "dependencies": { "fast-xml-parser": "4.5.0" } }, "sha512-a4SRfCY5g6Z35C7OWe9te/S1zk77rVQzfpvZ33gmTdJQzKxbNbEG7Aw/v453XwVMsQB352FIf7KRMm5Ya/wlZQ=="],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 
@@ -1044,6 +1051,8 @@
 
     "fast-uri": ["fast-uri@3.1.2", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/fast-uri/-/fast-uri-3.1.2.tgz", {}, "sha512-rVjf7ArG3LTk+FS6Yw81V1DLuZl1bRbNrev6Tmd/9RaroeeRRJhAt7jg/6YFxbvAQXUCavSoZhPPj6oOx+5KjQ=="],
 
+    "fast-xml-parser": ["fast-xml-parser@4.5.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/fast-xml-parser/-/fast-xml-parser-4.5.0.tgz", { "dependencies": { "strnum": "^1.0.5" }, "bin": { "fxparser": "src/cli/cli.js" } }, "sha512-/PlTQCI96+fZMAOLMZK4CWG1ItCbfZ/0jx7UIJFChPNrx7tcEgerUgWbeieCM9MfHInUDyK8DWYZ+YrywDJuTg=="],
+
     "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" }, "optionalPeers": ["picomatch"] }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 
     "fetchdts": ["fetchdts@0.1.7", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/fetchdts/-/fetchdts-0.1.7.tgz", {}, "sha512-YoZjBdafyLIop9lSxXVI33oLD5kN31q4Td+CasofLLYeLXRFeOsuOw0Uo+XNRi9PZlbfdlN2GmRtm4tCEQ9/KA=="],
@@ -1097,6 +1106,8 @@
     "has-symbols": ["has-symbols@1.1.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/has-symbols/-/has-symbols-1.1.0.tgz", {}, "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ=="],
 
     "hasown": ["hasown@2.0.4", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/hasown/-/hasown-2.0.4.tgz", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A=="],
+
+    "heic-to": ["heic-to@1.5.2", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/heic-to/-/heic-to-1.5.2.tgz", {}, "sha512-8Fns+lZHAWmz5U5IUxDeXKwIf3foBoKNPLxxFY4B0MkLjNuomEIHCoDbDE+x/llFK3NCEO1cu4+n3iUKY+Svmw=="],
 
     "hono": ["hono@4.12.32", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/hono/-/hono-4.12.32.tgz", {}, "sha512-XcuyW9qE2kJn07PkecMOBd5Vq/hMy7mmGw+idz1yblbg9N17ijJODrvPkn7/dwL3Kulj8LcRJ69DLOWf91dRUg=="],
 
@@ -1447,6 +1458,8 @@
     "strip-bom": ["strip-bom@3.0.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/strip-bom/-/strip-bom-3.0.0.tgz", {}, "sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA=="],
 
     "strip-json-comments": ["strip-json-comments@3.1.1", "", {}, "sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig=="],
+
+    "strnum": ["strnum@1.1.2", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/strnum/-/strnum-1.1.2.tgz", {}, "sha512-vrN+B7DBIoTTZjnPNewwhx6cBA/H+IS7rfW68n7XxC1y7uoiGQBxaKzqucGUgavX15dJgiGztLJ8vxuEzwqBdA=="],
 
     "stubborn-fs": ["stubborn-fs@2.0.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/stubborn-fs/-/stubborn-fs-2.0.0.tgz", { "dependencies": { "stubborn-utils": "^1.0.1" } }, "sha512-Y0AvSwDw8y+nlSNFXMm2g6L51rBGdAQT20J3YSOqxC53Lo3bjWRtr2BKcfYoAf352WYpsZSTURrA0tqhfgudPA=="],
 
