@@ -942,12 +942,17 @@ function StreamPage() {
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
 
+      const startContext = {
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
+      };
+      logEngineContext("connect (start)", startContext, null);
+
+      // NOTE: no stream size override is passed — the SDK derives the encode
+      // size from the camera track we hand it.
       const session = await client.realtime.connect(stream, {
         model: models.realtime(XMAX_MODEL),
-        context: {
-          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
-          ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
-        },
+        context: startContext,
         audio: { publish: false, subscribe: false },
         onRemoteStream: (transformedStream: MediaStream) => {
           if (outputVideoRef.current) {
