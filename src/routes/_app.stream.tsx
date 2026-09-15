@@ -62,6 +62,26 @@ const CAPTURE_FPS = 24;
 const CAPTURE_WIDTH = 1472;
 const CAPTURE_HEIGHT = 832;
 
+// Appended to every prompt, in all modes.
+const FACE_GUIDANCE =
+  "natural relaxed facial expression, mouth stays closed unless speaking, realistic face";
+
+// Debug: log the exact context object handed to the engine, plus the SDK's
+// derived stream settings, so we can see what the engine actually receives.
+const logEngineContext = (
+  label: string,
+  ctx: { prompt: string; refImageUrl?: string },
+  session: RealtimeSession | null,
+) => {
+  console.log(`[engine] ${label} context =`, {
+    prompt: ctx.prompt,
+    refImageUrl: ctx.refImageUrl ?? null,
+  });
+  try {
+    console.log("[engine] streamSetting =", (session as any)?.media?.streamSetting ?? null);
+  } catch {}
+};
+
 const buildPrompt = (
   preset: string | null,
   mode: "realistic" | "stylized",
