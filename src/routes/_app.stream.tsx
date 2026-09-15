@@ -62,9 +62,8 @@ const CAPTURE_FPS = 24;
 const CAPTURE_WIDTH = 1472;
 const CAPTURE_HEIGHT = 832;
 
-// Appended to every prompt, in all modes.
-const FACE_GUIDANCE =
-  "natural relaxed facial expression, mouth stays closed unless speaking, realistic face";
+// (No behavioral guidance — these models describe the output's appearance only.)
+
 
 // Debug: log the exact context object handed to the engine, plus the SDK's
 // derived stream settings, so we can see what the engine actually receives.
