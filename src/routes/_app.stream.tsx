@@ -318,9 +318,9 @@ function StreamPage() {
 
     const handleUnload = () => {
       if (!streamingRef.current) return;
-      // Tear down peer + tracks synchronously so Decart stops billing now.
+      // Tear down peer + tracks synchronously so the engine stops billing now.
       try {
-        decartClientRef.current?.disconnect();
+        void xmaxSessionRef.current?.disconnect();
       } catch {}
       try {
         broadcasterStopRef.current?.();
@@ -432,7 +432,7 @@ function StreamPage() {
 
 
   const findPeerConnection = (): RTCPeerConnection | null => {
-    const client = decartClientRef.current as unknown as Record<string, unknown> | null;
+    const client = xmaxSessionRef.current as unknown as Record<string, unknown> | null;
     if (!client) return null;
     const seen = new Set<unknown>();
     const walk = (obj: unknown, depth: number): RTCPeerConnection | null => {
@@ -615,18 +615,25 @@ function StreamPage() {
       console.error("Recorder stop error", e);
     }
     recorderRef.current = null;
-    // Decart SDK exposes `disconnect()` (verified against the type defs);
-    // call it directly so a missing method becomes a visible error rather
-    // than a silent leak.
-    const client = decartClientRef.current;
-    if (client) {
-      try {
-        client.disconnect();
-      } catch (e) {
-        console.error("Decart disconnect error", e);
-      }
+    // Stop generation first, then release the RTC session. Both are async;
+    // we fire-and-forget so teardown stays synchronous for unload paths.
+    const session = xmaxSessionRef.current;
+    if (session) {
+      void (async () => {
+        try {
+          await session.stopGeneration();
+        } catch (e) {
+          console.error("Engine stopGeneration error", e);
+        }
+        try {
+          await session.disconnect();
+        } catch (e) {
+          console.error("Engine disconnect error", e);
+        }
+      })();
     }
-    decartClientRef.current = null;
+    xmaxSessionRef.current = null;
+    xmaxClientRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     // Cancel the file->canvas paint loop and pause the file preview so the
