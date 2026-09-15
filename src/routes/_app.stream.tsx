@@ -287,7 +287,7 @@ function StreamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tab close / refresh / browser crash: synchronously disconnect the Decart
+  // Tab close / refresh / browser crash: synchronously disconnect the engine
   // peer and mark the DB session ended via a keepalive fetch (regular
   // supabase-js calls do NOT survive unload).
   useEffect(() => {
@@ -524,7 +524,7 @@ function StreamPage() {
   // Wall-clock metering: charges for actual elapsed time, not assumed 1-sec
   // ticks. This is critical because browsers throttle setInterval to as
   // little as once/minute when the tab is backgrounded — without delta-based
-  // accounting, the user is undercharged while Decart keeps billing us.
+  // accounting, the user is undercharged while the engine keeps billing us.
   const runMeterTick = async () => {
     if (!user || !streamingRef.current) return;
     // Belt-and-braces: never charge without a session id — otherwise
@@ -779,7 +779,7 @@ function StreamPage() {
     if (!user) return;
 
     // Re-entry guard: double-clicking Start, or a slow connect followed by
-    // another click, must NOT open a second Decart peer.
+    // another click, must NOT open a second engine session.
     if (startingRef.current || streamingRef.current) return;
     startingRef.current = true;
 
@@ -1040,7 +1040,7 @@ function StreamPage() {
     setDuration(0);
     setConnecting(false);
 
-    // sessionIdRef was set up-front by start_stream_session() before Decart
+    // sessionIdRef was set up-front by start_stream_session() before the engine
     // connected. Just record the initial image + start event now.
     if (user) {
       let initialImagePath: string | null = null;
