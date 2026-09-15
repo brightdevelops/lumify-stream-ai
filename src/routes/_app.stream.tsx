@@ -728,10 +728,12 @@ function StreamPage() {
     if (!session || !image) return;
     try {
       const refImageUrl = await ensureRemoteRefImage(image);
-      await session.set({
+      const ctx = {
         prompt: buildPrompt(preset, mode, realism, !!image, background),
         ...(refImageUrl ? { refImageUrl } : {}),
-      });
+      };
+      logEngineContext("set (style/reference)", ctx, session);
+      await session.set(ctx);
     } catch (e) {
       console.error("Engine set error", e);
     }
