@@ -100,6 +100,7 @@ const buildPrompt = (
       ? `Transform into this character in ${preset} style.`
       : "Transform into this character.";
   }
+  base = `${base} ${FACE_GUIDANCE}.`;
   const bg = background.trim();
   return bg
     ? `${base} Change the background to: ${bg}. Keep the person's face, body, and identity unchanged.`
