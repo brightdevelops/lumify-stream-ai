@@ -90,20 +90,16 @@ const buildPrompt = (
 ) => {
   let base: string;
   if (mode === "realistic") {
-    const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail. Preserve the person's real facial movements exactly — the mouth, lips, and jaw must follow the person's actual movements and must not move on their own. Do not animate or alter the mouth independently of the real person.`;
-    base = hasReference
-      ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
-      : realisticBase;
+    const realismWord =
+      realism <= 3 ? "heavily stylized, " : realism <= 7 ? "subtly enhanced, " : "true to life, ";
+    base = `${realismWord}photorealistic person, natural human skin texture, realistic lighting, high detail, calm neutral expression`;
   } else {
     base = preset
-      ? `Transform into this character in ${preset} style.`
-      : "Transform into this character.";
+      ? `a person as a ${preset} character, ${preset} art style, high quality, detailed, consistent appearance`
+      : "a stylized character portrait, high quality, detailed, consistent appearance";
   }
-  base = `${base} ${FACE_GUIDANCE}.`;
   const bg = background.trim();
-  return bg
-    ? `${base} Change the background to: ${bg}. Keep the person's face, body, and identity unchanged.`
-    : base;
+  return bg ? `${base} Background: ${bg}.` : base;
 };
 
 
