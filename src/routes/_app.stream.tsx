@@ -62,6 +62,26 @@ const CAPTURE_FPS = 24;
 const CAPTURE_WIDTH = 1472;
 const CAPTURE_HEIGHT = 832;
 
+// Appended to every prompt, in all modes.
+const FACE_GUIDANCE =
+  "natural relaxed facial expression, mouth stays closed unless speaking, realistic face";
+
+// Debug: log the exact context object handed to the engine, plus the SDK's
+// derived stream settings, so we can see what the engine actually receives.
+const logEngineContext = (
+  label: string,
+  ctx: { prompt: string; refImageUrl?: string },
+  session: RealtimeSession | null,
+) => {
+  console.log(`[engine] ${label} context =`, {
+    prompt: ctx.prompt,
+    refImageUrl: ctx.refImageUrl ?? null,
+  });
+  try {
+    console.log("[engine] streamSetting =", (session as any)?.media?.streamSetting ?? null);
+  } catch {}
+};
+
 const buildPrompt = (
   preset: string | null,
   mode: "realistic" | "stylized",
@@ -80,6 +100,7 @@ const buildPrompt = (
       ? `Transform into this character in ${preset} style.`
       : "Transform into this character.";
   }
+  base = `${base} ${FACE_GUIDANCE}.`;
   const bg = background.trim();
   return bg
     ? `${base} Change the background to: ${bg}. Keep the person's face, body, and identity unchanged.`
@@ -728,10 +749,12 @@ function StreamPage() {
     if (!session || !image) return;
     try {
       const refImageUrl = await ensureRemoteRefImage(image);
-      await session.set({
+      const ctx = {
         prompt: buildPrompt(preset, mode, realism, !!image, background),
         ...(refImageUrl ? { refImageUrl } : {}),
-      });
+      };
+      logEngineContext("set (style/reference)", ctx, session);
+      await session.set(ctx);
     } catch (e) {
       console.error("Engine set error", e);
     }
@@ -942,12 +965,17 @@ function StreamPage() {
       const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
       const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
 
+      const startContext = {
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
+      };
+      logEngineContext("connect (start)", startContext, null);
+
+      // NOTE: no stream size override is passed — the SDK derives the encode
+      // size from the camera track we hand it.
       const session = await client.realtime.connect(stream, {
         model: models.realtime(XMAX_MODEL),
-        context: {
-          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
-          ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
-        },
+        context: startContext,
         audio: { publish: false, subscribe: false },
         onRemoteStream: (transformedStream: MediaStream) => {
           if (outputVideoRef.current) {
@@ -1154,10 +1182,12 @@ function StreamPage() {
       void (async () => {
         try {
           const refImageUrl = await ensureRemoteRefImage(referenceImage);
-          await session.set({
+          const ctx = {
             prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
             ...(refImageUrl ? { refImageUrl } : {}),
-          });
+          };
+          logEngineContext("set (background)", ctx, session);
+          await session.set(ctx);
         } catch (e) {
           console.error("Engine set error", e);
         }
