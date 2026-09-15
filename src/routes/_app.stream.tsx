@@ -964,6 +964,10 @@ function StreamPage() {
       const msg = e instanceof Error ? e.message : String(e ?? "");
       if (msg.includes("Insufficient credits")) {
         setError(msg);
+      } else if (/invalid api key|unauthorized|401/i.test(msg)) {
+        setError(
+          "Streaming is temporarily unavailable — the AI service rejected our access key. This is on our side, not your network. Please try again shortly.",
+        );
       } else {
         setError(
           `Failed to connect to the AI transformation service. This is usually caused by your network or browser blocking WebRTC (common on corporate/school Wi-Fi, VPNs, or strict ad-blockers). Try: (1) a different network or mobile hotspot, (2) Chrome incognito with extensions disabled, (3) disabling VPN/ad-blocker. Technical details: ${msg || "unknown error"}`,
