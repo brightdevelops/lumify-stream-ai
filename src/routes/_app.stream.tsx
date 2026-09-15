@@ -1072,8 +1072,8 @@ function StreamPage() {
   };
 
   const endStream = async (outOfCredits = false) => {
-    if (!streamingRef.current && !decartClientRef.current) {
-      // Already ended (e.g. by pagehide + onConnectionChange racing). Avoid
+    if (!streamingRef.current && !xmaxSessionRef.current) {
+      // Already ended (e.g. by pagehide + onDisconnect racing). Avoid
       // double-logging the usage transaction.
       return;
     }
@@ -1149,17 +1149,17 @@ function StreamPage() {
   useEffect(() => {
     if (!streaming) return;
     const t = setTimeout(() => {
-      const client = decartClientRef.current;
-      if (!client) return;
+      const session = xmaxSessionRef.current;
+      if (!session) return;
       void (async () => {
         try {
-          await client.set({
+          const refImageUrl = await ensureRemoteRefImage(referenceImage);
+          await session.set({
             prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
-            ...(referenceImage ? { image: referenceImage } : {}),
-            enhance: false,
-          } as never);
+            ...(refImageUrl ? { refImageUrl } : {}),
+          });
         } catch (e) {
-          console.error("Decart set error", e);
+          console.error("Engine set error", e);
         }
       })();
     }, 500);
