@@ -48,7 +48,9 @@ export const getXmaxKey = createServerFn({ method: "GET" })
       );
     }
 
-    const baseUrl = process.env.XMAX_API_BASE_URL || "https://api.xmax.ai/open/api/v1";
+    // Same Open API backend the browser SDK talks to (global build default),
+    // so the minted temporary key is valid for the realtime session.
+    const baseUrl = process.env.XMAX_API_BASE_URL || "https://api.xmax.cloud/open/api/v1";
 
     const res = await fetch(`${baseUrl}/temporary-api-key`, {
       method: "POST",
