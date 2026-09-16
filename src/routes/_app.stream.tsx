@@ -1039,6 +1039,12 @@ function StreamPage() {
       if (engineRef.current === "decart") {
         // ── Decart Lucy (legacy engine) ───────────────────────────────────
         const { apiKey } = await getDecartKey();
+        // Diagnostic only — NEVER log the full key.
+        console.log(
+          "[decart] client key length =", apiKey?.length ?? 0,
+          "prefix =", apiKey ? `${apiKey.slice(0, 4)}…` : "(none)",
+          "model =", "lucy-2.1",
+        );
         const decartClient = createDecartClient({ apiKey });
         const realtimeClient = await decartClient.realtime.connect(stream, {
           model: decartModels.realtime("lucy-2.1" as any),

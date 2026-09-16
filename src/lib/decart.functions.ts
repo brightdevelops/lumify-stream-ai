@@ -24,6 +24,12 @@ export const getDecartKey = createServerFn({ method: "GET" })
     await assertNotInMaintenance("streaming", { userId: context.userId });
 
     const key = process.env.DECART_API_KEY;
+    // Diagnostic only — NEVER log the full key.
+    console.log(
+      "[decart] key present =", Boolean(key),
+      "length =", key?.length ?? 0,
+      "prefix =", key ? `${key.slice(0, 4)}…` : "(none)",
+    );
     if (!key) throw new Error("Decart not configured");
 
     const { data: cred, error: credErr } = await context.supabase
@@ -54,6 +60,21 @@ export const getDecartKey = createServerFn({ method: "GET" })
       throw new Error(
         "You've started too many streams in the last hour. Please wait a bit before starting another.",
       );
+    }
+
+    // Diagnostic probe (result ignored): ask Decart's REST API whether this
+    // key is accepted, and log the exact request + full response.
+    try {
+      const probeUrl = "https://api3.decart.ai/v1/models";
+      console.log("[decart] probe request", "GET", probeUrl, "auth header = Bearer <key>");
+      const probe = await fetch(probeUrl, {
+        headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+      });
+      const body = await probe.text();
+      console.log("[decart] probe status =", probe.status, probe.statusText);
+      console.log("[decart] probe body =", body.slice(0, 1000));
+    } catch (e) {
+      console.error("[decart] probe failed", e);
     }
 
     return { apiKey: key };
