@@ -3,8 +3,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { assertNotInMaintenance } from "@/lib/site-settings.functions";
 
+const DECART_API_BASE = "https://api.decart.ai";
+export const DECART_MODEL = "lucy-latest";
+
 /**
- * Returns the Decart API key to authenticated users only.
+ * Returns a SHORT-LIVED Decart client token to authenticated users only.
  *
  * Guards:
  *  - Refuses entirely when STREAMING_PAUSED (maintenance) — no Decart
