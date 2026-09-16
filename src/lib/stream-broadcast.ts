@@ -119,7 +119,11 @@ export function startBroadcaster(streamToken: string, stream: MediaStream) {
 export function startViewer(
   streamToken: string,
   onStream: (stream: MediaStream) => void,
-  options?: { iceServers?: RTCIceServer[]; onIceFailed?: () => void },
+  options?: {
+    iceServers?: RTCIceServer[];
+    onIceFailed?: () => void;
+    onConnectionState?: (state: string) => void;
+  },
 ) {
   const ch = supabase.channel(channelName(streamToken), {
 
