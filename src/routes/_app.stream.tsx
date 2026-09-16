@@ -6,7 +6,7 @@ import { createDecartClient, models as decartModels } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getXmaxKey } from "@/lib/xmax.functions";
-import { getDecartKey } from "@/lib/decart.functions";
+import { getDecartKey, DECART_MODEL } from "@/lib/decart.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { useMaintenanceMode, MAINTENANCE_STREAMING_MESSAGE } from "@/hooks/use-maintenance-mode";
 import { startBroadcaster } from "@/lib/stream-broadcast";
