@@ -119,7 +119,11 @@ export function startBroadcaster(streamToken: string, stream: MediaStream) {
 export function startViewer(
   streamToken: string,
   onStream: (stream: MediaStream) => void,
-  options?: { iceServers?: RTCIceServer[]; onIceFailed?: () => void },
+  options?: {
+    iceServers?: RTCIceServer[];
+    onIceFailed?: () => void;
+    onConnectionState?: (state: string) => void;
+  },
 ) {
   const ch = supabase.channel(channelName(streamToken), {
 
@@ -140,7 +144,15 @@ export function startViewer(
       logIce("viewer", pc);
       pc.addEventListener("iceconnectionstatechange", () => {
         const state = pc?.iceConnectionState;
-        if (state === "failed" || state === "disconnected") {
+        if (state) options?.onConnectionState?.(state);
+        if (state === "failed" || state === "closed") {
+          options?.onIceFailed?.();
+        }
+      });
+      pc.addEventListener("connectionstatechange", () => {
+        const state = pc?.connectionState;
+        if (state) options?.onConnectionState?.(state);
+        if (state === "failed" || state === "closed") {
           options?.onIceFailed?.();
         }
       });

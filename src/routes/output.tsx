@@ -22,6 +22,8 @@ function OutputPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stopViewerRef = useRef<(() => void) | null>(null);
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const disconnectedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectingRef = useRef(false);
 
   const [status, setStatus] = useState<Status>("waiting");
 
@@ -40,28 +42,41 @@ function OutputPage() {
     }
     let cancelled = false;
 
+    const clearTimers = () => {
+      if (retryRef.current) {
+        clearTimeout(retryRef.current);
+        retryRef.current = null;
+      }
+      if (disconnectedRef.current) {
+        clearTimeout(disconnectedRef.current);
+        disconnectedRef.current = null;
+      }
+    };
+
+    // Connection is healthy — no retry may remain armed.
+    const markHealthy = () => {
+      if (cancelled) return;
+      clearTimers();
+      reconnectingRef.current = false;
+      setStatus("live");
+    };
+
     const attachStream = (stream: MediaStream) => {
       const v = videoRef.current;
       if (!v) return;
       v.srcObject = stream;
-      setStatus("live");
+      markHealthy();
       tryPlay();
       const track = stream.getVideoTracks()[0];
       if (track) {
-        track.onmute = () => {
-          if (!cancelled) {
-            setStatus("reconnecting");
-            scheduleRetry();
-          }
-        };
         track.onunmute = () => {
-          if (!cancelled) setStatus("live");
+          if (!cancelled) markHealthy();
+        };
+        track.onmute = () => {
+          if (!cancelled) scheduleRetry();
         };
         track.onended = () => {
-          if (!cancelled) {
-            setStatus("reconnecting");
-            scheduleRetry();
-          }
+          if (!cancelled) scheduleRetry();
         };
       }
     };
@@ -74,6 +89,8 @@ function OutputPage() {
       } catch (e) {
         console.debug("viewer teardown", e);
       }
+      stopViewerRef.current = null;
+
       stopViewerRef.current = startViewer(
         token,
         (stream) => {
@@ -81,22 +98,47 @@ function OutputPage() {
         },
         {
           iceServers,
+          onConnectionState: (state) => {
+            if (cancelled) return;
+            console.debug("output: connection state", state);
+            if (state === "connected" || state === "completed") {
+              markHealthy();
+              return;
+            }
+            if (state === "disconnected") {
+              // Transient blips recover on their own — wait 5s.
+              if (disconnectedRef.current) return;
+              disconnectedRef.current = setTimeout(() => {
+                disconnectedRef.current = null;
+                if (!cancelled) scheduleRetry();
+              }, 5000);
+            }
+          },
           onIceFailed: () => {
             if (cancelled) return;
-            console.warn("output: ICE connection failed — retrying");
-            setStatus("reconnecting");
+            console.warn("output: connection failed — retrying");
             scheduleRetry();
           },
         },
       );
     };
 
+    // Arms a single reconnect attempt; never a periodic interval.
     const scheduleRetry = () => {
-      if (retryRef.current) clearTimeout(retryRef.current);
+      if (cancelled || reconnectingRef.current) return;
+      reconnectingRef.current = true;
+      clearTimers();
+      setStatus("reconnecting");
       retryRef.current = setTimeout(() => {
+        retryRef.current = null;
         if (cancelled) return;
         connect();
-        scheduleRetry();
+        // Allow another attempt only if this one does not become healthy.
+        retryRef.current = setTimeout(() => {
+          retryRef.current = null;
+          reconnectingRef.current = false;
+          if (!cancelled && videoRef.current?.srcObject == null) scheduleRetry();
+        }, 8000);
       }, 3000);
     };
 
@@ -117,7 +159,8 @@ function OutputPage() {
 
     return () => {
       cancelled = true;
-      if (retryRef.current) clearTimeout(retryRef.current);
+      clearTimers();
+      reconnectingRef.current = false;
       try {
         stopViewerRef.current?.();
       } catch (e) {
