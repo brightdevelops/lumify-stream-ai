@@ -155,6 +155,10 @@ function StreamPage() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const xmaxSessionRef = useRef<RealtimeSession | null>(null);
   const xmaxClientRef = useRef<XmaxClient | null>(null);
+  // Decart (legacy) realtime client, used when the admin engine switch is off.
+  const decartClientRef = useRef<any>(null);
+  // Engine chosen ONCE at stream start; never changes mid-stream.
+  const engineRef = useRef<Engine>("xmax");
   // Remote (uploaded) URL of the current reference image + the File it maps to.
   const refImageFileRef = useRef<File | null>(null);
   const refImageUrlRemoteRef = useRef<string | null>(null);
