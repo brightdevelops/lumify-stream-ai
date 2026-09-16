@@ -2347,55 +2347,6 @@ function StudioLayout(p: StudioProps) {
               ))}
             </div>
 
-            {/* Second-phone workflow */}
-            <button
-              type="button"
-              onClick={() => setShowPhoneHelp((v: boolean) => !v)}
-              aria-expanded={showPhoneHelp}
-              className="flex w-full items-center justify-between"
-              style={{
-                marginTop: 14,
-                minHeight: 44,
-                background: "#0b0d0a",
-                border: "1px solid #262b1c",
-                borderRadius: 10,
-                padding: "10px 12px",
-                fontSize: 12.5,
-                color: "var(--foreground)",
-                transition: "all 150ms ease",
-              }}
-            >
-              <span>📱 Using a second phone?</span>
-              <ChevronDown
-                size={14}
-                className={`transition-transform ${showPhoneHelp ? "rotate-180" : ""}`}
-                style={{ color: "#9aa08c" }}
-              />
-            </button>
-            {showPhoneHelp && (
-              <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
-                {[
-                  "Copy your private output link below.",
-                  "Open it in the browser on your second phone and tap to watch — it goes fullscreen.",
-                  "Go live on TikTok with screen sharing (or a screen-broadcast app like Prism Live Studio) and your Lumify output is what viewers see.",
-                ].map((step, i) => (
-                  <div key={i} className="flex items-start gap-3" style={{ fontSize: 12.5, color: "#9aa08c" }}>
-                    <span
-                      className="grid place-items-center shrink-0"
-                      style={{
-                        width: 18, height: 18, borderRadius: 5,
-                        background: "var(--accent-soft)",
-                        color: "var(--primary)",
-                        fontSize: 10.5, fontWeight: 700,
-                      }}
-                    >
-                      {i + 1}
-                    </span>
-                    <span>{step}</span>
-                  </div>
-                ))}
-              </div>
-            )}
             <div
               className="flex items-center gap-2"
               style={{
@@ -2442,49 +2393,6 @@ function StudioLayout(p: StudioProps) {
         </div>
       </div>
 
-      {/* ── Sticky mobile action bar (≤768px only) ───────────────── */}
-      <div className="lumi-mobile-bar">
-        {showAwakeHint && (
-          <div className="lumi-mobile-hint">
-            <span>Keep this screen on while live — switching apps can interrupt your stream.</span>
-            <button type="button" onClick={dismissAwakeHint} aria-label="Dismiss">
-              <X size={12} />
-            </button>
-          </div>
-        )}
-        <div className="lumi-mobile-bar-inner">
-          <button
-            type="button"
-            onClick={streaming ? stop : start}
-            disabled={connecting || (!streaming && (STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))))}
-            className="inline-flex flex-1 items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{
-              background: "var(--primary)",
-              color: "#111406",
-              fontWeight: 700,
-              fontSize: 14,
-              borderRadius: 12,
-              minHeight: 48,
-              padding: "12px 20px",
-              transition: "all 150ms ease",
-            }}
-          >
-            {streaming ? <><Square size={14} /> Streaming…</> : <><Play size={14} /> Start stream</>}
-          </button>
-          <button
-            type="button"
-            onClick={stop}
-            disabled={!streaming}
-            className="btn-ghost disabled:opacity-50"
-            style={{ minHeight: 48, padding: "12px 18px", transition: "all 150ms ease" }}
-          >
-            Stop
-          </button>
-        </div>
-        <div style={{ fontSize: 12, color: "#9aa08c", marginTop: 8 }}>
-          {RATE} credits/sec · ≈ {timeLeftLabel} on your balance
-        </div>
-      </div>
 
 
       {showOutOfCredits && (
