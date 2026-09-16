@@ -993,74 +993,114 @@ function StreamPage() {
 
 
     try {
-      const { apiKey } = await getXmaxKey();
+      // Pick the engine ONCE, here, at stream start. Streams already live keep
+      // whatever engine they started on.
+      try {
+        const setting = await getEngineSetting();
+        engineRef.current = setting.useXmax === false ? "decart" : "xmax";
+      } catch {
+        engineRef.current = "xmax";
+      }
+      console.log("[engine] using", engineRef.current);
+
       const handleEngineError = (message: string, err: unknown) => {
         console.error("Engine error", (err as any)?.code, message, err);
       };
-      const client = createXmaxClient({ apiKey, onError: handleEngineError });
-      xmaxClientRef.current = client;
 
-      const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
-      const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
-
-      const startContext = {
-        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
-        ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
+      // Shared downstream wiring: output panel + OBS broadcast + recorder.
+      const handleRemoteStream = (transformedStream: MediaStream) => {
+        if (outputVideoRef.current) {
+          outputVideoRef.current.srcObject = transformedStream;
+          outputVideoRef.current.play().catch(() => {});
+        }
+        try {
+          broadcasterStopRef.current?.();
+          if (user && streamToken) {
+            broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
+          }
+        } catch (e) {
+          console.error("Broadcaster start failed", e);
+        }
+        // Start session recording: webcam + AI output composite (disclosed in Terms).
+        try {
+          recorderRef.current?.stop();
+        } catch {}
+        if (user && mediaStreamRef.current) {
+          recorderRef.current = startSessionRecorder({
+            userId: user.id,
+            sessionId: sessionIdRef.current,
+            webcamStream: mediaStreamRef.current,
+            outputStream: transformedStream,
+            referenceImageUrl: referenceUrl,
+          });
+        }
       };
-      logEngineContext("connect (start)", startContext, null);
 
-      // NOTE: no stream size override is passed — the SDK derives the encode
-      // size from the camera track we hand it.
-      const session = await client.realtime.connect(stream, {
-        model: models.realtime(XMAX_MODEL),
-        context: startContext,
-        audio: { publish: false, subscribe: false },
-        onRemoteStream: (transformedStream: MediaStream) => {
-          if (outputVideoRef.current) {
-            outputVideoRef.current.srcObject = transformedStream;
-            outputVideoRef.current.play().catch(() => {});
-          }
-          try {
-            broadcasterStopRef.current?.();
-            if (user && streamToken) {
-              broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
+      if (engineRef.current === "decart") {
+        // ── Decart Lucy (legacy engine) ───────────────────────────────────
+        const { apiKey } = await getDecartKey();
+        const decartClient = createDecartClient({ apiKey });
+        const realtimeClient = await decartClient.realtime.connect(stream, {
+          model: decartModels.realtime("lucy-2.1" as any),
+          onRemoteStream: handleRemoteStream,
+          onConnectionChange: (state: string) => {
+            console.log("[engine] state =", state);
+            if (state === "disconnected" && streamingRef.current) {
+              endStream(false).catch(() => {});
             }
+          },
+        } as never);
+        decartClientRef.current = realtimeClient;
 
-          } catch (e) {
-            console.error("Broadcaster start failed", e);
-          }
-          // Start session recording: webcam + AI output composite (disclosed in Terms).
-          try {
-            recorderRef.current?.stop();
-          } catch {}
-          if (user && mediaStreamRef.current) {
-            recorderRef.current = startSessionRecorder({
-              userId: user.id,
-              sessionId: sessionIdRef.current,
-              webcamStream: mediaStreamRef.current,
-              outputStream: transformedStream,
-              referenceImageUrl: referenceUrl,
-            });
-          }
-        },
-        onStateChange: (state) => {
-          console.log("[engine] state =", state);
-          if (state === "disconnected" && streamingRef.current) {
-            endStream(false).catch(() => {});
-          }
-        },
-        // If the engine session drops (network loss, overload, server-side
-        // close), stop immediately so the meter doesn't keep ticking against
-        // nothing AND we don't leave an orphan session locally.
-        onDisconnect: (reason) => {
-          console.log("[engine] disconnected:", reason);
-          if (streamingRef.current) {
-            endStream(false).catch(() => {});
-          }
-        },
-        onError: handleEngineError,
-      });
-      xmaxSessionRef.current = session;
+        const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+        const decartContext = {
+          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          image: photo,
+          enhance: false,
+        };
+        logEngineContext("connect (start)", decartContext, null);
+        await (realtimeClient as any).set(decartContext as never);
+      } else {
+        // ── Xmax x2.0 (default engine) ────────────────────────────────────
+        const { apiKey } = await getXmaxKey();
+        const client = createXmaxClient({ apiKey, onError: handleEngineError });
+        xmaxClientRef.current = client;
+
+        const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+        const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
+
+        const startContext = {
+          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
+        };
+        logEngineContext("connect (start)", startContext, null);
+
+        // NOTE: no stream size override is passed — the SDK derives the encode
+        // size from the camera track we hand it.
+        const session = await client.realtime.connect(stream, {
+          model: models.realtime(XMAX_MODEL),
+          context: startContext,
+          audio: { publish: false, subscribe: false },
+          onRemoteStream: handleRemoteStream,
+          onStateChange: (state) => {
+            console.log("[engine] state =", state);
+            if (state === "disconnected" && streamingRef.current) {
+              endStream(false).catch(() => {});
+            }
+          },
+          // If the engine session drops (network loss, overload, server-side
+          // close), stop immediately so the meter doesn't keep ticking against
+          // nothing AND we don't leave an orphan session locally.
+          onDisconnect: (reason) => {
+            console.log("[engine] disconnected:", reason);
+            if (streamingRef.current) {
+              endStream(false).catch(() => {});
+            }
+          },
+          onError: handleEngineError,
+        });
+        xmaxSessionRef.current = session;
+      }
     } catch (e) {
       console.error("Engine connect failed", e);
       teardownStream();
