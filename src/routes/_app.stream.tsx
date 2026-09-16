@@ -941,9 +941,34 @@ function StreamPage() {
 
       // Shared downstream wiring: output panel + OBS broadcast + recorder.
       const handleRemoteStream = (transformedStream: MediaStream) => {
-        if (outputVideoRef.current) {
-          outputVideoRef.current.srcObject = transformedStream;
-          outputVideoRef.current.play().catch(() => {});
+        const vTracks = transformedStream.getVideoTracks();
+        console.log(
+          "[engine] remote stream received — engine =", engineRef.current,
+          "videoTracks =", vTracks.length,
+          "audioTracks =", transformedStream.getAudioTracks().length,
+          vTracks[0]
+            ? { id: vTracks[0].id, readyState: vTracks[0].readyState, muted: vTracks[0].muted, enabled: vTracks[0].enabled }
+            : "(no video track)",
+        );
+        const el = outputVideoRef.current;
+        if (el) {
+          el.srcObject = transformedStream;
+          el.muted = true;
+          (el as HTMLVideoElement).playsInline = true;
+          el.onloadedmetadata = () => {
+            console.log("[engine] output element metadata — size =", el.videoWidth, "x", el.videoHeight);
+            el.play().catch((err) => console.warn("[engine] output play() rejected (metadata)", err));
+          };
+          el.play()
+            .then(() => console.log("[engine] output element attached and playing"))
+            .catch((err) => console.warn("[engine] output play() rejected", err));
+          vTracks[0]?.addEventListener("unmute", () =>
+            console.log("[engine] remote video track unmuted — frames flowing"),
+          );
+          vTracks[0]?.addEventListener("mute", () => console.log("[engine] remote video track muted"));
+          vTracks[0]?.addEventListener("ended", () => console.log("[engine] remote video track ended"));
+        } else {
+          console.warn("[engine] output video element not mounted — cannot attach remote stream");
         }
         try {
           broadcasterStopRef.current?.();
