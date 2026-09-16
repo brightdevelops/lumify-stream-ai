@@ -38,11 +38,10 @@ export const setMaintenanceMode = createServerFn({ method: "POST" })
   });
 
 /**
- * Public read of the Lucy model flag. Returns the Decart model id to use.
- * When `lucy_use_25` is true (default) we run "lucy-latest" (currently 2.5),
- * otherwise "lucy-2.0". The client UI always shows "Lucy 2.5" regardless.
+ * Which realtime engine new streams use.
+ * `engine_use_xmax` true (or missing) = Xmax x2.0, false = Decart Lucy.
  */
-export const getLucyModel = createServerFn({ method: "GET" }).handler(async () => {
+export const getEngineSetting = createServerFn({ method: "GET" }).handler(async () => {
   const { createClient } = await import("@supabase/supabase-js");
   const supa = createClient(
     process.env.SUPABASE_URL!,
@@ -52,27 +51,22 @@ export const getLucyModel = createServerFn({ method: "GET" }).handler(async () =
   const { data } = await supa
     .from("site_settings")
     .select("value")
-    .eq("key", "lucy_use_25")
+    .eq("key", "engine_use_xmax")
     .maybeSingle();
-  const use25 = data?.value !== false; // default true
-  // NOTE: Decart has retired the standalone 2.0 model — only lucy-2.5 (and the
-  // "lucy-latest" alias) exist in their current registry. The toggle is kept
-  // for future versions, but both positions currently resolve to lucy-latest
-  // so an admin flip can never send an invalid model id.
-  return { modelId: "lucy-latest", use25 };
+  return { useXmax: data?.value !== false }; // missing row => Xmax
 });
 
-/** Admin-only toggle for the Lucy model version. */
-export const setLucyModel = createServerFn({ method: "POST" })
+/** Admin-only switch between the Xmax and Decart engines. */
+export const setEngineSetting = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ use25: z.boolean() }).parse(input))
+  .inputValidator((input) => z.object({ useXmax: z.boolean() }).parse(input))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.rpc("set_site_setting", {
-      p_key: "lucy_use_25",
-      p_value: data.use25,
+      p_key: "engine_use_xmax",
+      p_value: data.useXmax,
     });
     if (error) throw new Error(error.message);
-    return { use25: data.use25 };
+    return { useXmax: data.useXmax };
   });
 
 /**

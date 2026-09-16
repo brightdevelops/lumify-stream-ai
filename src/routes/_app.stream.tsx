@@ -2,16 +2,18 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle, Info, ChevronDown, Camera as CameraIcon, PictureInPicture2, Film, Repeat } from "lucide-react";
 import { createXmaxClient, models, type RealtimeSession, type XmaxClient } from "@xmaxai/sdk-global";
+import { createDecartClient, models as decartModels } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getXmaxKey } from "@/lib/xmax.functions";
+import { getDecartKey } from "@/lib/decart.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { useMaintenanceMode, MAINTENANCE_STREAMING_MESSAGE } from "@/hooks/use-maintenance-mode";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 import { startSessionRecorder, logStreamEvent, uploadSwapImage, type RecorderHandle } from "@/lib/stream-recorder";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
-import { getLucyModel } from "@/lib/site-settings.functions";
+import { getEngineSetting } from "@/lib/site-settings.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -81,7 +83,15 @@ const logEngineContext = (
   } catch {}
 };
 
+type Engine = "xmax" | "decart";
+
+/**
+ * Prompt templates, one set per engine. Xmax x2.0 describes the output's
+ * appearance; Decart Lucy uses the original instruction-style templates.
+ * The sets are never mixed — the engine is fixed for the whole stream.
+ */
 const buildPrompt = (
+  engine: Engine,
   preset: string | null,
   mode: "realistic" | "stylized",
   realism: number,
@@ -89,6 +99,23 @@ const buildPrompt = (
   background: string = "",
 ) => {
   let base: string;
+  if (engine === "decart") {
+    if (mode === "realistic") {
+      const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail. Preserve the person's real facial movements exactly — the mouth, lips, and jaw must follow the person's actual movements and must not move on their own. Do not animate or alter the mouth independently of the real person.`;
+      base = hasReference
+        ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
+        : realisticBase;
+    } else {
+      base = preset
+        ? `Transform into this character in ${preset} style.`
+        : "Transform into this character.";
+    }
+    const bgD = background.trim();
+    return bgD
+      ? `${base} Change the background to: ${bgD}. Keep the person's face, body, and identity unchanged.`
+      : base;
+  }
+
   if (mode === "realistic") {
     const realismWord =
       realism <= 3 ? "heavily stylized, " : realism <= 7 ? "subtly enhanced, " : "true to life, ";
@@ -128,6 +155,10 @@ function StreamPage() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const xmaxSessionRef = useRef<RealtimeSession | null>(null);
   const xmaxClientRef = useRef<XmaxClient | null>(null);
+  // Decart (legacy) realtime client, used when the admin engine switch is off.
+  const decartClientRef = useRef<any>(null);
+  // Engine chosen ONCE at stream start; never changes mid-stream.
+  const engineRef = useRef<Engine>("xmax");
   // Remote (uploaded) URL of the current reference image + the File it maps to.
   const refImageFileRef = useRef<File | null>(null);
   const refImageUrlRemoteRef = useRef<string | null>(null);
@@ -260,18 +291,6 @@ function StreamPage() {
   const fractionalSecRef = useRef(0); // carries sub-second remainder between ticks
   const accessTokenRef = useRef<string | null>(null); // for keepalive end-session beacon
   const streamingRef = useRef(false);
-  const lucyModelIdRef = useRef<string>("lucy-latest");
-
-  // Always refetch the current Lucy model id right before starting/restarting
-  // a session so an admin toggle in Inventor takes effect without a page reload.
-  const refreshLucyModelId = async () => {
-    try {
-      const r = await getLucyModel();
-      if (r?.modelId) lucyModelIdRef.current = r.modelId;
-    } catch { /* keep last known */ }
-  };
-
-  useEffect(() => { refreshLucyModelId(); }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -337,6 +356,7 @@ function StreamPage() {
       // Tear down peer + tracks synchronously so the engine stops billing now.
       try {
         void xmaxSessionRef.current?.disconnect();
+        decartClientRef.current?.disconnect?.();
       } catch {}
       try {
         broadcasterStopRef.current?.();
@@ -448,7 +468,7 @@ function StreamPage() {
 
 
   const findPeerConnection = (): RTCPeerConnection | null => {
-    const client = xmaxSessionRef.current as unknown as Record<string, unknown> | null;
+    const client = (xmaxSessionRef.current ?? decartClientRef.current) as unknown as Record<string, unknown> | null;
     if (!client) return null;
     const seen = new Set<unknown>();
     const walk = (obj: unknown, depth: number): RTCPeerConnection | null => {
@@ -650,6 +670,15 @@ function StreamPage() {
     }
     xmaxSessionRef.current = null;
     xmaxClientRef.current = null;
+    const decartClient = decartClientRef.current;
+    if (decartClient) {
+      try {
+        decartClient.disconnect();
+      } catch (e) {
+        console.error("Engine disconnect error", e);
+      }
+    }
+    decartClientRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     // Cancel the file->canvas paint loop and pause the file preview so the
@@ -740,12 +769,26 @@ function StreamPage() {
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
+    if (!image) return;
+    const prompt = buildPrompt(engineRef.current, preset, mode, realism, !!image, background);
+
+    if (engineRef.current === "decart") {
+      const decartClient = decartClientRef.current;
+      if (!decartClient) return;
+      try {
+        await decartClient.set({ prompt, image, enhance: false } as never);
+      } catch (e) {
+        console.error("Engine set error", e);
+      }
+      return;
+    }
+
     const session = xmaxSessionRef.current;
-    if (!session || !image) return;
+    if (!session) return;
     try {
       const refImageUrl = await ensureRemoteRefImage(image);
       const ctx = {
-        prompt: buildPrompt(preset, mode, realism, !!image, background),
+        prompt,
         ...(refImageUrl ? { refImageUrl } : {}),
       };
       logEngineContext("set (style/reference)", ctx, session);
@@ -785,7 +828,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
           });
         })();
       }
@@ -950,74 +993,114 @@ function StreamPage() {
 
 
     try {
-      const { apiKey } = await getXmaxKey();
+      // Pick the engine ONCE, here, at stream start. Streams already live keep
+      // whatever engine they started on.
+      try {
+        const setting = await getEngineSetting();
+        engineRef.current = setting.useXmax === false ? "decart" : "xmax";
+      } catch {
+        engineRef.current = "xmax";
+      }
+      console.log("[engine] using", engineRef.current);
+
       const handleEngineError = (message: string, err: unknown) => {
         console.error("Engine error", (err as any)?.code, message, err);
       };
-      const client = createXmaxClient({ apiKey, onError: handleEngineError });
-      xmaxClientRef.current = client;
 
-      const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
-      const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
-
-      const startContext = {
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
-        ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
+      // Shared downstream wiring: output panel + OBS broadcast + recorder.
+      const handleRemoteStream = (transformedStream: MediaStream) => {
+        if (outputVideoRef.current) {
+          outputVideoRef.current.srcObject = transformedStream;
+          outputVideoRef.current.play().catch(() => {});
+        }
+        try {
+          broadcasterStopRef.current?.();
+          if (user && streamToken) {
+            broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
+          }
+        } catch (e) {
+          console.error("Broadcaster start failed", e);
+        }
+        // Start session recording: webcam + AI output composite (disclosed in Terms).
+        try {
+          recorderRef.current?.stop();
+        } catch {}
+        if (user && mediaStreamRef.current) {
+          recorderRef.current = startSessionRecorder({
+            userId: user.id,
+            sessionId: sessionIdRef.current,
+            webcamStream: mediaStreamRef.current,
+            outputStream: transformedStream,
+            referenceImageUrl: referenceUrl,
+          });
+        }
       };
-      logEngineContext("connect (start)", startContext, null);
 
-      // NOTE: no stream size override is passed — the SDK derives the encode
-      // size from the camera track we hand it.
-      const session = await client.realtime.connect(stream, {
-        model: models.realtime(XMAX_MODEL),
-        context: startContext,
-        audio: { publish: false, subscribe: false },
-        onRemoteStream: (transformedStream: MediaStream) => {
-          if (outputVideoRef.current) {
-            outputVideoRef.current.srcObject = transformedStream;
-            outputVideoRef.current.play().catch(() => {});
-          }
-          try {
-            broadcasterStopRef.current?.();
-            if (user && streamToken) {
-              broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
+      if (engineRef.current === "decart") {
+        // ── Decart Lucy (legacy engine) ───────────────────────────────────
+        const { apiKey } = await getDecartKey();
+        const decartClient = createDecartClient({ apiKey });
+        const realtimeClient = await decartClient.realtime.connect(stream, {
+          model: decartModels.realtime("lucy-2.1" as any),
+          onRemoteStream: handleRemoteStream,
+          onConnectionChange: (state: string) => {
+            console.log("[engine] state =", state);
+            if (state === "disconnected" && streamingRef.current) {
+              endStream(false).catch(() => {});
             }
+          },
+        } as never);
+        decartClientRef.current = realtimeClient;
 
-          } catch (e) {
-            console.error("Broadcaster start failed", e);
-          }
-          // Start session recording: webcam + AI output composite (disclosed in Terms).
-          try {
-            recorderRef.current?.stop();
-          } catch {}
-          if (user && mediaStreamRef.current) {
-            recorderRef.current = startSessionRecorder({
-              userId: user.id,
-              sessionId: sessionIdRef.current,
-              webcamStream: mediaStreamRef.current,
-              outputStream: transformedStream,
-              referenceImageUrl: referenceUrl,
-            });
-          }
-        },
-        onStateChange: (state) => {
-          console.log("[engine] state =", state);
-          if (state === "disconnected" && streamingRef.current) {
-            endStream(false).catch(() => {});
-          }
-        },
-        // If the engine session drops (network loss, overload, server-side
-        // close), stop immediately so the meter doesn't keep ticking against
-        // nothing AND we don't leave an orphan session locally.
-        onDisconnect: (reason) => {
-          console.log("[engine] disconnected:", reason);
-          if (streamingRef.current) {
-            endStream(false).catch(() => {});
-          }
-        },
-        onError: handleEngineError,
-      });
-      xmaxSessionRef.current = session;
+        const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+        const decartContext = {
+          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          image: photo,
+          enhance: false,
+        };
+        logEngineContext("connect (start)", decartContext, null);
+        await (realtimeClient as any).set(decartContext as never);
+      } else {
+        // ── Xmax x2.0 (default engine) ────────────────────────────────────
+        const { apiKey } = await getXmaxKey();
+        const client = createXmaxClient({ apiKey, onError: handleEngineError });
+        xmaxClientRef.current = client;
+
+        const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+        const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
+
+        const startContext = {
+          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
+        };
+        logEngineContext("connect (start)", startContext, null);
+
+        // NOTE: no stream size override is passed — the SDK derives the encode
+        // size from the camera track we hand it.
+        const session = await client.realtime.connect(stream, {
+          model: models.realtime(XMAX_MODEL),
+          context: startContext,
+          audio: { publish: false, subscribe: false },
+          onRemoteStream: handleRemoteStream,
+          onStateChange: (state) => {
+            console.log("[engine] state =", state);
+            if (state === "disconnected" && streamingRef.current) {
+              endStream(false).catch(() => {});
+            }
+          },
+          // If the engine session drops (network loss, overload, server-side
+          // close), stop immediately so the meter doesn't keep ticking against
+          // nothing AND we don't leave an orphan session locally.
+          onDisconnect: (reason) => {
+            console.log("[engine] disconnected:", reason);
+            if (streamingRef.current) {
+              endStream(false).catch(() => {});
+            }
+          },
+          onError: handleEngineError,
+        });
+        xmaxSessionRef.current = session;
+      }
     } catch (e) {
       console.error("Engine connect failed", e);
       teardownStream();
@@ -1078,7 +1161,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -1095,7 +1178,7 @@ function StreamPage() {
   };
 
   const endStream = async (outOfCredits = false) => {
-    if (!streamingRef.current && !xmaxSessionRef.current) {
+    if (!streamingRef.current && !xmaxSessionRef.current && !decartClientRef.current) {
       // Already ended (e.g. by pagehide + onDisconnect racing). Avoid
       // double-logging the usage transaction.
       return;
@@ -1146,7 +1229,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(engineRef.current, next, mode, realism, !!referenceImage, background),
         });
       }
     }
@@ -1162,7 +1245,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1172,13 +1255,28 @@ function StreamPage() {
   useEffect(() => {
     if (!streaming) return;
     const t = setTimeout(() => {
+      const prompt = buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background);
+      if (engineRef.current === "decart") {
+        const decartClient = decartClientRef.current;
+        if (!decartClient) return;
+        void (async () => {
+          try {
+            const ctx = { prompt, image: referenceImage, enhance: false };
+            logEngineContext("set (background)", ctx, null);
+            await decartClient.set(ctx as never);
+          } catch (e) {
+            console.error("Engine set error", e);
+          }
+        })();
+        return;
+      }
       const session = xmaxSessionRef.current;
       if (!session) return;
       void (async () => {
         try {
           const refImageUrl = await ensureRemoteRefImage(referenceImage);
           const ctx = {
-            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            prompt,
             ...(refImageUrl ? { refImageUrl } : {}),
           };
           logEngineContext("set (background)", ctx, session);
