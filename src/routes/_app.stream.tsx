@@ -1008,11 +1008,17 @@ function StreamPage() {
         logEngineContext("connect (start)", decartContext, null);
 
         const decartClient = createDecartClient({ apiKey });
+        console.log("[decart] connecting realtime room…");
         const realtimeClient = await decartClient.realtime.connect(stream, {
           model: decartModels.realtime(DECART_MODEL as never),
-          onRemoteStream: handleRemoteStream,
+          // Same shared sink the Xmax arm uses: output panel + OBS broadcast + recorder.
+          onRemoteStream: (transformedStream: MediaStream) => {
+            console.log("[decart] remote video track subscribed from inference server");
+            handleRemoteStream(transformedStream);
+          },
           onConnectionChange: (state: string) => {
             console.log("[engine] state =", state);
+            if (state === "connected") console.log("[decart] livekit room connected");
             if ((state === "disconnected" || state === "failed") && streamingRef.current) {
               endStream(false).catch(() => {});
             }
@@ -1025,6 +1031,20 @@ function StreamPage() {
         (realtimeClient as any).on?.("error", (err: unknown) => {
           handleEngineError((err as any)?.message ?? "Decart engine error", err);
         });
+        (realtimeClient as any).on?.("queuePosition", (qp: unknown) =>
+          console.log("[decart] queuePosition =", qp),
+        );
+        (realtimeClient as any).on?.("generationTick", (t: unknown) =>
+          console.log("[decart] generationTick", t),
+        );
+        (realtimeClient as any).on?.("generationEnded", (t: unknown) =>
+          console.log("[decart] generationEnded", t),
+        );
+        (realtimeClient as any).on?.("diagnostic", (d: unknown) => console.log("[decart] diagnostic", d));
+        console.log(
+          "[decart] connected — sessionId =", (realtimeClient as any)?.sessionId ?? "(none)",
+          "isConnected =", (realtimeClient as any)?.isConnected?.() ?? "(unknown)",
+        );
         decartClientRef.current = realtimeClient;
       } else {
         // ── Xmax x2.0 (default engine) ────────────────────────────────────
