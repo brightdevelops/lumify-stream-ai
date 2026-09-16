@@ -62,6 +62,21 @@ export const getDecartKey = createServerFn({ method: "GET" })
       );
     }
 
+    // Diagnostic probe (result ignored): ask Decart's REST API whether this
+    // key is accepted, and log the exact request + full response.
+    try {
+      const probeUrl = "https://api3.decart.ai/v1/models";
+      console.log("[decart] probe request", "GET", probeUrl, "auth header = Bearer <key>");
+      const probe = await fetch(probeUrl, {
+        headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+      });
+      const body = await probe.text();
+      console.log("[decart] probe status =", probe.status, probe.statusText);
+      console.log("[decart] probe body =", body.slice(0, 1000));
+    } catch (e) {
+      console.error("[decart] probe failed", e);
+    }
+
     return { apiKey: key };
   });
 
