@@ -772,7 +772,7 @@ function StreamPage() {
     try {
       const refImageUrl = await ensureRemoteRefImage(image);
       const ctx = {
-        prompt: buildPrompt(preset, mode, realism, !!image, background),
+        prompt: buildPrompt(engineRef.current, preset, mode, realism, !!image, background),
         ...(refImageUrl ? { refImageUrl } : {}),
       };
       logEngineContext("set (style/reference)", ctx, session);
@@ -812,7 +812,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
           });
         })();
       }
@@ -988,7 +988,7 @@ function StreamPage() {
       const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
 
       const startContext = {
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
         ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
       };
       logEngineContext("connect (start)", startContext, null);
@@ -1105,7 +1105,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -1173,7 +1173,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(next, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(engineRef.current, next, mode, realism, !!referenceImage, background),
         });
       }
     }
@@ -1189,7 +1189,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1205,7 +1205,7 @@ function StreamPage() {
         try {
           const refImageUrl = await ensureRemoteRefImage(referenceImage);
           const ctx = {
-            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
             ...(refImageUrl ? { refImageUrl } : {}),
           };
           logEngineContext("set (background)", ctx, session);
