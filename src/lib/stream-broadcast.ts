@@ -144,7 +144,15 @@ export function startViewer(
       logIce("viewer", pc);
       pc.addEventListener("iceconnectionstatechange", () => {
         const state = pc?.iceConnectionState;
-        if (state === "failed" || state === "disconnected") {
+        if (state) options?.onConnectionState?.(state);
+        if (state === "failed" || state === "closed") {
+          options?.onIceFailed?.();
+        }
+      });
+      pc.addEventListener("connectionstatechange", () => {
+        const state = pc?.connectionState;
+        if (state) options?.onConnectionState?.(state);
+        if (state === "failed" || state === "closed") {
           options?.onIceFailed?.();
         }
       });
