@@ -356,6 +356,7 @@ function StreamPage() {
       // Tear down peer + tracks synchronously so the engine stops billing now.
       try {
         void xmaxSessionRef.current?.disconnect();
+        decartClientRef.current?.disconnect?.();
       } catch {}
       try {
         broadcasterStopRef.current?.();
@@ -467,7 +468,7 @@ function StreamPage() {
 
 
   const findPeerConnection = (): RTCPeerConnection | null => {
-    const client = xmaxSessionRef.current as unknown as Record<string, unknown> | null;
+    const client = (xmaxSessionRef.current ?? decartClientRef.current) as unknown as Record<string, unknown> | null;
     if (!client) return null;
     const seen = new Set<unknown>();
     const walk = (obj: unknown, depth: number): RTCPeerConnection | null => {
@@ -669,6 +670,15 @@ function StreamPage() {
     }
     xmaxSessionRef.current = null;
     xmaxClientRef.current = null;
+    const decartClient = decartClientRef.current;
+    if (decartClient) {
+      try {
+        decartClient.disconnect();
+      } catch (e) {
+        console.error("Engine disconnect error", e);
+      }
+    }
+    decartClientRef.current = null;
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     // Cancel the file->canvas paint loop and pause the file preview so the
@@ -1114,7 +1124,7 @@ function StreamPage() {
   };
 
   const endStream = async (outOfCredits = false) => {
-    if (!streamingRef.current && !xmaxSessionRef.current) {
+    if (!streamingRef.current && !xmaxSessionRef.current && !decartClientRef.current) {
       // Already ended (e.g. by pagehide + onDisconnect racing). Avoid
       // double-logging the usage transaction.
       return;
