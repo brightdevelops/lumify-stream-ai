@@ -1255,13 +1255,28 @@ function StreamPage() {
   useEffect(() => {
     if (!streaming) return;
     const t = setTimeout(() => {
+      const prompt = buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background);
+      if (engineRef.current === "decart") {
+        const decartClient = decartClientRef.current;
+        if (!decartClient) return;
+        void (async () => {
+          try {
+            const ctx = { prompt, image: referenceImage, enhance: false };
+            logEngineContext("set (background)", ctx, null);
+            await decartClient.set(ctx as never);
+          } catch (e) {
+            console.error("Engine set error", e);
+          }
+        })();
+        return;
+      }
       const session = xmaxSessionRef.current;
       if (!session) return;
       void (async () => {
         try {
           const refImageUrl = await ensureRemoteRefImage(referenceImage);
           const ctx = {
-            prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+            prompt,
             ...(refImageUrl ? { refImageUrl } : {}),
           };
           logEngineContext("set (background)", ctx, session);
