@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Users, CreditCard, Wallet, TrendingUp, Coins, Activity, Cpu } from "lucide-react";
+import { toast } from "sonner";
+import { Users, CreditCard, Wallet, TrendingUp, Coins, Activity } from "lucide-react";
+import { Toaster } from "@/components/ui/sonner";
 import { inventorGetMetrics, type InventorMetrics } from "@/lib/inventor.functions";
-import { getLucyModel, setLucyModel } from "@/lib/site-settings.functions";
+import { getEngineSetting, setEngineSetting } from "@/lib/site-settings.functions";
 import { NGN, NUM, pkgName, shortDate } from "@/lib/inventor-utils";
 import { AnnouncementEditor } from "@/components/inventor/AnnouncementEditor";
 
@@ -11,33 +13,108 @@ export const Route = createFileRoute("/inventor/")({
   component: OverviewPage,
 });
 
+function EngineCard() {
+  const getEngine = useServerFn(getEngineSetting);
+  const setEngine = useServerFn(setEngineSetting);
+  const [useXmax, setUseXmax] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getEngine()
+      .then((r: { useXmax: boolean }) => setUseXmax(r.useXmax))
+      .catch(() => {});
+  }, [getEngine]);
+
+  const choose = async (next: boolean) => {
+    if (useXmax === null || saving || next === useXmax) return;
+    if (!window.confirm("Switch the streaming engine for all new streams?")) return;
+    setSaving(true);
+    try {
+      const r = await setEngine({ data: { useXmax: next } });
+      setUseXmax(r.useXmax);
+      toast.success(`New streams will use ${r.useXmax ? "Xmax x2.0" : "Decart Lucy"}.`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to switch engine");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const options: { label: string; value: boolean }[] = [
+    { label: "XMAX X2.0", value: true },
+    { label: "DECART LUCY", value: false },
+  ];
+
+  return (
+    <div
+      style={{
+        background: "#14170f",
+        border: "1px solid #262b1c",
+        borderRadius: 16,
+        padding: 20,
+      }}
+    >
+      <p
+        style={{
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.12em",
+          color: "#9aa08c",
+          margin: 0,
+        }}
+      >
+        AI Engine
+      </p>
+      <div
+        style={{
+          display: "inline-flex",
+          gap: 4,
+          marginTop: 12,
+          padding: 4,
+          background: "#0b0d0a",
+          border: "1px solid #262b1c",
+          borderRadius: 999,
+        }}
+      >
+        {options.map((o) => {
+          const active = useXmax === o.value;
+          return (
+            <button
+              key={o.label}
+              onClick={() => choose(o.value)}
+              disabled={useXmax === null || saving}
+              style={{
+                borderRadius: 999,
+                padding: "8px 16px",
+                fontSize: 12,
+                letterSpacing: "0.06em",
+                fontWeight: 600,
+                transition: "all 150ms",
+                background: active ? "#c6f24e" : "transparent",
+                color: active ? "#111406" : "#9aa08c",
+                opacity: useXmax === null || saving ? 0.6 : 1,
+              }}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: 12, color: "#6b7160", marginTop: 12 }}>
+        Applies to streams started after the change. Streams already live keep their engine.
+      </p>
+    </div>
+  );
+}
+
 function OverviewPage() {
   const fn = useServerFn(inventorGetMetrics);
-  const getLucy = useServerFn(getLucyModel);
-  const setLucy = useServerFn(setLucyModel);
   const [m, setM] = useState<InventorMetrics | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [use25, setUse25] = useState<boolean | null>(null);
-  const [savingModel, setSavingModel] = useState(false);
 
   useEffect(() => {
     fn().then((r) => setM(r.metrics)).catch((e) => setErr(String(e?.message ?? e)));
-    getLucy().then((r) => setUse25(r.use25)).catch(() => {});
-  }, [fn, getLucy]);
-
-  const toggleModel = async () => {
-    if (use25 === null || savingModel) return;
-    setSavingModel(true);
-    try {
-      const next = !use25;
-      const r = await setLucy({ data: { use25: next } });
-      setUse25(r.use25);
-    } catch (e: any) {
-      alert(e?.message ?? "Failed to update model");
-    } finally {
-      setSavingModel(false);
-    }
-  };
+  }, [fn]);
 
   if (err) return <p className="text-sm text-destructive">{err}</p>;
   if (!m) return <p className="text-sm text-muted-foreground">Loading…</p>;
