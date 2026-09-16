@@ -169,7 +169,7 @@ function OutputPage() {
             fontFamily: "system-ui, sans-serif",
           }}
         >
-          {status === "reconnecting" ? "Reconnecting…" : "Waiting for broadcaster…"}
+          {status === "reconnecting" ? "Reconnecting…" : "Waiting for stream…"}
         </div>
       )}
     </div>
