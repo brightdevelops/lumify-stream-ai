@@ -16,9 +16,9 @@ export const DECART_MODEL = "lucy-latest";
  *  - Refuses if the user already has an active stream session (prevents
  *    multi-tab / refresh duplicates that would burn Decart usage twice).
  *
- * NOTE: Decart's realtime SDK runs in the browser, so the key must reach the
- * client at some point. Keeping it behind auth + an active-session guard
- * limits exposure and prevents the most common duplicate-session leaks.
+ * The permanent DECART_API_KEY never reaches the browser: it is used here to
+ * mint a short-lived, model-scoped client token via
+ * POST {base}/v1/client/tokens (docs.platform.decart.ai client tokens).
  */
 export const getDecartKey = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
