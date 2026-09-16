@@ -941,9 +941,34 @@ function StreamPage() {
 
       // Shared downstream wiring: output panel + OBS broadcast + recorder.
       const handleRemoteStream = (transformedStream: MediaStream) => {
-        if (outputVideoRef.current) {
-          outputVideoRef.current.srcObject = transformedStream;
-          outputVideoRef.current.play().catch(() => {});
+        const vTracks = transformedStream.getVideoTracks();
+        console.log(
+          "[engine] remote stream received — engine =", engineRef.current,
+          "videoTracks =", vTracks.length,
+          "audioTracks =", transformedStream.getAudioTracks().length,
+          vTracks[0]
+            ? { id: vTracks[0].id, readyState: vTracks[0].readyState, muted: vTracks[0].muted, enabled: vTracks[0].enabled }
+            : "(no video track)",
+        );
+        const el = outputVideoRef.current;
+        if (el) {
+          el.srcObject = transformedStream;
+          el.muted = true;
+          (el as HTMLVideoElement).playsInline = true;
+          el.onloadedmetadata = () => {
+            console.log("[engine] output element metadata — size =", el.videoWidth, "x", el.videoHeight);
+            el.play().catch((err) => console.warn("[engine] output play() rejected (metadata)", err));
+          };
+          el.play()
+            .then(() => console.log("[engine] output element attached and playing"))
+            .catch((err) => console.warn("[engine] output play() rejected", err));
+          vTracks[0]?.addEventListener("unmute", () =>
+            console.log("[engine] remote video track unmuted — frames flowing"),
+          );
+          vTracks[0]?.addEventListener("mute", () => console.log("[engine] remote video track muted"));
+          vTracks[0]?.addEventListener("ended", () => console.log("[engine] remote video track ended"));
+        } else {
+          console.warn("[engine] output video element not mounted — cannot attach remote stream");
         }
         try {
           broadcasterStopRef.current?.();
@@ -983,11 +1008,17 @@ function StreamPage() {
         logEngineContext("connect (start)", decartContext, null);
 
         const decartClient = createDecartClient({ apiKey });
+        console.log("[decart] connecting realtime room…");
         const realtimeClient = await decartClient.realtime.connect(stream, {
           model: decartModels.realtime(DECART_MODEL as never),
-          onRemoteStream: handleRemoteStream,
+          // Same shared sink the Xmax arm uses: output panel + OBS broadcast + recorder.
+          onRemoteStream: (transformedStream: MediaStream) => {
+            console.log("[decart] remote video track subscribed from inference server");
+            handleRemoteStream(transformedStream);
+          },
           onConnectionChange: (state: string) => {
             console.log("[engine] state =", state);
+            if (state === "connected") console.log("[decart] livekit room connected");
             if ((state === "disconnected" || state === "failed") && streamingRef.current) {
               endStream(false).catch(() => {});
             }
@@ -1000,6 +1031,20 @@ function StreamPage() {
         (realtimeClient as any).on?.("error", (err: unknown) => {
           handleEngineError((err as any)?.message ?? "Decart engine error", err);
         });
+        (realtimeClient as any).on?.("queuePosition", (qp: unknown) =>
+          console.log("[decart] queuePosition =", qp),
+        );
+        (realtimeClient as any).on?.("generationTick", (t: unknown) =>
+          console.log("[decart] generationTick", t),
+        );
+        (realtimeClient as any).on?.("generationEnded", (t: unknown) =>
+          console.log("[decart] generationEnded", t),
+        );
+        (realtimeClient as any).on?.("diagnostic", (d: unknown) => console.log("[decart] diagnostic", d));
+        console.log(
+          "[decart] connected — sessionId =", (realtimeClient as any)?.sessionId ?? "(none)",
+          "isConnected =", (realtimeClient as any)?.isConnected?.() ?? "(unknown)",
+        );
         decartClientRef.current = realtimeClient;
       } else {
         // ── Xmax x2.0 (default engine) ────────────────────────────────────
