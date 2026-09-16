@@ -24,6 +24,12 @@ export const getDecartKey = createServerFn({ method: "GET" })
     await assertNotInMaintenance("streaming", { userId: context.userId });
 
     const key = process.env.DECART_API_KEY;
+    // Diagnostic only — NEVER log the full key.
+    console.log(
+      "[decart] key present =", Boolean(key),
+      "length =", key?.length ?? 0,
+      "prefix =", key ? `${key.slice(0, 4)}…` : "(none)",
+    );
     if (!key) throw new Error("Decart not configured");
 
     const { data: cred, error: credErr } = await context.supabase
