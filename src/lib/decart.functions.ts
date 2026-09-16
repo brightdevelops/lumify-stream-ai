@@ -65,21 +65,34 @@ export const getDecartKey = createServerFn({ method: "GET" })
       );
     }
 
-    // Diagnostic probe (result ignored): ask Decart's REST API whether this
-    // key is accepted, and log the exact request + full response.
-    try {
-      const probeUrl = "https://api3.decart.ai/v1/models";
-      console.log("[decart] probe request", "GET", probeUrl, "auth header = Bearer <key>");
-      const probe = await fetch(probeUrl, {
-        headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
-      });
-      const body = await probe.text();
-      console.log("[decart] probe status =", probe.status, probe.statusText);
-      console.log("[decart] probe body =", body.slice(0, 1000));
-    } catch (e) {
-      console.error("[decart] probe failed", e);
+    // Mint a short-lived, model-scoped client token. Only this token goes to
+    // the browser; the permanent key stays server-side.
+    const res = await fetch(`${DECART_API_BASE}/v1/client/tokens`, {
+      method: "POST",
+      headers: {
+        "X-API-KEY": key,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({
+        expiresIn: 300,
+        allowedModels: [DECART_MODEL],
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[decart] client token mint failed", res.status, body.slice(0, 500));
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Invalid API key");
+      }
+      throw new Error(`Decart token error ${res.status}`);
     }
 
-    return { apiKey: key };
+    const json = (await res.json()) as { apiKey?: string; expiresAt?: string };
+    if (!json.apiKey) throw new Error("Decart token error: empty token");
+    console.log("[decart] client token minted, expiresAt =", json.expiresAt ?? "(unknown)");
+
+    return { apiKey: json.apiKey, expiresAt: json.expiresAt ?? null, model: DECART_MODEL };
   });
 
