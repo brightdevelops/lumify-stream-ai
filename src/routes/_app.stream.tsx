@@ -769,12 +769,26 @@ function StreamPage() {
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
+    if (!image) return;
+    const prompt = buildPrompt(engineRef.current, preset, mode, realism, !!image, background);
+
+    if (engineRef.current === "decart") {
+      const decartClient = decartClientRef.current;
+      if (!decartClient) return;
+      try {
+        await decartClient.set({ prompt, image, enhance: false } as never);
+      } catch (e) {
+        console.error("Engine set error", e);
+      }
+      return;
+    }
+
     const session = xmaxSessionRef.current;
-    if (!session || !image) return;
+    if (!session) return;
     try {
       const refImageUrl = await ensureRemoteRefImage(image);
       const ctx = {
-        prompt: buildPrompt(engineRef.current, preset, mode, realism, !!image, background),
+        prompt,
         ...(refImageUrl ? { refImageUrl } : {}),
       };
       logEngineContext("set (style/reference)", ctx, session);
