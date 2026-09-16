@@ -202,59 +202,6 @@ function StreamPage() {
   const [needsCameraUnlock, setNeedsCameraUnlock] = useState(false);
   const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
 
-  // ── Phone support ───────────────────────────────────────────────────────
-  const [isTouch, setIsTouch] = useState(false);
-  const [facingMode, setFacingMode] = useState<"user" | "environment" | null>(null);
-  const facingModeRef = useRef<"user" | "environment" | null>(null);
-  const [showAwakeHint, setShowAwakeHint] = useState(false);
-  const wakeLockRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const coarse =
-      window.matchMedia?.("(pointer: coarse)").matches || "ontouchstart" in window;
-    setIsTouch(!!coarse);
-    if (coarse && !facingModeRef.current) {
-      facingModeRef.current = "user";
-      setFacingMode("user");
-    }
-  }, []);
-
-  const acquireWakeLock = async () => {
-    try {
-      const nav = navigator as any;
-      if (!nav.wakeLock?.request || wakeLockRef.current) return;
-      wakeLockRef.current = await nav.wakeLock.request("screen");
-      wakeLockRef.current.addEventListener?.("release", () => {
-        wakeLockRef.current = null;
-      });
-    } catch (e) {
-      console.debug("wake lock unavailable", e);
-    }
-  };
-
-  const releaseWakeLock = () => {
-    try {
-      wakeLockRef.current?.release?.();
-    } catch (e) {
-      console.debug("wake lock release failed", e);
-    }
-    wakeLockRef.current = null;
-  };
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible" && streamingRef.current) {
-        void acquireWakeLock();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      releaseWakeLock();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
 
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
@@ -539,20 +486,9 @@ function StreamPage() {
 
   const handleCameraChange = async (deviceId: string) => {
     setSelectedCameraId(deviceId);
-    setFacingMode(null);
-    facingModeRef.current = null;
     await swapVideoTrack({ deviceId: { exact: deviceId } });
   };
 
-  /** Phone front/back switch — `ideal` so single-camera devices still work. */
-  const applyFacingMode = async (next: "user" | "environment") => {
-    setFacingMode(next);
-    facingModeRef.current = next;
-    await swapVideoTrack({ facingMode: { ideal: next } });
-  };
-
-  const flipCamera = () =>
-    applyFacingMode(facingModeRef.current === "environment" ? "user" : "environment");
 
 
 
@@ -953,11 +889,7 @@ function StreamPage() {
       // ── Camera path (unchanged behaviour) ──────────────────────────────
       try {
         const baseVideo: MediaTrackConstraints = {
-          ...(facingModeRef.current
-            ? { facingMode: { ideal: facingModeRef.current } }
-            : selectedCameraId
-              ? { deviceId: { ideal: selectedCameraId } }
-              : {}),
+          ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
           frameRate: { ideal: modelFps },
           width: { ideal: modelWidth },
           height: { ideal: modelHeight },
@@ -1179,8 +1111,6 @@ function StreamPage() {
     streamingRef.current = true;
     setStreaming(true);
     startingRef.current = false;
-    void acquireWakeLock();
-    if (isTouch) setShowAwakeHint(true);
   };
 
   const endStream = async (outOfCredits = false) => {
@@ -1192,8 +1122,6 @@ function StreamPage() {
     streamingRef.current = false;
     teardownStream();
     setStreaming(false);
-    releaseWakeLock();
-    setShowAwakeHint(false);
     accessTokenRef.current = null;
 
     const totalUsed = usedRef.current;
@@ -1338,12 +1266,6 @@ function StreamPage() {
     needsCameraUnlock={needsCameraUnlock}
     cameraPermission={cameraPermission}
     requestCameraAccess={requestCameraAccess}
-    isTouch={isTouch}
-    facingMode={facingMode}
-    applyFacingMode={applyFacingMode}
-    flipCamera={flipCamera}
-    showAwakeHint={showAwakeHint}
-    dismissAwakeHint={() => setShowAwakeHint(false)}
 
     mode={mode}
     setMode={setMode}
@@ -1722,7 +1644,6 @@ function StudioLayout(p: StudioProps) {
     user, streaming, connecting,
     inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
     needsCameraUnlock, cameraPermission, requestCameraAccess,
-    isTouch, facingMode, applyFacingMode, flipCamera, showAwakeHint, dismissAwakeHint,
 
     mode, setMode, realism, setRealism, background, setBackground,
     referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
@@ -1742,10 +1663,6 @@ function StudioLayout(p: StudioProps) {
 
   const [dragOver, setDragOver] = useState(false);
   const [showCamTip, setShowCamTip] = useState(false);
-  const [showPhoneHelp, setShowPhoneHelp] = useState(false);
-  // Phones rarely expose useful device labels — offer front/back instead.
-  const useFacingPicker =
-    cameras.length === 0 || cameras.every((c: MediaDeviceInfo) => !c.label);
 
   const fieldLabel: React.CSSProperties = {
     ...MONO,
@@ -1820,8 +1737,6 @@ function StudioLayout(p: StudioProps) {
                     objectFit: "cover",
                     background: "#000",
                     opacity: streaming ? 1 : 0,
-                    transform:
-                      inputSource === "camera" && facingMode === "user" ? "scaleX(-1)" : undefined,
                   }}
                   onLoadedMetadata={(e) => {
                     if (inputSourceRef.current === "file") setVideoDuration(e.currentTarget.duration || 0);
@@ -1847,26 +1762,6 @@ function StudioLayout(p: StudioProps) {
                   </Chip>
                   <Chip>720p</Chip>
                 </div>
-                {isTouch && inputSource === "camera" && (
-                  <button
-                    type="button"
-                    onClick={() => flipCamera()}
-                    aria-label="Flip camera"
-                    className="absolute bottom-1.5 right-1.5 z-[6] grid place-items-center"
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 999,
-                      background: "rgba(0,0,0,.55)",
-                      border: "1px solid rgba(198,242,78,.35)",
-                      color: "var(--primary)",
-                      fontSize: 13,
-                      transition: "all 150ms ease",
-                    }}
-                  >
-                    ⟲
-                  </button>
-                )}
                 {!streaming && (
                   <div className="lumi-panel-empty">
                     <PanelEmpty
@@ -1969,26 +1864,7 @@ function StudioLayout(p: StudioProps) {
                     <div style={{ minHeight: 40, display: "flex", flexDirection: "column", gap: 8 }}>
                       {cameraPermission === "denied" ? (
                         <CameraBlockedPanel />
-                      ) : isTouch && useFacingPicker ? (
-                        <div className="segmented items-center lumi-full-row" style={{ minHeight: 44 }}>
-                          <button
-                            type="button"
-                            data-active={facingMode !== "environment"}
-                            onClick={() => applyFacingMode("user")}
-                            style={{ minHeight: 44, flex: 1 }}
-                          >
-                            Front camera
-                          </button>
-                          <button
-                            type="button"
-                            data-active={facingMode === "environment"}
-                            onClick={() => applyFacingMode("environment")}
-                            style={{ minHeight: 44, flex: 1 }}
-                          >
-                            Back camera
-                          </button>
-                        </div>
-                      ) : (
+                                            ) : (
                         <>
                           <select
                             value={selectedCameraId}
