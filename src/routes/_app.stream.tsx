@@ -969,26 +969,10 @@ function StreamPage() {
       };
 
       if (engineRef.current === "decart") {
-        // ── Decart Lucy (legacy engine) ───────────────────────────────────
+        // ── Decart Lucy ───────────────────────────────────────────────────
+        // Short-lived client token minted server-side; LiveKit-backed realtime.
         const { apiKey } = await getDecartKey();
-        // Diagnostic only — NEVER log the full key.
-        console.log(
-          "[decart] client key length =", apiKey?.length ?? 0,
-          "prefix =", apiKey ? `${apiKey.slice(0, 4)}…` : "(none)",
-          "model =", "lucy-2.1",
-        );
-        const decartClient = createDecartClient({ apiKey });
-        const realtimeClient = await decartClient.realtime.connect(stream, {
-          model: decartModels.realtime("lucy-2.1" as any),
-          onRemoteStream: handleRemoteStream,
-          onConnectionChange: (state: string) => {
-            console.log("[engine] state =", state);
-            if (state === "disconnected" && streamingRef.current) {
-              endStream(false).catch(() => {});
-            }
-          },
-        } as never);
-        decartClientRef.current = realtimeClient;
+        console.log("[decart] client token length =", apiKey?.length ?? 0, "model =", DECART_MODEL);
 
         const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
         const decartContext = {
@@ -997,7 +981,26 @@ function StreamPage() {
           enhance: false,
         };
         logEngineContext("connect (start)", decartContext, null);
-        await (realtimeClient as any).set(decartContext as never);
+
+        const decartClient = createDecartClient({ apiKey });
+        const realtimeClient = await decartClient.realtime.connect(stream, {
+          model: decartModels.realtime(DECART_MODEL as never),
+          onRemoteStream: handleRemoteStream,
+          onConnectionChange: (state: string) => {
+            console.log("[engine] state =", state);
+            if ((state === "disconnected" || state === "failed") && streamingRef.current) {
+              endStream(false).catch(() => {});
+            }
+          },
+          initialState: {
+            prompt: { text: decartContext.prompt, enhance: false },
+            ...(photo ? { image: photo } : {}),
+          },
+        } as never);
+        (realtimeClient as any).on?.("error", (err: unknown) => {
+          handleEngineError((err as any)?.message ?? "Decart engine error", err);
+        });
+        decartClientRef.current = realtimeClient;
       } else {
         // ── Xmax x2.0 (default engine) ────────────────────────────────────
         const { apiKey } = await getXmaxKey();
