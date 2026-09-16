@@ -287,18 +287,6 @@ function StreamPage() {
   const fractionalSecRef = useRef(0); // carries sub-second remainder between ticks
   const accessTokenRef = useRef<string | null>(null); // for keepalive end-session beacon
   const streamingRef = useRef(false);
-  const lucyModelIdRef = useRef<string>("lucy-latest");
-
-  // Always refetch the current Lucy model id right before starting/restarting
-  // a session so an admin toggle in Inventor takes effect without a page reload.
-  const refreshLucyModelId = async () => {
-    try {
-      const r = await getLucyModel();
-      if (r?.modelId) lucyModelIdRef.current = r.modelId;
-    } catch { /* keep last known */ }
-  };
-
-  useEffect(() => { refreshLucyModelId(); }, []);
 
   useEffect(() => {
     if (!user) return;
