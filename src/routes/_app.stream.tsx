@@ -123,6 +123,13 @@ function StreamPage() {
   const refImageUrlRemoteRef = useRef<string | null>(null);
   const broadcasterStopRef = useRef<(() => void) | null>(null);
   const recorderRef = useRef<RecorderHandle | null>(null);
+  // Remote tracks arrive one at a time (audio first, video later). We keep a
+  // single accumulating output stream so a late video track re-attaches.
+  const outputStreamRef = useRef<MediaStream | null>(null);
+  const outputVideoTrackRef = useRef<MediaStreamTrack | null>(null);
+  // Timestamps of recent failed generations — 3 within 30s ends the stream
+  // instead of letting the SDK reconnect-loop forever while billing runs.
+  const genFailuresRef = useRef<number[]>([]);
   const [copied, setCopied] = useState(false);
   const [streamToken, setStreamToken] = useState<string | null>(null);
 
@@ -893,25 +900,56 @@ function StreamPage() {
         engineRef.current = "xmax";
       }
       console.log("[engine] using", engineRef.current);
+      // Fresh output wiring per stream.
+      outputStreamRef.current = null;
+      outputVideoTrackRef.current = null;
+      genFailuresRef.current = [];
 
       const handleEngineError = (message: string, err: unknown) => {
         console.error("Engine error", (err as any)?.code, message, err);
       };
 
       // Shared downstream wiring: output panel + OBS broadcast + recorder.
-      const handleRemoteStream = (transformedStream: MediaStream) => {
-        const vTracks = transformedStream.getVideoTracks();
+      //
+      // Remote tracks are subscribed one at a time — the inference server
+      // usually publishes audio first and the transformed VIDEO track a moment
+      // later. We therefore never attach "whatever snapshot arrived": we merge
+      // every incoming track into one persistent output stream and (re)wire the
+      // panel, the OBS broadcast and the recorder the moment the real video
+      // track lands (or is replaced).
+      const handleRemoteStream = (incoming: MediaStream) => {
+        let out = outputStreamRef.current;
+        if (!out) {
+          out = new MediaStream();
+          outputStreamRef.current = out;
+        }
+        for (const t of incoming.getTracks()) {
+          if (!out.getTracks().includes(t)) out.addTrack(t);
+        }
+        // Drop dead tracks so a replaced video track doesn't linger.
+        for (const t of out.getTracks()) {
+          if (t.readyState === "ended") out.removeTrack(t);
+        }
+
+        const videoTrack = out.getVideoTracks()[0] ?? null;
         console.log(
           "[engine] remote stream received — engine =", engineRef.current,
-          "videoTracks =", vTracks.length,
-          "audioTracks =", transformedStream.getAudioTracks().length,
-          vTracks[0]
-            ? { id: vTracks[0].id, readyState: vTracks[0].readyState, muted: vTracks[0].muted, enabled: vTracks[0].enabled }
-            : "(no video track)",
+          "videoTracks =", out.getVideoTracks().length,
+          "audioTracks =", out.getAudioTracks().length,
+          videoTrack
+            ? {
+                id: videoTrack.id,
+                readyState: videoTrack.readyState,
+                muted: videoTrack.muted,
+                enabled: videoTrack.enabled,
+                settings: videoTrack.getSettings?.(),
+              }
+            : "(no video track yet — waiting for the transformed video track)",
         );
+
         const el = outputVideoRef.current;
         if (el) {
-          el.srcObject = transformedStream;
+          if (el.srcObject !== out) el.srcObject = out;
           el.muted = true;
           (el as HTMLVideoElement).playsInline = true;
           el.onloadedmetadata = () => {
@@ -921,18 +959,25 @@ function StreamPage() {
           el.play()
             .then(() => console.log("[engine] output element attached and playing"))
             .catch((err) => console.warn("[engine] output play() rejected", err));
-          vTracks[0]?.addEventListener("unmute", () =>
-            console.log("[engine] remote video track unmuted — frames flowing"),
-          );
-          vTracks[0]?.addEventListener("mute", () => console.log("[engine] remote video track muted"));
-          vTracks[0]?.addEventListener("ended", () => console.log("[engine] remote video track ended"));
         } else {
           console.warn("[engine] output video element not mounted — cannot attach remote stream");
         }
+
+        // Nothing downstream is useful without video — wait for it, and only
+        // (re)start broadcast + recorder when the video track actually changes.
+        if (!videoTrack || videoTrack === outputVideoTrackRef.current) return;
+        outputVideoTrackRef.current = videoTrack;
+        console.log("[engine] transformed video track attached — wiring output, broadcast and recorder");
+        videoTrack.addEventListener("unmute", () =>
+          console.log("[engine] remote video track unmuted — frames flowing"),
+        );
+        videoTrack.addEventListener("mute", () => console.log("[engine] remote video track muted"));
+        videoTrack.addEventListener("ended", () => console.log("[engine] remote video track ended"));
+
         try {
           broadcasterStopRef.current?.();
           if (user && streamToken) {
-            broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
+            broadcasterStopRef.current = startBroadcaster(streamToken, out);
           }
         } catch (e) {
           console.error("Broadcaster start failed", e);
@@ -946,7 +991,7 @@ function StreamPage() {
             userId: user.id,
             sessionId: sessionIdRef.current,
             webcamStream: mediaStreamRef.current,
-            outputStream: transformedStream,
+            outputStream: out,
             referenceImageUrl: referenceUrl,
           });
         }
@@ -973,6 +1018,23 @@ function StreamPage() {
 
           console.log("[decart] creating client…");
           const decartClient = createDecartClient({ apiKey });
+
+          // Confirm what we are about to publish — an empty/ended local video
+          // track is the usual reason generation dies instantly.
+          const localVideo = stream.getVideoTracks()[0];
+          console.log(
+            "[decart] local camera track to publish =",
+            localVideo
+              ? {
+                  id: localVideo.id,
+                  label: localVideo.label,
+                  readyState: localVideo.readyState,
+                  enabled: localVideo.enabled,
+                  muted: localVideo.muted,
+                  settings: localVideo.getSettings?.(),
+                }
+              : "(NO local video track — nothing to publish)",
+          );
           console.log("[decart] connecting realtime room…");
 
           // A hung handshake must never leave the page in a silent "connecting"
@@ -1018,10 +1080,44 @@ function StreamPage() {
           (realtimeClient as any).on?.("generationTick", (t: unknown) =>
             console.log("[decart] generationTick", t),
           );
-          (realtimeClient as any).on?.("generationEnded", (t: unknown) =>
-            console.log("[decart] generationEnded", t),
+          (realtimeClient as any).on?.("generationEnded", (t: any) => {
+            // Full payload, not just the two fields we happen to know about.
+            console.log(
+              "[decart] generationEnded FULL =",
+              t,
+              "json =", (() => { try { return JSON.stringify(t); } catch { return "(unserializable)"; } })(),
+              "keys =", t && typeof t === "object" ? Object.keys(t) : "(n/a)",
+            );
+            if (t?.reason !== "error") return;
+            // Break the SDK's infinite reconnect loop: 3 failed generations
+            // inside 30s ends the stream through the normal path (billing stops).
+            const now = Date.now();
+            genFailuresRef.current = [...genFailuresRef.current, now].filter((ts) => now - ts <= 30_000);
+            console.warn(
+              "[decart] generation failure",
+              genFailuresRef.current.length,
+              "of 3 within 30s",
+            );
+            if (genFailuresRef.current.length >= 3 && streamingRef.current) {
+              console.error("[decart] 3 generation failures in 30s — ending stream instead of reconnecting");
+              genFailuresRef.current = [];
+              setError(
+                "The AI engine kept failing to start generating (3 failed attempts). The stream was stopped so you aren't charged for a dead session. Please try again, or switch engines.",
+              );
+              try {
+                decartClientRef.current?.disconnect?.();
+              } catch {}
+              endStream(false).catch(() => {});
+            }
+          });
+          (realtimeClient as any).on?.("diagnostic", (d: any) =>
+            console.log(
+              "[decart] diagnostic", d?.name ?? "(unnamed)",
+              "data =", d?.data,
+              "phases =", d?.data?.phases,
+              "json =", (() => { try { return JSON.stringify(d); } catch { return "(unserializable)"; } })(),
+            ),
           );
-          (realtimeClient as any).on?.("diagnostic", (d: unknown) => console.log("[decart] diagnostic", d));
           console.log(
             "[decart] connected — sessionId =", (realtimeClient as any)?.sessionId ?? "(none)",
             "isConnected =", (realtimeClient as any)?.isConnected?.() ?? "(unknown)",
