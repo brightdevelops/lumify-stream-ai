@@ -900,6 +900,10 @@ function StreamPage() {
         engineRef.current = "xmax";
       }
       console.log("[engine] using", engineRef.current);
+      // Fresh output wiring per stream.
+      outputStreamRef.current = null;
+      outputVideoTrackRef.current = null;
+      genFailuresRef.current = [];
 
       const handleEngineError = (message: string, err: unknown) => {
         console.error("Engine error", (err as any)?.code, message, err);
