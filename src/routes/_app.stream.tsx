@@ -173,6 +173,9 @@ function StreamPage() {
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
   const [background, setBackground] = useState<string>("");
+  // Last background value already sent to the engine — prevents a redundant
+  // set() firing the moment a stream starts.
+  const lastSentBackgroundRef = useRef<string>("");
 
   // ── Video-file input mode ───────────────────────────────────────────────
   const [inputSource, setInputSource] = useState<"camera" | "file">("camera");
@@ -967,6 +970,13 @@ function StreamPage() {
         // (re)start broadcast + recorder when the video track actually changes.
         if (!videoTrack || videoTrack === outputVideoTrackRef.current) return;
         outputVideoTrackRef.current = videoTrack;
+        {
+          const s = videoTrack.getSettings?.() ?? {};
+          console.log(
+            "[engine] transformed video track attached — size",
+            `${s.width ?? "?"} x ${s.height ?? "?"}`,
+          );
+        }
         console.log("[engine] transformed video track attached — wiring output, broadcast and recorder");
         videoTrack.addEventListener("unmute", () =>
           console.log("[engine] remote video track unmuted — frames flowing"),
@@ -1315,8 +1325,16 @@ function StreamPage() {
   }, [mode, realism]);
 
   // Push background changes through the SAME update path as prompt changes.
+  // Only when the user actually edits the background WHILE live — never right
+  // after connect (the start context already carries the full prompt, and a
+  // mid-handshake set() breaks the engine's initial-state handshake).
   useEffect(() => {
-    if (!streaming) return;
+    if (!streaming) {
+      lastSentBackgroundRef.current = background;
+      return;
+    }
+    if (lastSentBackgroundRef.current === background) return;
+    lastSentBackgroundRef.current = background;
     const t = setTimeout(() => {
       const prompt = buildPrompt(selectedPreset, mode, realism, !!referenceImage, background);
       if (engineRef.current === "decart") {
