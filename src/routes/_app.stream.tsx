@@ -1080,10 +1080,44 @@ function StreamPage() {
           (realtimeClient as any).on?.("generationTick", (t: unknown) =>
             console.log("[decart] generationTick", t),
           );
-          (realtimeClient as any).on?.("generationEnded", (t: unknown) =>
-            console.log("[decart] generationEnded", t),
+          (realtimeClient as any).on?.("generationEnded", (t: any) => {
+            // Full payload, not just the two fields we happen to know about.
+            console.log(
+              "[decart] generationEnded FULL =",
+              t,
+              "json =", (() => { try { return JSON.stringify(t); } catch { return "(unserializable)"; } })(),
+              "keys =", t && typeof t === "object" ? Object.keys(t) : "(n/a)",
+            );
+            if (t?.reason !== "error") return;
+            // Break the SDK's infinite reconnect loop: 3 failed generations
+            // inside 30s ends the stream through the normal path (billing stops).
+            const now = Date.now();
+            genFailuresRef.current = [...genFailuresRef.current, now].filter((ts) => now - ts <= 30_000);
+            console.warn(
+              "[decart] generation failure",
+              genFailuresRef.current.length,
+              "of 3 within 30s",
+            );
+            if (genFailuresRef.current.length >= 3 && streamingRef.current) {
+              console.error("[decart] 3 generation failures in 30s — ending stream instead of reconnecting");
+              genFailuresRef.current = [];
+              setError(
+                "The AI engine kept failing to start generating (3 failed attempts). The stream was stopped so you aren't charged for a dead session. Please try again, or switch engines.",
+              );
+              try {
+                decartClientRef.current?.disconnect?.();
+              } catch {}
+              endStream(false).catch(() => {});
+            }
+          });
+          (realtimeClient as any).on?.("diagnostic", (d: any) =>
+            console.log(
+              "[decart] diagnostic", d?.name ?? "(unnamed)",
+              "data =", d?.data,
+              "phases =", d?.data?.phases,
+              "json =", (() => { try { return JSON.stringify(d); } catch { return "(unserializable)"; } })(),
+            ),
           );
-          (realtimeClient as any).on?.("diagnostic", (d: unknown) => console.log("[decart] diagnostic", d));
           console.log(
             "[decart] connected — sessionId =", (realtimeClient as any)?.sessionId ?? "(none)",
             "isConnected =", (realtimeClient as any)?.isConnected?.() ?? "(unknown)",
