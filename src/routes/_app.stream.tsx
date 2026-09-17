@@ -906,19 +906,46 @@ function StreamPage() {
       };
 
       // Shared downstream wiring: output panel + OBS broadcast + recorder.
-      const handleRemoteStream = (transformedStream: MediaStream) => {
-        const vTracks = transformedStream.getVideoTracks();
+      //
+      // Remote tracks are subscribed one at a time — the inference server
+      // usually publishes audio first and the transformed VIDEO track a moment
+      // later. We therefore never attach "whatever snapshot arrived": we merge
+      // every incoming track into one persistent output stream and (re)wire the
+      // panel, the OBS broadcast and the recorder the moment the real video
+      // track lands (or is replaced).
+      const handleRemoteStream = (incoming: MediaStream) => {
+        let out = outputStreamRef.current;
+        if (!out) {
+          out = new MediaStream();
+          outputStreamRef.current = out;
+        }
+        for (const t of incoming.getTracks()) {
+          if (!out.getTracks().includes(t)) out.addTrack(t);
+        }
+        // Drop dead tracks so a replaced video track doesn't linger.
+        for (const t of out.getTracks()) {
+          if (t.readyState === "ended") out.removeTrack(t);
+        }
+
+        const videoTrack = out.getVideoTracks()[0] ?? null;
         console.log(
           "[engine] remote stream received — engine =", engineRef.current,
-          "videoTracks =", vTracks.length,
-          "audioTracks =", transformedStream.getAudioTracks().length,
-          vTracks[0]
-            ? { id: vTracks[0].id, readyState: vTracks[0].readyState, muted: vTracks[0].muted, enabled: vTracks[0].enabled }
-            : "(no video track)",
+          "videoTracks =", out.getVideoTracks().length,
+          "audioTracks =", out.getAudioTracks().length,
+          videoTrack
+            ? {
+                id: videoTrack.id,
+                readyState: videoTrack.readyState,
+                muted: videoTrack.muted,
+                enabled: videoTrack.enabled,
+                settings: videoTrack.getSettings?.(),
+              }
+            : "(no video track yet — waiting for the transformed video track)",
         );
+
         const el = outputVideoRef.current;
         if (el) {
-          el.srcObject = transformedStream;
+          if (el.srcObject !== out) el.srcObject = out;
           el.muted = true;
           (el as HTMLVideoElement).playsInline = true;
           el.onloadedmetadata = () => {
@@ -928,18 +955,25 @@ function StreamPage() {
           el.play()
             .then(() => console.log("[engine] output element attached and playing"))
             .catch((err) => console.warn("[engine] output play() rejected", err));
-          vTracks[0]?.addEventListener("unmute", () =>
-            console.log("[engine] remote video track unmuted — frames flowing"),
-          );
-          vTracks[0]?.addEventListener("mute", () => console.log("[engine] remote video track muted"));
-          vTracks[0]?.addEventListener("ended", () => console.log("[engine] remote video track ended"));
         } else {
           console.warn("[engine] output video element not mounted — cannot attach remote stream");
         }
+
+        // Nothing downstream is useful without video — wait for it, and only
+        // (re)start broadcast + recorder when the video track actually changes.
+        if (!videoTrack || videoTrack === outputVideoTrackRef.current) return;
+        outputVideoTrackRef.current = videoTrack;
+        console.log("[engine] transformed video track attached — wiring output, broadcast and recorder");
+        videoTrack.addEventListener("unmute", () =>
+          console.log("[engine] remote video track unmuted — frames flowing"),
+        );
+        videoTrack.addEventListener("mute", () => console.log("[engine] remote video track muted"));
+        videoTrack.addEventListener("ended", () => console.log("[engine] remote video track ended"));
+
         try {
           broadcasterStopRef.current?.();
           if (user && streamToken) {
-            broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
+            broadcasterStopRef.current = startBroadcaster(streamToken, out);
           }
         } catch (e) {
           console.error("Broadcaster start failed", e);
@@ -953,7 +987,7 @@ function StreamPage() {
             userId: user.id,
             sessionId: sessionIdRef.current,
             webcamStream: mediaStreamRef.current,
-            outputStream: transformedStream,
+            outputStream: out,
             referenceImageUrl: referenceUrl,
           });
         }
