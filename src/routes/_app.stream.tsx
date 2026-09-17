@@ -664,7 +664,7 @@ function StreamPage() {
 
   const applyReference = async (preset: string | null, image: File | null) => {
     if (!image) return;
-    const prompt = buildPrompt(engineRef.current, preset, mode, realism, !!image, background);
+    const prompt = buildPrompt(preset, mode, realism, !!image, background);
 
     if (engineRef.current === "decart") {
       const decartClient = decartClientRef.current;
@@ -722,7 +722,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           });
         })();
       }
@@ -959,7 +959,7 @@ function StreamPage() {
 
         const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
         const decartContext = {
-          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           image: photo,
           enhance: false,
         };
@@ -1014,7 +1014,7 @@ function StreamPage() {
         const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
 
         const startContext = {
-          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
         };
         logEngineContext("connect (start)", startContext, null);
@@ -1105,7 +1105,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -1169,7 +1169,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(engineRef.current, next, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(next, mode, realism, !!referenceImage, background),
         });
       }
     }
@@ -1185,7 +1185,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1195,7 +1195,7 @@ function StreamPage() {
   useEffect(() => {
     if (!streaming) return;
     const t = setTimeout(() => {
-      const prompt = buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background);
+      const prompt = buildPrompt(selectedPreset, mode, realism, !!referenceImage, background);
       if (engineRef.current === "decart") {
         const decartClient = decartClientRef.current;
         if (!decartClient) return;
