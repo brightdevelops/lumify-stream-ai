@@ -123,6 +123,13 @@ function StreamPage() {
   const refImageUrlRemoteRef = useRef<string | null>(null);
   const broadcasterStopRef = useRef<(() => void) | null>(null);
   const recorderRef = useRef<RecorderHandle | null>(null);
+  // Remote tracks arrive one at a time (audio first, video later). We keep a
+  // single accumulating output stream so a late video track re-attaches.
+  const outputStreamRef = useRef<MediaStream | null>(null);
+  const outputVideoTrackRef = useRef<MediaStreamTrack | null>(null);
+  // Timestamps of recent failed generations — 3 within 30s ends the stream
+  // instead of letting the SDK reconnect-loop forever while billing runs.
+  const genFailuresRef = useRef<number[]>([]);
   const [copied, setCopied] = useState(false);
   const [streamToken, setStreamToken] = useState<string | null>(null);
 
