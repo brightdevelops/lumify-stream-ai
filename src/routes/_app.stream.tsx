@@ -1018,6 +1018,23 @@ function StreamPage() {
 
           console.log("[decart] creating client…");
           const decartClient = createDecartClient({ apiKey });
+
+          // Confirm what we are about to publish — an empty/ended local video
+          // track is the usual reason generation dies instantly.
+          const localVideo = stream.getVideoTracks()[0];
+          console.log(
+            "[decart] local camera track to publish =",
+            localVideo
+              ? {
+                  id: localVideo.id,
+                  label: localVideo.label,
+                  readyState: localVideo.readyState,
+                  enabled: localVideo.enabled,
+                  muted: localVideo.muted,
+                  settings: localVideo.getSettings?.(),
+                }
+              : "(NO local video track — nothing to publish)",
+          );
           console.log("[decart] connecting realtime room…");
 
           // A hung handshake must never leave the page in a silent "connecting"
