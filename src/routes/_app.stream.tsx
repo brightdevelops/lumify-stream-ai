@@ -1315,8 +1315,16 @@ function StreamPage() {
   }, [mode, realism]);
 
   // Push background changes through the SAME update path as prompt changes.
+  // Only when the user actually edits the background WHILE live — never right
+  // after connect (the start context already carries the full prompt, and a
+  // mid-handshake set() breaks the engine's initial-state handshake).
   useEffect(() => {
-    if (!streaming) return;
+    if (!streaming) {
+      lastSentBackgroundRef.current = background;
+      return;
+    }
+    if (lastSentBackgroundRef.current === background) return;
+    lastSentBackgroundRef.current = background;
     const t = setTimeout(() => {
       const prompt = buildPrompt(selectedPreset, mode, realism, !!referenceImage, background);
       if (engineRef.current === "decart") {
