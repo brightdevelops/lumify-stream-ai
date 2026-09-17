@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle, Info, ChevronDown, Camera as CameraIcon, PictureInPicture2, Film, Repeat } from "lucide-react";
 import { createXmaxClient, models, type RealtimeSession, type XmaxClient } from "@xmaxai/sdk-global";
 import { createDecartClient, models as decartModels } from "@decartai/sdk";
+import { buildPrompt } from "@/lib/stream-prompt";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getXmaxKey } from "@/lib/xmax.functions";
@@ -85,49 +86,7 @@ const logEngineContext = (
 
 type Engine = "xmax" | "decart";
 
-/**
- * Prompt templates, one set per engine. Xmax x2.0 describes the output's
- * appearance; Decart Lucy uses the original instruction-style templates.
- * The sets are never mixed — the engine is fixed for the whole stream.
- */
-const buildPrompt = (
-  engine: Engine,
-  preset: string | null,
-  mode: "realistic" | "stylized",
-  realism: number,
-  hasReference: boolean = false,
-  background: string = "",
-) => {
-  let base: string;
-  if (engine === "decart") {
-    if (mode === "realistic") {
-      const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail. Preserve the person's real facial movements exactly — the mouth, lips, and jaw must follow the person's actual movements and must not move on their own. Do not animate or alter the mouth independently of the real person.`;
-      base = hasReference
-        ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
-        : realisticBase;
-    } else {
-      base = preset
-        ? `Transform into this character in ${preset} style.`
-        : "Transform into this character.";
-    }
-    const bgD = background.trim();
-    return bgD
-      ? `${base} Change the background to: ${bgD}. Keep the person's face, body, and identity unchanged.`
-      : base;
-  }
-
-  if (mode === "realistic") {
-    const realismWord =
-      realism <= 3 ? "heavily stylized, " : realism <= 7 ? "subtly enhanced, " : "true to life, ";
-    base = `${realismWord}photorealistic person, natural human skin texture, realistic lighting, high detail, calm neutral expression`;
-  } else {
-    base = preset
-      ? `a person as a ${preset} character, ${preset} art style, high quality, detailed, consistent appearance`
-      : "a stylized character portrait, high quality, detailed, consistent appearance";
-  }
-  const bg = background.trim();
-  return bg ? `${base} Background: ${bg}.` : base;
-};
+// Prompt templates are shared by both engine arms — see src/lib/stream-prompt.ts
 
 
 
@@ -706,7 +665,7 @@ function StreamPage() {
 
   const applyReference = async (preset: string | null, image: File | null) => {
     if (!image) return;
-    const prompt = buildPrompt(engineRef.current, preset, mode, realism, !!image, background);
+    const prompt = buildPrompt(preset, mode, realism, !!image, background);
 
     if (engineRef.current === "decart") {
       const decartClient = decartClientRef.current;
@@ -764,7 +723,7 @@ function StreamPage() {
             eventType: "image_change",
             imageName: file.name,
             imagePath,
-            prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           });
         })();
       }
@@ -1001,7 +960,7 @@ function StreamPage() {
 
         const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
         const decartContext = {
-          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           image: photo,
           enhance: false,
         };
@@ -1056,7 +1015,7 @@ function StreamPage() {
         const uploadedRefUrl = await ensureRemoteRefImage(photo ?? null);
 
         const startContext = {
-          prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
           ...(uploadedRefUrl ? { refImageUrl: uploadedRefUrl } : {}),
         };
         logEngineContext("connect (start)", startContext, null);
@@ -1147,7 +1106,7 @@ function StreamPage() {
         userId: user.id,
         sessionId: sessionIdRef.current,
         eventType: "start",
-        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
         style: selectedPreset,
         mode,
         realism: mode === "realistic" ? realism : null,
@@ -1211,7 +1170,7 @@ function StreamPage() {
           eventType: "style_change",
           style: next,
           mode,
-          prompt: buildPrompt(engineRef.current, next, mode, realism, !!referenceImage, background),
+          prompt: buildPrompt(next, mode, realism, !!referenceImage, background),
         });
       }
     }
@@ -1227,7 +1186,7 @@ function StreamPage() {
         mode,
         realism: mode === "realistic" ? realism : null,
         style: selectedPreset,
-        prompt: buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background),
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1237,7 +1196,7 @@ function StreamPage() {
   useEffect(() => {
     if (!streaming) return;
     const t = setTimeout(() => {
-      const prompt = buildPrompt(engineRef.current, selectedPreset, mode, realism, !!referenceImage, background);
+      const prompt = buildPrompt(selectedPreset, mode, realism, !!referenceImage, background);
       if (engineRef.current === "decart") {
         const decartClient = decartClientRef.current;
         if (!decartClient) return;
