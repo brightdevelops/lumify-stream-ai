@@ -970,6 +970,13 @@ function StreamPage() {
         // (re)start broadcast + recorder when the video track actually changes.
         if (!videoTrack || videoTrack === outputVideoTrackRef.current) return;
         outputVideoTrackRef.current = videoTrack;
+        {
+          const s = videoTrack.getSettings?.() ?? {};
+          console.log(
+            "[engine] transformed video track attached — size",
+            `${s.width ?? "?"} x ${s.height ?? "?"}`,
+          );
+        }
         console.log("[engine] transformed video track attached — wiring output, broadcast and recorder");
         videoTrack.addEventListener("unmute", () =>
           console.log("[engine] remote video track unmuted — frames flowing"),
