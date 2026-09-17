@@ -85,49 +85,7 @@ const logEngineContext = (
 
 type Engine = "xmax" | "decart";
 
-/**
- * Prompt templates, one set per engine. Xmax x2.0 describes the output's
- * appearance; Decart Lucy uses the original instruction-style templates.
- * The sets are never mixed — the engine is fixed for the whole stream.
- */
-const buildPrompt = (
-  engine: Engine,
-  preset: string | null,
-  mode: "realistic" | "stylized",
-  realism: number,
-  hasReference: boolean = false,
-  background: string = "",
-) => {
-  let base: string;
-  if (engine === "decart") {
-    if (mode === "realistic") {
-      const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail. Preserve the person's real facial movements exactly — the mouth, lips, and jaw must follow the person's actual movements and must not move on their own. Do not animate or alter the mouth independently of the real person.`;
-      base = hasReference
-        ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
-        : realisticBase;
-    } else {
-      base = preset
-        ? `Transform into this character in ${preset} style.`
-        : "Transform into this character.";
-    }
-    const bgD = background.trim();
-    return bgD
-      ? `${base} Change the background to: ${bgD}. Keep the person's face, body, and identity unchanged.`
-      : base;
-  }
-
-  if (mode === "realistic") {
-    const realismWord =
-      realism <= 3 ? "heavily stylized, " : realism <= 7 ? "subtly enhanced, " : "true to life, ";
-    base = `${realismWord}photorealistic person, natural human skin texture, realistic lighting, high detail, calm neutral expression`;
-  } else {
-    base = preset
-      ? `a person as a ${preset} character, ${preset} art style, high quality, detailed, consistent appearance`
-      : "a stylized character portrait, high quality, detailed, consistent appearance";
-  }
-  const bg = background.trim();
-  return bg ? `${base} Background: ${bg}.` : base;
-};
+// Prompt templates are shared by both engine arms — see src/lib/stream-prompt.ts
 
 
 
