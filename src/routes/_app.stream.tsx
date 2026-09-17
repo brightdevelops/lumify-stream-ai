@@ -955,56 +955,82 @@ function StreamPage() {
       if (engineRef.current === "decart") {
         // ── Decart Lucy ───────────────────────────────────────────────────
         // Short-lived client token minted server-side; LiveKit-backed realtime.
-        const { apiKey } = await getDecartKey();
-        console.log("[decart] client token length =", apiKey?.length ?? 0, "model =", DECART_MODEL);
+        // The whole sequence is wrapped so no step can fail (or hang) silently:
+        // every throw is logged as "[decart] connect failed:" and re-thrown into
+        // the outer handler, which surfaces the existing error UI.
+        try {
+          console.log("[decart] requesting client token…");
+          const { apiKey } = await getDecartKey();
+          console.log("[decart] client token length =", apiKey?.length ?? 0, "model =", DECART_MODEL);
 
-        const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
-        const decartContext = {
-          prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
-          image: photo,
-          enhance: false,
-        };
-        logEngineContext("connect (start)", decartContext, null);
+          const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+          const decartContext = {
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            image: photo,
+            enhance: false,
+          };
+          logEngineContext("connect (start)", decartContext, null);
 
-        const decartClient = createDecartClient({ apiKey });
-        console.log("[decart] connecting realtime room…");
-        const realtimeClient = await decartClient.realtime.connect(stream, {
-          model: decartModels.realtime(DECART_MODEL as never),
-          // Same shared sink the Xmax arm uses: output panel + OBS broadcast + recorder.
-          onRemoteStream: (transformedStream: MediaStream) => {
-            console.log("[decart] remote video track subscribed from inference server");
-            handleRemoteStream(transformedStream);
-          },
-          onConnectionChange: (state: string) => {
-            console.log("[engine] state =", state);
-            if (state === "connected") console.log("[decart] livekit room connected");
-            if ((state === "disconnected" || state === "failed") && streamingRef.current) {
-              endStream(false).catch(() => {});
-            }
-          },
-          initialState: {
-            prompt: { text: decartContext.prompt, enhance: false },
-            ...(photo ? { image: photo } : {}),
-          },
-        } as never);
-        (realtimeClient as any).on?.("error", (err: unknown) => {
-          handleEngineError((err as any)?.message ?? "Decart engine error", err);
-        });
-        (realtimeClient as any).on?.("queuePosition", (qp: unknown) =>
-          console.log("[decart] queuePosition =", qp),
-        );
-        (realtimeClient as any).on?.("generationTick", (t: unknown) =>
-          console.log("[decart] generationTick", t),
-        );
-        (realtimeClient as any).on?.("generationEnded", (t: unknown) =>
-          console.log("[decart] generationEnded", t),
-        );
-        (realtimeClient as any).on?.("diagnostic", (d: unknown) => console.log("[decart] diagnostic", d));
-        console.log(
-          "[decart] connected — sessionId =", (realtimeClient as any)?.sessionId ?? "(none)",
-          "isConnected =", (realtimeClient as any)?.isConnected?.() ?? "(unknown)",
-        );
-        decartClientRef.current = realtimeClient;
+          console.log("[decart] creating client…");
+          const decartClient = createDecartClient({ apiKey });
+          console.log("[decart] connecting realtime room…");
+
+          // A hung handshake must never leave the page in a silent "connecting"
+          // limbo — time it out and surface it through the same error path.
+          const CONNECT_TIMEOUT_MS = 45_000;
+          let timeoutId: ReturnType<typeof setTimeout> | undefined;
+          const realtimeClient = await Promise.race([
+            decartClient.realtime.connect(stream, {
+              model: decartModels.realtime(DECART_MODEL as never),
+              // Same shared sink the Xmax arm uses: output panel + OBS broadcast + recorder.
+              onRemoteStream: (transformedStream: MediaStream) => {
+                console.log("[decart] remote video track subscribed from inference server");
+                handleRemoteStream(transformedStream);
+              },
+              onConnectionChange: (state: string) => {
+                console.log("[engine] state =", state);
+                if (state === "connected") console.log("[decart] livekit room connected");
+                if ((state === "disconnected" || state === "failed") && streamingRef.current) {
+                  endStream(false).catch(() => {});
+                }
+              },
+              initialState: {
+                prompt: { text: decartContext.prompt, enhance: false },
+                ...(photo ? { image: photo } : {}),
+              },
+            } as never),
+            new Promise((_, reject) => {
+              timeoutId = setTimeout(
+                () => reject(new Error("Decart realtime connect timed out after 45s")),
+                CONNECT_TIMEOUT_MS,
+              );
+            }),
+          ]).finally(() => {
+            if (timeoutId) clearTimeout(timeoutId);
+          });
+
+          (realtimeClient as any).on?.("error", (err: unknown) => {
+            handleEngineError((err as any)?.message ?? "Decart engine error", err);
+          });
+          (realtimeClient as any).on?.("queuePosition", (qp: unknown) =>
+            console.log("[decart] queuePosition =", qp),
+          );
+          (realtimeClient as any).on?.("generationTick", (t: unknown) =>
+            console.log("[decart] generationTick", t),
+          );
+          (realtimeClient as any).on?.("generationEnded", (t: unknown) =>
+            console.log("[decart] generationEnded", t),
+          );
+          (realtimeClient as any).on?.("diagnostic", (d: unknown) => console.log("[decart] diagnostic", d));
+          console.log(
+            "[decart] connected — sessionId =", (realtimeClient as any)?.sessionId ?? "(none)",
+            "isConnected =", (realtimeClient as any)?.isConnected?.() ?? "(unknown)",
+          );
+          decartClientRef.current = realtimeClient;
+        } catch (decartErr) {
+          console.error("[decart] connect failed:", decartErr);
+          throw decartErr;
+        }
       } else {
         // ── Xmax x2.0 (default engine) ────────────────────────────────────
         const { apiKey } = await getXmaxKey();
