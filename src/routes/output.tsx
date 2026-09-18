@@ -24,6 +24,10 @@ function OutputPage() {
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const disconnectedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectingRef = useRef(false);
+  // True only while frames are actually flowing. Drives whether a retry cycle
+  // keeps going; `video.srcObject` is NOT a reliable signal because it stays
+  // set forever once a stream has been attached.
+  const healthyRef = useRef(false);
 
   const [status, setStatus] = useState<Status>("waiting");
 
