@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
-import { supabase } from "@/integrations/supabase/client";
+import { getFreshAccessToken } from "@/lib/supabase-auth-refresh";
 
 function decodeExp(token: string): number {
   try {
