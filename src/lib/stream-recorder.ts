@@ -5,6 +5,7 @@
 // and inserts a stream_recordings row per chunk.
 
 import { supabase } from "@/integrations/supabase/client";
+import { getFreshAccessToken } from "@/lib/supabase-auth-refresh";
 
 const CHUNK_MS = 30_000; // 30 seconds per chunk
 // Low-overhead safety-review recording: half-res, low fps, low bitrate.
