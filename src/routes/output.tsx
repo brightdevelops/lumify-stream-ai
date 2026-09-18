@@ -24,6 +24,10 @@ function OutputPage() {
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const disconnectedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectingRef = useRef(false);
+  // True only while frames are actually flowing. Drives whether a retry cycle
+  // keeps going; `video.srcObject` is NOT a reliable signal because it stays
+  // set forever once a stream has been attached.
+  const healthyRef = useRef(false);
 
   const [status, setStatus] = useState<Status>("waiting");
 
@@ -58,6 +62,7 @@ function OutputPage() {
       if (cancelled) return;
       clearTimers();
       reconnectingRef.current = false;
+      healthyRef.current = true;
       setStatus("live");
     };
 
@@ -123,21 +128,26 @@ function OutputPage() {
       );
     };
 
-    // Arms a single reconnect attempt; never a periodic interval.
+    // Arms one reconnect attempt at a time, and keeps re-arming until the
+    // connection is healthy again — an OBS browser source has nobody to reload
+    // it, so giving up after a single attempt would leave it black forever.
     const scheduleRetry = () => {
       if (cancelled || reconnectingRef.current) return;
       reconnectingRef.current = true;
+      healthyRef.current = false;
       clearTimers();
+      // Drop the dead stream so the element isn't holding a stale track.
+      if (videoRef.current) videoRef.current.srcObject = null;
       setStatus("reconnecting");
       retryRef.current = setTimeout(() => {
         retryRef.current = null;
         if (cancelled) return;
         connect();
-        // Allow another attempt only if this one does not become healthy.
+        // Judge this attempt after 8s; if it never became healthy, try again.
         retryRef.current = setTimeout(() => {
           retryRef.current = null;
           reconnectingRef.current = false;
-          if (!cancelled && videoRef.current?.srcObject == null) scheduleRetry();
+          if (!cancelled && !healthyRef.current) scheduleRetry();
         }, 8000);
       }, 3000);
     };

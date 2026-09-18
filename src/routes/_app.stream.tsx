@@ -14,6 +14,7 @@ import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 import { startSessionRecorder, logStreamEvent, uploadSwapImage, type RecorderHandle } from "@/lib/stream-recorder";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
+import { getFreshAccessToken } from "@/lib/supabase-auth-refresh";
 import { getEngineSetting } from "@/lib/site-settings.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
@@ -1268,12 +1269,22 @@ function StreamPage() {
     if (user && totalUsed > 0) {
       const mins = Math.floor(totalSec / 60);
       const secs = totalSec % 60;
-      await supabase.rpc("log_usage_transaction", {
+      const args = {
         p_credits: totalUsed,
         p_amount: totalUsed * NAIRA_PER_CREDIT,
         p_description: `Stream session — ${mins} min ${secs} sec`,
         p_session_id: sessionIdRef.current ?? undefined,
-      });
+      };
+      const { error: usageErr } = await supabase.rpc("log_usage_transaction", args);
+      // A long session can end with an access token the SDK hasn't refreshed
+      // yet; the call then runs as `anon` and Postgres denies it (42501), so
+      // the stream is never charged. Refresh once (single-flight) and retry.
+      if (usageErr) {
+        console.error("log_usage_transaction failed — retrying after session refresh", usageErr);
+        await getFreshAccessToken();
+        const { error: retryErr } = await supabase.rpc("log_usage_transaction", args);
+        if (retryErr) console.error("log_usage_transaction retry failed", retryErr);
+      }
     }
     if (sessionIdRef.current) {
       await supabase.from("stream_sessions").update({

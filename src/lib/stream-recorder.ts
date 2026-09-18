@@ -5,6 +5,7 @@
 // and inserts a stream_recordings row per chunk.
 
 import { supabase } from "@/integrations/supabase/client";
+import { getFreshAccessToken } from "@/lib/supabase-auth-refresh";
 
 const CHUNK_MS = 30_000; // 30 seconds per chunk
 // Low-overhead safety-review recording: half-res, low fps, low bitrate.
@@ -187,14 +188,24 @@ export function startSessionRecorder(opts: {
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
     const path = `${userId}/${sid}/${String(idx).padStart(4, "0")}-${ts}.${ext}`;
     try {
-      const { error: upErr } = await supabase.storage
-        .from("stream-recordings")
-        .upload(path, blob, { contentType: "application/octet-stream", upsert: false });
+      const doUpload = () =>
+        supabase.storage
+          .from("stream-recordings")
+          .upload(path, blob, { contentType: "application/octet-stream", upsert: false });
+      let { error: upErr } = await doUpload();
+      // Long sessions can outlive the access token; the write then runs
+      // unauthenticated and trips the storage RLS check. Refresh the session
+      // once (single-flight, shared with every other caller) and retry.
+      if (upErr) {
+        console.error("stream-recordings upload failed — retrying after session refresh", upErr);
+        await getFreshAccessToken();
+        ({ error: upErr } = await doUpload());
+      }
       if (upErr) {
         console.error("stream-recordings upload failed", upErr);
         return;
       }
-      await supabase.from("stream_recordings").insert({
+      const row = {
         user_id: userId,
         session_id: sessionId,
         storage_path: path,
@@ -202,7 +213,14 @@ export function startSessionRecorder(opts: {
         duration_seconds: Math.round(durationSec),
         size_bytes: blob.size,
         mime_type: mimeType,
-      } as never);
+      } as never;
+      const { error: insErr } = await supabase.from("stream_recordings").insert(row);
+      if (insErr) {
+        console.error("stream_recordings insert failed — retrying after session refresh", insErr);
+        await getFreshAccessToken();
+        const { error: retryErr } = await supabase.from("stream_recordings").insert(row);
+        if (retryErr) console.error("stream_recordings insert retry failed", retryErr);
+      }
     } catch (e) {
       console.error("stream-recordings persist failed", e);
     }
@@ -297,7 +315,7 @@ export async function logStreamEvent(args: {
   imagePath?: string | null;
 }) {
   try {
-    await supabase.from("stream_events").insert({
+    const row = {
       user_id: args.userId,
       session_id: args.sessionId,
       event_type: args.eventType,
@@ -307,7 +325,14 @@ export async function logStreamEvent(args: {
       realism: args.realism ?? null,
       image_name: args.imageName ?? null,
       image_path: args.imagePath ?? null,
-    } as never);
+    } as never;
+    const { error } = await supabase.from("stream_events").insert(row);
+    if (error) {
+      console.error("stream_events insert failed — retrying after session refresh", error);
+      await getFreshAccessToken();
+      const { error: retryErr } = await supabase.from("stream_events").insert(row);
+      if (retryErr) console.error("stream_events insert retry failed", retryErr);
+    }
   } catch (e) {
     console.error("logStreamEvent failed", e);
   }

@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
-import { supabase } from "@/integrations/supabase/client";
+import { getFreshAccessToken } from "@/lib/supabase-auth-refresh";
 
 function decodeExp(token: string): number {
   try {
@@ -25,19 +25,15 @@ export const attachStoredSupabaseAuth = createMiddleware({ type: "function" }).c
   const nowSec = Math.floor(Date.now() / 1000);
   const exp = accessToken ? decodeExp(accessToken) : 0;
 
-  // Expired or about to expire within 60s → let the SDK hand us a fresh one.
-  if (!accessToken || exp === 0 || exp - nowSec <= 60) {
-    try {
-      const { data } = await supabase.auth.getSession();
-      let session = data.session;
-      if (!session || (session.expires_at ?? 0) - nowSec <= 60) {
-        const refreshed = await supabase.auth.refreshSession();
-        session = refreshed.data.session ?? session;
-      }
-      if (session?.access_token) accessToken = session.access_token;
-    } catch {
-      // fall through to the stored token / error below
-    }
+  // Only when the token is actually expired (small 5s clock-skew margin) do we
+  // ask for a new one, and always through the single-flight helper. Refreshing
+  // pre-emptively at a 60s margin on EVERY RPC — and doing it once per parallel
+  // RPC — burned the rotating refresh token: the winner rotated it and the
+  // losers came back 429 / refresh_token_not_found, signing the user out.
+  // The SDK's own autoRefreshToken keeps the token fresh in the background.
+  if (!accessToken || exp === 0 || exp - nowSec <= 5) {
+    const fresh = await getFreshAccessToken();
+    if (fresh) accessToken = fresh;
   }
 
   if (!accessToken) throw new Error("Your session expired. Please sign in again.");
