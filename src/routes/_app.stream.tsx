@@ -205,6 +205,7 @@ function StreamPage() {
   const sessionIdRef = useRef<string | null>(null);
   const startingRef = useRef(false); // re-entry guard for start()
   const lastTickAtRef = useRef<number>(0); // wall-clock anchor for metering
+  const decartFirstFrameRef = useRef(false); // Decart billing gate
   const fractionalSecRef = useRef(0); // carries sub-second remainder between ticks
   const accessTokenRef = useRef<string | null>(null); // for keepalive end-session beacon
   const streamingRef = useRef(false);
@@ -473,6 +474,11 @@ function StreamPage() {
     // deduct_and_mark_session can't bump stream_sessions.credits_used, which
     // makes endStream's log_usage_transaction double-charge via v_delta.
     if (!sessionIdRef.current) return;
+    // Decart: no charge until the first transformed video frame arrives.
+    if (engineRef.current === "decart" && !decartFirstFrameRef.current) {
+      lastTickAtRef.current = Date.now();
+      return;
+    }
     const now = Date.now();
     const elapsedSec = (now - lastTickAtRef.current) / 1000;
     if (elapsedSec <= 0) return;
@@ -908,6 +914,7 @@ function StreamPage() {
       outputStreamRef.current = null;
       outputVideoTrackRef.current = null;
       genFailuresRef.current = [];
+      decartFirstFrameRef.current = false;
 
       const handleEngineError = (message: string, err: unknown) => {
         console.error("Engine error", (err as any)?.code, message, err);
@@ -971,6 +978,16 @@ function StreamPage() {
         // (re)start broadcast + recorder when the video track actually changes.
         if (!videoTrack || videoTrack === outputVideoTrackRef.current) return;
         outputVideoTrackRef.current = videoTrack;
+        // Billing gate for Decart: start charging from the first real video frame.
+        const markFirstFrame = () => {
+          if (decartFirstFrameRef.current) return;
+          decartFirstFrameRef.current = true;
+          lastTickAtRef.current = Date.now();
+          fractionalSecRef.current = 0;
+          console.log("[decart] first transformed video frame — meter starts now");
+        };
+        if (!videoTrack.muted) markFirstFrame();
+        else videoTrack.addEventListener("unmute", markFirstFrame, { once: true });
         {
           const s = videoTrack.getSettings?.() ?? {};
           console.log(
@@ -1033,6 +1050,14 @@ function StreamPage() {
           // Confirm what we are about to publish — an empty/ended local video
           // track is the usual reason generation dies instantly.
           const localVideo = stream.getVideoTracks()[0];
+          // Standard 1280x720 for Decart (odd sizes like 1472x832 may not publish).
+          if (localVideo) {
+            try {
+              await localVideo.applyConstraints({ width: { ideal: 1280 }, height: { ideal: 720 } });
+            } catch (e) {
+              console.warn("[decart] could not apply 1280x720 constraints", e);
+            }
+          }
           console.log(
             "[decart] local camera track to publish =",
             localVideo
@@ -1067,6 +1092,8 @@ function StreamPage() {
                   endStream(false).catch(() => {});
                 }
               },
+              // vp9 = single quality layer (no 3-layer simulcast split).
+              preferredVideoCodec: "vp9",
               initialState: {
                 prompt: { text: decartContext.prompt, enhance: false },
                 ...(photo ? { image: photo } : {}),
@@ -1085,6 +1112,26 @@ function StreamPage() {
           (realtimeClient as any).on?.("error", (err: unknown) => {
             handleEngineError((err as any)?.message ?? "Decart engine error", err);
           });
+          // Upload diagnostics for the first 15s: are camera frames actually leaving?
+          {
+            const statsStart = Date.now();
+            let lastLog = 0;
+            (realtimeClient as any).on?.("stats", (s: any) => {
+              const now = Date.now();
+              if (now - statsStart > 15_000 || now - lastLog < 2_000) return;
+              lastLog = now;
+              console.log("[decart] upload stats", {
+                bytesSent: s?.outboundVideo?.bytesSent,
+                packetsSent: s?.outboundVideo?.packetsSent,
+                fps: s?.outboundVideo?.framesPerSecond,
+                size: `${s?.outboundVideo?.frameWidth} x ${s?.outboundVideo?.frameHeight}`,
+                encoder: s?.outboundVideo?.encoderImplementation,
+                route: s?.connection?.selectedCandidatePairs,
+                rtt: s?.connection?.currentRoundTripTime,
+                inboundVideo: s?.video,
+              });
+            });
+          }
           (realtimeClient as any).on?.("queuePosition", (qp: unknown) =>
             console.log("[decart] queuePosition =", qp),
           );
@@ -1251,6 +1298,20 @@ function StreamPage() {
     streamingRef.current = true;
     setStreaming(true);
     startingRef.current = false;
+
+    // Decart: never bill a blank panel. If no transformed video frame has
+    // arrived within 15s, end the stream (the meter is gated until then).
+    if (engineRef.current === "decart") {
+      setTimeout(() => {
+        if (engineRef.current === "decart" && streamingRef.current && !decartFirstFrameRef.current) {
+          console.error("[decart] no transformed video within 15s — ending stream without charge");
+          endStream(false).catch(() => {});
+          setError(
+            "The AI engine connected but never sent back any video, so the stream was stopped. You were not charged. Please try again, or switch engines.",
+          );
+        }
+      }, 15_000);
+    }
   };
 
   const endStream = async (outOfCredits = false) => {
