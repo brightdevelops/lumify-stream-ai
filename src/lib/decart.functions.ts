@@ -3,12 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { assertNotInMaintenance } from "@/lib/site-settings.functions";
 
-const DECART_API_BASE = "https://api.decart.ai";
-// TEMP DIAGNOSTIC: was "lucy-latest". allowedModels uses this constant.
-export const DECART_MODEL = "lucy-2.1";
-
 /**
- * Returns a SHORT-LIVED Decart client token to authenticated users only.
+ * Returns the Decart API key to authenticated users only.
  *
  * Guards:
  *  - Refuses entirely when STREAMING_PAUSED (maintenance) — no Decart
@@ -17,9 +13,9 @@ export const DECART_MODEL = "lucy-2.1";
  *  - Refuses if the user already has an active stream session (prevents
  *    multi-tab / refresh duplicates that would burn Decart usage twice).
  *
- * The permanent DECART_API_KEY never reaches the browser: it is used here to
- * mint a short-lived, model-scoped client token via
- * POST {base}/v1/client/tokens (docs.platform.decart.ai client tokens).
+ * NOTE: Decart's realtime SDK runs in the browser, so the key must reach the
+ * client at some point. Keeping it behind auth + an active-session guard
+ * limits exposure and prevents the most common duplicate-session leaks.
  */
 export const getDecartKey = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -28,12 +24,6 @@ export const getDecartKey = createServerFn({ method: "GET" })
     await assertNotInMaintenance("streaming", { userId: context.userId });
 
     const key = process.env.DECART_API_KEY;
-    // Diagnostic only — NEVER log the full key.
-    console.log(
-      "[decart] key present =", Boolean(key),
-      "length =", key?.length ?? 0,
-      "prefix =", key ? `${key.slice(0, 4)}…` : "(none)",
-    );
     if (!key) throw new Error("Decart not configured");
 
     const { data: cred, error: credErr } = await context.supabase
@@ -66,34 +56,6 @@ export const getDecartKey = createServerFn({ method: "GET" })
       );
     }
 
-    // Mint a short-lived, model-scoped client token. Only this token goes to
-    // the browser; the permanent key stays server-side.
-    const res = await fetch(`${DECART_API_BASE}/v1/client/tokens`, {
-      method: "POST",
-      headers: {
-        "X-API-KEY": key,
-        "content-type": "application/json",
-        accept: "application/json",
-      },
-      body: JSON.stringify({
-        expiresIn: 300,
-        allowedModels: [DECART_MODEL],
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("[decart] client token mint failed", res.status, body.slice(0, 500));
-      if (res.status === 401 || res.status === 403) {
-        throw new Error("Invalid API key");
-      }
-      throw new Error(`Decart token error ${res.status}`);
-    }
-
-    const json = (await res.json()) as { apiKey?: string; expiresAt?: string };
-    if (!json.apiKey) throw new Error("Decart token error: empty token");
-    console.log("[decart] client token minted, expiresAt =", json.expiresAt ?? "(unknown)");
-
-    return { apiKey: json.apiKey, expiresAt: json.expiresAt ?? null, model: DECART_MODEL };
+    return { apiKey: key };
   });
 

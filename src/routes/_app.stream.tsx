@@ -1,18 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Play, Square, Sparkles, Plus, X, Upload, Image as ImageIcon, Monitor, Copy, Check, ExternalLink, Clock, Radio, AlertTriangle, Info, ChevronDown, Camera as CameraIcon, PictureInPicture2, Film, Repeat } from "lucide-react";
-import { createDecartClient, models as decartModels } from "@decartai/sdk";
-import { buildPrompt } from "@/lib/stream-prompt";
+import { createDecartClient, models } from "@decartai/sdk";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { getDecartKey, DECART_MODEL } from "@/lib/decart.functions";
+import { getDecartKey } from "@/lib/decart.functions";
 import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { useMaintenanceMode, MAINTENANCE_STREAMING_MESSAGE } from "@/hooks/use-maintenance-mode";
 import { startBroadcaster } from "@/lib/stream-broadcast";
 import { getMyStreamToken } from "@/lib/stream-token.functions";
 import { startSessionRecorder, logStreamEvent, uploadSwapImage, type RecorderHandle } from "@/lib/stream-recorder";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
-import { getFreshAccessToken } from "@/lib/supabase-auth-refresh";
+import { getLucyModel } from "@/lib/site-settings.functions";
 
 const OUTPUT_ORIGIN = "https://lumifylive.com";
 
@@ -54,26 +53,31 @@ const PRESETS = ["Cartoon", "Anime", "Oil Painting", "Cyberpunk", "Neon Glow", "
 const RATE = 2; // credits/sec
 const MIN_CREDITS_TO_START = 10;
 const LOW_BALANCE_SECONDS = 60; // warn when ~1 min of stream time left
-// Capture targets for our own getUserMedia constraints.
-const CAPTURE_FPS = 24;
-const CAPTURE_WIDTH = 1472;
-const CAPTURE_HEIGHT = 832;
+// Decart API key is fetched at stream start from an authenticated server function.
 
-// Debug: log the exact context object handed to the engine.
-const logEngineContext = (
-  label: string,
-  ctx: { prompt: string; refImageUrl?: string; [k: string]: unknown },
-  _session: unknown,
+const buildPrompt = (
+  preset: string | null,
+  mode: "realistic" | "stylized",
+  realism: number,
+  hasReference: boolean = false,
+  background: string = "",
 ) => {
-  console.log(`[engine] ${label} context =`, {
-    prompt: ctx.prompt,
-    refImageUrl: ctx.refImageUrl ?? null,
-  });
+  let base: string;
+  if (mode === "realistic") {
+    const realisticBase = `Keep a natural, human appearance. Strength ${realism}/10. photorealistic, natural human skin texture, realistic lighting, lifelike, high detail. Preserve the person's real facial movements exactly — the mouth, lips, and jaw must follow the person's actual movements and must not move on their own. Do not animate or alter the mouth independently of the real person.`;
+    base = hasReference
+      ? `${realisticBase} Keep transformations subtle and natural, avoid cartoon or anime effects.`
+      : realisticBase;
+  } else {
+    base = preset
+      ? `Transform into this character in ${preset} style.`
+      : "Transform into this character.";
+  }
+  const bg = background.trim();
+  return bg
+    ? `${base} Change the background to: ${bg}. Keep the person's face, body, and identity unchanged.`
+    : base;
 };
-
-type Engine = "decart";
-
-// Prompt templates are shared by both engine arms — see src/lib/stream-prompt.ts
 
 
 
@@ -99,21 +103,9 @@ function StreamPage() {
   const outputVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  // Decart realtime client.
-  const decartClientRef = useRef<any>(null);
-  const engineRef = useRef<Engine>("decart");
-  // Remote (uploaded) URL of the current reference image + the File it maps to.
-  const refImageFileRef = useRef<File | null>(null);
-  const refImageUrlRemoteRef = useRef<string | null>(null);
+  const decartClientRef = useRef<Awaited<ReturnType<ReturnType<typeof createDecartClient>["realtime"]["connect"]>> | null>(null);
   const broadcasterStopRef = useRef<(() => void) | null>(null);
   const recorderRef = useRef<RecorderHandle | null>(null);
-  // Remote tracks arrive one at a time (audio first, video later). We keep a
-  // single accumulating output stream so a late video track re-attaches.
-  const outputStreamRef = useRef<MediaStream | null>(null);
-  const outputVideoTrackRef = useRef<MediaStreamTrack | null>(null);
-  // Timestamps of recent failed generations — 3 within 30s ends the stream
-  // instead of letting the SDK reconnect-loop forever while billing runs.
-  const genFailuresRef = useRef<number[]>([]);
   const [copied, setCopied] = useState(false);
   const [streamToken, setStreamToken] = useState<string | null>(null);
 
@@ -152,14 +144,64 @@ function StreamPage() {
   const [needsCameraUnlock, setNeedsCameraUnlock] = useState(false);
   const [cameraPermission, setCameraPermission] = useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
 
+  // ── Phone support ───────────────────────────────────────────────────────
+  const [isTouch, setIsTouch] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment" | null>(null);
+  const facingModeRef = useRef<"user" | "environment" | null>(null);
+  const [showAwakeHint, setShowAwakeHint] = useState(false);
+  const wakeLockRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const coarse =
+      window.matchMedia?.("(pointer: coarse)").matches || "ontouchstart" in window;
+    setIsTouch(!!coarse);
+    if (coarse && !facingModeRef.current) {
+      facingModeRef.current = "user";
+      setFacingMode("user");
+    }
+  }, []);
+
+  const acquireWakeLock = async () => {
+    try {
+      const nav = navigator as any;
+      if (!nav.wakeLock?.request || wakeLockRef.current) return;
+      wakeLockRef.current = await nav.wakeLock.request("screen");
+      wakeLockRef.current.addEventListener?.("release", () => {
+        wakeLockRef.current = null;
+      });
+    } catch (e) {
+      console.debug("wake lock unavailable", e);
+    }
+  };
+
+  const releaseWakeLock = () => {
+    try {
+      wakeLockRef.current?.release?.();
+    } catch (e) {
+      console.debug("wake lock release failed", e);
+    }
+    wakeLockRef.current = null;
+  };
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && streamingRef.current) {
+        void acquireWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      releaseWakeLock();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const [mode, setMode] = useState<"realistic" | "stylized">("realistic");
   const [realism, setRealism] = useState<number>(8);
   const [background, setBackground] = useState<string>("");
-  // Last background value already sent to the engine — prevents a redundant
-  // set() firing the moment a stream starts.
-  const lastSentBackgroundRef = useRef<string>("");
 
   // ── Video-file input mode ───────────────────────────────────────────────
   const [inputSource, setInputSource] = useState<"camera" | "file">("camera");
@@ -191,6 +233,18 @@ function StreamPage() {
   const fractionalSecRef = useRef(0); // carries sub-second remainder between ticks
   const accessTokenRef = useRef<string | null>(null); // for keepalive end-session beacon
   const streamingRef = useRef(false);
+  const lucyModelIdRef = useRef<string>("lucy-latest");
+
+  // Always refetch the current Lucy model id right before starting/restarting
+  // a session so an admin toggle in Inventor takes effect without a page reload.
+  const refreshLucyModelId = async () => {
+    try {
+      const r = await getLucyModel();
+      if (r?.modelId) lucyModelIdRef.current = r.modelId;
+    } catch { /* keep last known */ }
+  };
+
+  useEffect(() => { refreshLucyModelId(); }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -222,7 +276,7 @@ function StreamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tab close / refresh / browser crash: synchronously disconnect the engine
+  // Tab close / refresh / browser crash: synchronously disconnect the Decart
   // peer and mark the DB session ended via a keepalive fetch (regular
   // supabase-js calls do NOT survive unload).
   useEffect(() => {
@@ -253,9 +307,9 @@ function StreamPage() {
 
     const handleUnload = () => {
       if (!streamingRef.current) return;
-      // Tear down peer + tracks synchronously so the engine stops billing now.
+      // Tear down peer + tracks synchronously so Decart stops billing now.
       try {
-        decartClientRef.current?.disconnect?.();
+        decartClientRef.current?.disconnect();
       } catch {}
       try {
         broadcasterStopRef.current?.();
@@ -393,9 +447,11 @@ function StreamPage() {
     let adopted = false;
     let newStream: MediaStream | null = null;
     try {
-      const fps = CAPTURE_FPS;
-      const width = CAPTURE_WIDTH;
-      const height = CAPTURE_HEIGHT;
+      await refreshLucyModelId();
+      const model = models.realtime("lucy-2.1" as any);
+      const fps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
+      const width = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
+      const height = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
       newStream = await navigator.mediaDevices.getUserMedia({
         video: {
           ...videoConstraints,
@@ -438,9 +494,20 @@ function StreamPage() {
 
   const handleCameraChange = async (deviceId: string) => {
     setSelectedCameraId(deviceId);
+    setFacingMode(null);
+    facingModeRef.current = null;
     await swapVideoTrack({ deviceId: { exact: deviceId } });
   };
 
+  /** Phone front/back switch — `ideal` so single-camera devices still work. */
+  const applyFacingMode = async (next: "user" | "environment") => {
+    setFacingMode(next);
+    facingModeRef.current = next;
+    await swapVideoTrack({ facingMode: { ideal: next } });
+  };
+
+  const flipCamera = () =>
+    applyFacingMode(facingModeRef.current === "environment" ? "user" : "environment");
 
 
 
@@ -448,7 +515,7 @@ function StreamPage() {
   // Wall-clock metering: charges for actual elapsed time, not assumed 1-sec
   // ticks. This is critical because browsers throttle setInterval to as
   // little as once/minute when the tab is backgrounded — without delta-based
-  // accounting, the user is undercharged while the engine keeps billing us.
+  // accounting, the user is undercharged while Decart keeps billing us.
   const runMeterTick = async () => {
     if (!user || !streamingRef.current) return;
     // Belt-and-braces: never charge without a session id — otherwise
@@ -539,12 +606,15 @@ function StreamPage() {
       console.error("Recorder stop error", e);
     }
     recorderRef.current = null;
-    const decartClient = decartClientRef.current;
-    if (decartClient) {
+    // Decart SDK exposes `disconnect()` (verified against the type defs);
+    // call it directly so a missing method becomes a visible error rather
+    // than a silent leak.
+    const client = decartClientRef.current;
+    if (client) {
       try {
-        decartClient.disconnect();
+        client.disconnect();
       } catch (e) {
-        console.error("Engine disconnect error", e);
+        console.error("Decart disconnect error", e);
       }
     }
     decartClientRef.current = null;
@@ -621,14 +691,15 @@ function StreamPage() {
   };
 
   const applyReference = async (preset: string | null, image: File | null) => {
-    if (!image) return;
-    const prompt = buildPrompt(preset, mode, realism, !!image, background);
-    const decartClient = decartClientRef.current;
-    if (!decartClient) return;
+    if (!decartClientRef.current || !image) return;
     try {
-      await decartClient.set({ prompt, image, enhance: false } as never);
+      await decartClientRef.current.set({
+        prompt: buildPrompt(preset, mode, realism, !!image, background),
+        image,
+        enhance: false,
+      } as never);
     } catch (e) {
-      console.error("Engine set error", e);
+      console.error("Decart set error", e);
     }
   };
 
@@ -674,7 +745,7 @@ function StreamPage() {
     if (!user) return;
 
     // Re-entry guard: double-clicking Start, or a slow connect followed by
-    // another click, must NOT open a second engine session.
+    // another click, must NOT open a second Decart peer.
     if (startingRef.current || streamingRef.current) return;
     startingRef.current = true;
 
@@ -711,9 +782,11 @@ function StreamPage() {
     let stream: MediaStream;
     // Resolve the model dims/fps up-front — used by both branches so the
     // canvas-captured file stream matches the camera path exactly.
-    const modelFps = CAPTURE_FPS;
-    const modelWidth = CAPTURE_WIDTH;
-    const modelHeight = CAPTURE_HEIGHT;
+    await refreshLucyModelId();
+    const model = models.realtime("lucy-2.1" as any);
+    const modelFps = Number.isFinite(Number(model.fps)) ? Number(model.fps) : 25;
+    const modelWidth = Number.isFinite(Number(model.width)) ? Number(model.width) : 1280;
+    const modelHeight = Number.isFinite(Number(model.height)) ? Number(model.height) : 720;
 
     if (inputSource === "file") {
       // ── Video-file path ────────────────────────────────────────────────
@@ -787,7 +860,11 @@ function StreamPage() {
       // ── Camera path (unchanged behaviour) ──────────────────────────────
       try {
         const baseVideo: MediaTrackConstraints = {
-          ...(selectedCameraId ? { deviceId: { ideal: selectedCameraId } } : {}),
+          ...(facingModeRef.current
+            ? { facingMode: { ideal: facingModeRef.current } }
+            : selectedCameraId
+              ? { deviceId: { ideal: selectedCameraId } }
+              : {}),
           frameRate: { ideal: modelFps },
           width: { ideal: modelWidth },
           height: { ideal: modelHeight },
@@ -823,245 +900,59 @@ function StreamPage() {
 
 
     try {
-      console.log("[engine] using", engineRef.current);
-      // Fresh output wiring per stream.
-      outputStreamRef.current = null;
-      outputVideoTrackRef.current = null;
-      genFailuresRef.current = [];
-
-      const handleEngineError = (message: string, err: unknown) => {
-        console.error("Engine error", (err as any)?.code, message, err);
-      };
-
-      // Shared downstream wiring: output panel + OBS broadcast + recorder.
-      //
-      // Remote tracks are subscribed one at a time — the inference server
-      // usually publishes audio first and the transformed VIDEO track a moment
-      // later. We therefore never attach "whatever snapshot arrived": we merge
-      // every incoming track into one persistent output stream and (re)wire the
-      // panel, the OBS broadcast and the recorder the moment the real video
-      // track lands (or is replaced).
-      const handleRemoteStream = (incoming: MediaStream) => {
-        let out = outputStreamRef.current;
-        if (!out) {
-          out = new MediaStream();
-          outputStreamRef.current = out;
-        }
-        for (const t of incoming.getTracks()) {
-          if (!out.getTracks().includes(t)) out.addTrack(t);
-        }
-        // Drop dead tracks so a replaced video track doesn't linger.
-        for (const t of out.getTracks()) {
-          if (t.readyState === "ended") out.removeTrack(t);
-        }
-
-        const videoTrack = out.getVideoTracks()[0] ?? null;
-        console.log(
-          "[engine] remote stream received — engine =", engineRef.current,
-          "videoTracks =", out.getVideoTracks().length,
-          "audioTracks =", out.getAudioTracks().length,
-          videoTrack
-            ? {
-                id: videoTrack.id,
-                readyState: videoTrack.readyState,
-                muted: videoTrack.muted,
-                enabled: videoTrack.enabled,
-                settings: videoTrack.getSettings?.(),
-              }
-            : "(no video track yet — waiting for the transformed video track)",
-        );
-
-        const el = outputVideoRef.current;
-        if (el) {
-          if (el.srcObject !== out) el.srcObject = out;
-          el.muted = true;
-          (el as HTMLVideoElement).playsInline = true;
-          el.onloadedmetadata = () => {
-            console.log("[engine] output element metadata — size =", el.videoWidth, "x", el.videoHeight);
-            el.play().catch((err) => console.warn("[engine] output play() rejected (metadata)", err));
-          };
-          el.play()
-            .then(() => console.log("[engine] output element attached and playing"))
-            .catch((err) => console.warn("[engine] output play() rejected", err));
-        } else {
-          console.warn("[engine] output video element not mounted — cannot attach remote stream");
-        }
-
-        // Nothing downstream is useful without video — wait for it, and only
-        // (re)start broadcast + recorder when the video track actually changes.
-        if (!videoTrack || videoTrack === outputVideoTrackRef.current) return;
-        outputVideoTrackRef.current = videoTrack;
-        {
-          const s = videoTrack.getSettings?.() ?? {};
-          console.log(
-            "[engine] transformed video track attached — size",
-            `${s.width ?? "?"} x ${s.height ?? "?"}`,
-          );
-        }
-        console.log("[engine] transformed video track attached — wiring output, broadcast and recorder");
-        videoTrack.addEventListener("unmute", () =>
-          console.log("[engine] remote video track unmuted — frames flowing"),
-        );
-        videoTrack.addEventListener("mute", () => console.log("[engine] remote video track muted"));
-        videoTrack.addEventListener("ended", () => console.log("[engine] remote video track ended"));
-
-        try {
-          broadcasterStopRef.current?.();
-          if (user && streamToken) {
-            broadcasterStopRef.current = startBroadcaster(streamToken, out);
+      const { apiKey } = await getDecartKey();
+      await refreshLucyModelId();
+      const model = models.realtime("lucy-2.1" as any);
+      const client = createDecartClient({ apiKey });
+      const realtimeClient = await client.realtime.connect(stream, {
+        model,
+        onRemoteStream: (transformedStream: MediaStream) => {
+          if (outputVideoRef.current) {
+            outputVideoRef.current.srcObject = transformedStream;
+            outputVideoRef.current.play().catch(() => {});
           }
-        } catch (e) {
-          console.error("Broadcaster start failed", e);
-        }
-        // Start session recording: webcam + AI output composite (disclosed in Terms).
-        try {
-          recorderRef.current?.stop();
-        } catch {}
-        if (user && mediaStreamRef.current) {
-          recorderRef.current = startSessionRecorder({
-            userId: user.id,
-            sessionId: sessionIdRef.current,
-            webcamStream: mediaStreamRef.current,
-            outputStream: out,
-            referenceImageUrl: referenceUrl,
-          });
-        }
-      };
-
-      {
-        // ── Decart Lucy ───────────────────────────────────────────────────
-        // Short-lived client token minted server-side; LiveKit-backed realtime.
-        // The whole sequence is wrapped so no step can fail (or hang) silently:
-        // every throw is logged as "[decart] connect failed:" and re-thrown into
-        // the outer handler, which surfaces the existing error UI.
-        try {
-          console.log("[decart] requesting client token…");
-          const { apiKey } = await getDecartKey();
-          console.log("[decart] client token length =", apiKey?.length ?? 0, "model =", DECART_MODEL);
-
-          const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
-          const decartContext = {
-            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
-            image: photo,
-            enhance: false,
-          };
-          logEngineContext("connect (start)", decartContext, null);
-
-          console.log("[decart] creating client…");
-          const decartClient = createDecartClient({ apiKey });
-
-          // Confirm what we are about to publish — an empty/ended local video
-          // track is the usual reason generation dies instantly.
-          const localVideo = stream.getVideoTracks()[0];
-          console.log(
-            "[decart] local camera track to publish =",
-            localVideo
-              ? {
-                  id: localVideo.id,
-                  label: localVideo.label,
-                  readyState: localVideo.readyState,
-                  enabled: localVideo.enabled,
-                  muted: localVideo.muted,
-                  settings: localVideo.getSettings?.(),
-                }
-              : "(NO local video track — nothing to publish)",
-          );
-          console.log("[decart] connecting realtime room…");
-
-          // A hung handshake must never leave the page in a silent "connecting"
-          // limbo — time it out and surface it through the same error path.
-          const CONNECT_TIMEOUT_MS = 45_000;
-          let timeoutId: ReturnType<typeof setTimeout> | undefined;
-          const realtimeClient = await Promise.race([
-            decartClient.realtime.connect(stream, {
-              model: decartModels.realtime(DECART_MODEL as never),
-              // Shared sink: output panel + OBS broadcast + recorder.
-              onRemoteStream: (transformedStream: MediaStream) => {
-                console.log("[decart] remote video track subscribed from inference server");
-                handleRemoteStream(transformedStream);
-              },
-              onConnectionChange: (state: string) => {
-                console.log("[engine] state =", state);
-                if (state === "connected") console.log("[decart] livekit room connected");
-                if ((state === "disconnected" || state === "failed") && streamingRef.current) {
-                  endStream(false).catch(() => {});
-                }
-              },
-              initialState: {
-                prompt: { text: decartContext.prompt, enhance: false },
-                // TEMP DIAGNOSTIC: image omitted from initialState to isolate model vs reference image.
-                // ...(photo ? { image: photo } : {}),
-              },
-            } as never),
-            new Promise((_, reject) => {
-              timeoutId = setTimeout(
-                () => reject(new Error("Decart realtime connect timed out after 45s")),
-                CONNECT_TIMEOUT_MS,
-              );
-            }),
-          ]).finally(() => {
-            if (timeoutId) clearTimeout(timeoutId);
-          });
-
-          (realtimeClient as any).on?.("error", (err: unknown) => {
-            handleEngineError((err as any)?.message ?? "Decart engine error", err);
-          });
-          (realtimeClient as any).on?.("queuePosition", (qp: unknown) =>
-            console.log("[decart] queuePosition =", qp),
-          );
-          (realtimeClient as any).on?.("generationTick", (t: unknown) =>
-            console.log("[decart] generationTick", t),
-          );
-          (realtimeClient as any).on?.("generationEnded", (t: any) => {
-            // Full payload, not just the two fields we happen to know about.
-            console.log(
-              "[decart] generationEnded FULL =",
-              t,
-              "json =", (() => { try { return JSON.stringify(t); } catch { return "(unserializable)"; } })(),
-              "keys =", t && typeof t === "object" ? Object.keys(t) : "(n/a)",
-            );
-            if (t?.reason !== "error") return;
-            // Break the SDK's infinite reconnect loop: 3 failed generations
-            // inside 30s ends the stream through the normal path (billing stops).
-            const now = Date.now();
-            genFailuresRef.current = [...genFailuresRef.current, now].filter((ts) => now - ts <= 30_000);
-            console.warn(
-              "[decart] generation failure",
-              genFailuresRef.current.length,
-              "of 3 within 30s",
-            );
-            if (genFailuresRef.current.length >= 3 && streamingRef.current) {
-              console.error("[decart] 3 generation failures in 30s — ending stream instead of reconnecting");
-              genFailuresRef.current = [];
-              setError(
-                "The AI engine kept failing to start generating (3 failed attempts). The stream was stopped so you aren't charged for a dead session. Please try again, or switch engines.",
-              );
-              try {
-                decartClientRef.current?.disconnect?.();
-              } catch {}
-              endStream(false).catch(() => {});
+          try {
+            broadcasterStopRef.current?.();
+            if (user && streamToken) {
+              broadcasterStopRef.current = startBroadcaster(streamToken, transformedStream);
             }
-          });
-          (realtimeClient as any).on?.("diagnostic", (d: any) =>
-            console.log(
-              "[decart] diagnostic", d?.name ?? "(unnamed)",
-              "data =", d?.data,
-              "phases =", d?.data?.phases,
-              "json =", (() => { try { return JSON.stringify(d); } catch { return "(unserializable)"; } })(),
-            ),
-          );
-          console.log(
-            "[decart] connected — sessionId =", (realtimeClient as any)?.sessionId ?? "(none)",
-            "isConnected =", (realtimeClient as any)?.isConnected?.() ?? "(unknown)",
-          );
-          decartClientRef.current = realtimeClient;
-        } catch (decartErr) {
-          console.error("[decart] connect failed:", decartErr);
-          throw decartErr;
-        }
-      }
+
+          } catch (e) {
+            console.error("Broadcaster start failed", e);
+          }
+          // Start session recording: webcam + AI output composite (disclosed in Terms).
+          try {
+            recorderRef.current?.stop();
+          } catch {}
+          if (user && mediaStreamRef.current) {
+            recorderRef.current = startSessionRecorder({
+              userId: user.id,
+              sessionId: sessionIdRef.current,
+              webcamStream: mediaStreamRef.current,
+              outputStream: transformedStream,
+              referenceImageUrl: referenceUrl,
+            });
+          }
+        },
+        // If the Decart peer drops (network loss, server-side close), stop
+        // immediately so the meter doesn't keep ticking against nothing AND
+        // we don't leave an orphan session locally.
+        onConnectionChange: (state) => {
+          if (state === "disconnected" && streamingRef.current) {
+            endStream(false).catch(() => {});
+          }
+        },
+      });
+      decartClientRef.current = realtimeClient;
+
+      const photo = fileInputRef.current?.files?.[0] ?? referenceImage;
+      await realtimeClient.set({
+        prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+        image: photo,
+        enhance: false,
+      } as never);
     } catch (e) {
-      console.error("Engine connect failed", e);
+      console.error("Decart connect failed", e);
       teardownStream();
       setConnecting(false);
       startingRef.current = false;
@@ -1105,7 +996,7 @@ function StreamPage() {
     setDuration(0);
     setConnecting(false);
 
-    // sessionIdRef was set up-front by start_stream_session() before the engine
+    // sessionIdRef was set up-front by start_stream_session() before Decart
     // connected. Just record the initial image + start event now.
     if (user) {
       let initialImagePath: string | null = null;
@@ -1132,17 +1023,21 @@ function StreamPage() {
     streamingRef.current = true;
     setStreaming(true);
     startingRef.current = false;
+    void acquireWakeLock();
+    if (isTouch) setShowAwakeHint(true);
   };
 
   const endStream = async (outOfCredits = false) => {
     if (!streamingRef.current && !decartClientRef.current) {
-      // Already ended (e.g. by pagehide + onDisconnect racing). Avoid
+      // Already ended (e.g. by pagehide + onConnectionChange racing). Avoid
       // double-logging the usage transaction.
       return;
     }
     streamingRef.current = false;
     teardownStream();
     setStreaming(false);
+    releaseWakeLock();
+    setShowAwakeHint(false);
     accessTokenRef.current = null;
 
     const totalUsed = usedRef.current;
@@ -1150,22 +1045,12 @@ function StreamPage() {
     if (user && totalUsed > 0) {
       const mins = Math.floor(totalSec / 60);
       const secs = totalSec % 60;
-      const args = {
+      await supabase.rpc("log_usage_transaction", {
         p_credits: totalUsed,
         p_amount: totalUsed * NAIRA_PER_CREDIT,
         p_description: `Stream session — ${mins} min ${secs} sec`,
         p_session_id: sessionIdRef.current ?? undefined,
-      };
-      const { error: usageErr } = await supabase.rpc("log_usage_transaction", args);
-      // A long session can end with an access token the SDK hasn't refreshed
-      // yet; the call then runs as `anon` and Postgres denies it (42501), so
-      // the stream is never charged. Refresh once (single-flight) and retry.
-      if (usageErr) {
-        console.error("log_usage_transaction failed — retrying after session refresh", usageErr);
-        await getFreshAccessToken();
-        const { error: retryErr } = await supabase.rpc("log_usage_transaction", args);
-        if (retryErr) console.error("log_usage_transaction retry failed", retryErr);
-      }
+      });
     }
     if (sessionIdRef.current) {
       await supabase.from("stream_sessions").update({
@@ -1217,27 +1102,20 @@ function StreamPage() {
   }, [mode, realism]);
 
   // Push background changes through the SAME update path as prompt changes.
-  // Only when the user actually edits the background WHILE live — never right
-  // after connect (the start context already carries the full prompt, and a
-  // mid-handshake set() breaks the engine's initial-state handshake).
   useEffect(() => {
-    if (!streaming) {
-      lastSentBackgroundRef.current = background;
-      return;
-    }
-    if (lastSentBackgroundRef.current === background) return;
-    lastSentBackgroundRef.current = background;
+    if (!streaming) return;
     const t = setTimeout(() => {
-      const prompt = buildPrompt(selectedPreset, mode, realism, !!referenceImage, background);
-      const decartClient = decartClientRef.current;
-      if (!decartClient) return;
+      const client = decartClientRef.current;
+      if (!client) return;
       void (async () => {
         try {
-          const ctx = { prompt, image: referenceImage, enhance: false };
-          logEngineContext("set (background)", ctx, null);
-          await decartClient.set(ctx as never);
+          await client.set({
+            prompt: buildPrompt(selectedPreset, mode, realism, !!referenceImage, background),
+            ...(referenceImage ? { image: referenceImage } : {}),
+            enhance: false,
+          } as never);
         } catch (e) {
-          console.error("Engine set error", e);
+          console.error("Decart set error", e);
         }
       })();
     }, 500);
@@ -1287,6 +1165,12 @@ function StreamPage() {
     needsCameraUnlock={needsCameraUnlock}
     cameraPermission={cameraPermission}
     requestCameraAccess={requestCameraAccess}
+    isTouch={isTouch}
+    facingMode={facingMode}
+    applyFacingMode={applyFacingMode}
+    flipCamera={flipCamera}
+    showAwakeHint={showAwakeHint}
+    dismissAwakeHint={() => setShowAwakeHint(false)}
 
     mode={mode}
     setMode={setMode}
@@ -1665,6 +1549,7 @@ function StudioLayout(p: StudioProps) {
     user, streaming, connecting,
     inputSource, changeInputSource, cameras, selectedCameraId, handleCameraChange,
     needsCameraUnlock, cameraPermission, requestCameraAccess,
+    isTouch, facingMode, applyFacingMode, flipCamera, showAwakeHint, dismissAwakeHint,
 
     mode, setMode, realism, setRealism, background, setBackground,
     referenceImage, referenceUrl, fileInputRef, handleFile, clearReference,
@@ -1684,6 +1569,10 @@ function StudioLayout(p: StudioProps) {
 
   const [dragOver, setDragOver] = useState(false);
   const [showCamTip, setShowCamTip] = useState(false);
+  const [showPhoneHelp, setShowPhoneHelp] = useState(false);
+  // Phones rarely expose useful device labels — offer front/back instead.
+  const useFacingPicker =
+    cameras.length === 0 || cameras.every((c: MediaDeviceInfo) => !c.label);
 
   const fieldLabel: React.CSSProperties = {
     ...MONO,
@@ -1758,6 +1647,8 @@ function StudioLayout(p: StudioProps) {
                     objectFit: "cover",
                     background: "#000",
                     opacity: streaming ? 1 : 0,
+                    transform:
+                      inputSource === "camera" && facingMode === "user" ? "scaleX(-1)" : undefined,
                   }}
                   onLoadedMetadata={(e) => {
                     if (inputSourceRef.current === "file") setVideoDuration(e.currentTarget.duration || 0);
@@ -1783,6 +1674,26 @@ function StudioLayout(p: StudioProps) {
                   </Chip>
                   <Chip>720p</Chip>
                 </div>
+                {isTouch && inputSource === "camera" && (
+                  <button
+                    type="button"
+                    onClick={() => flipCamera()}
+                    aria-label="Flip camera"
+                    className="absolute bottom-1.5 right-1.5 z-[6] grid place-items-center"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      background: "rgba(0,0,0,.55)",
+                      border: "1px solid rgba(198,242,78,.35)",
+                      color: "var(--primary)",
+                      fontSize: 13,
+                      transition: "all 150ms ease",
+                    }}
+                  >
+                    ⟲
+                  </button>
+                )}
                 {!streaming && (
                   <div className="lumi-panel-empty">
                     <PanelEmpty
@@ -1885,7 +1796,26 @@ function StudioLayout(p: StudioProps) {
                     <div style={{ minHeight: 40, display: "flex", flexDirection: "column", gap: 8 }}>
                       {cameraPermission === "denied" ? (
                         <CameraBlockedPanel />
-                                            ) : (
+                      ) : isTouch && useFacingPicker ? (
+                        <div className="segmented items-center lumi-full-row" style={{ minHeight: 44 }}>
+                          <button
+                            type="button"
+                            data-active={facingMode !== "environment"}
+                            onClick={() => applyFacingMode("user")}
+                            style={{ minHeight: 44, flex: 1 }}
+                          >
+                            Front camera
+                          </button>
+                          <button
+                            type="button"
+                            data-active={facingMode === "environment"}
+                            onClick={() => applyFacingMode("environment")}
+                            style={{ minHeight: 44, flex: 1 }}
+                          >
+                            Back camera
+                          </button>
+                        </div>
+                      ) : (
                         <>
                           <select
                             value={selectedCameraId}
@@ -2368,6 +2298,55 @@ function StudioLayout(p: StudioProps) {
               ))}
             </div>
 
+            {/* Second-phone workflow */}
+            <button
+              type="button"
+              onClick={() => setShowPhoneHelp((v: boolean) => !v)}
+              aria-expanded={showPhoneHelp}
+              className="flex w-full items-center justify-between"
+              style={{
+                marginTop: 14,
+                minHeight: 44,
+                background: "#0b0d0a",
+                border: "1px solid #262b1c",
+                borderRadius: 10,
+                padding: "10px 12px",
+                fontSize: 12.5,
+                color: "var(--foreground)",
+                transition: "all 150ms ease",
+              }}
+            >
+              <span>📱 Using a second phone?</span>
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${showPhoneHelp ? "rotate-180" : ""}`}
+                style={{ color: "#9aa08c" }}
+              />
+            </button>
+            {showPhoneHelp && (
+              <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
+                {[
+                  "Copy your private output link below.",
+                  "Open it in the browser on your second phone and tap to watch — it goes fullscreen.",
+                  "Go live on TikTok with screen sharing (or a screen-broadcast app like Prism Live Studio) and your Lumify output is what viewers see.",
+                ].map((step, i) => (
+                  <div key={i} className="flex items-start gap-3" style={{ fontSize: 12.5, color: "#9aa08c" }}>
+                    <span
+                      className="grid place-items-center shrink-0"
+                      style={{
+                        width: 18, height: 18, borderRadius: 5,
+                        background: "var(--accent-soft)",
+                        color: "var(--primary)",
+                        fontSize: 10.5, fontWeight: 700,
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span>{step}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div
               className="flex items-center gap-2"
               style={{
@@ -2414,6 +2393,49 @@ function StudioLayout(p: StudioProps) {
         </div>
       </div>
 
+      {/* ── Sticky mobile action bar (≤768px only) ───────────────── */}
+      <div className="lumi-mobile-bar">
+        {showAwakeHint && (
+          <div className="lumi-mobile-hint">
+            <span>Keep this screen on while live — switching apps can interrupt your stream.</span>
+            <button type="button" onClick={dismissAwakeHint} aria-label="Dismiss">
+              <X size={12} />
+            </button>
+          </div>
+        )}
+        <div className="lumi-mobile-bar-inner">
+          <button
+            type="button"
+            onClick={streaming ? stop : start}
+            disabled={connecting || (!streaming && (STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))))}
+            className="inline-flex flex-1 items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              background: "var(--primary)",
+              color: "#111406",
+              fontWeight: 700,
+              fontSize: 14,
+              borderRadius: 12,
+              minHeight: 48,
+              padding: "12px 20px",
+              transition: "all 150ms ease",
+            }}
+          >
+            {streaming ? <><Square size={14} /> Streaming…</> : <><Play size={14} /> Start stream</>}
+          </button>
+          <button
+            type="button"
+            onClick={stop}
+            disabled={!streaming}
+            className="btn-ghost disabled:opacity-50"
+            style={{ minHeight: 48, padding: "12px 18px", transition: "all 150ms ease" }}
+          >
+            Stop
+          </button>
+        </div>
+        <div style={{ fontSize: 12, color: "#9aa08c", marginTop: 8 }}>
+          {RATE} credits/sec · ≈ {timeLeftLabel} on your balance
+        </div>
+      </div>
 
 
       {showOutOfCredits && (

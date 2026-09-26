@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
-    "@decartai/sdk": "^0.2.0",
+    "@decartai/sdk": "^0.1.0",
     "@hookform/resolvers": "^5.2.2",
     "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@lovable.dev/email-js": "^0.0.4",
@@ -80,7 +80,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "2.23.1",
+    "@lovable.dev/vite-tanstack-config": "2.13.1",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

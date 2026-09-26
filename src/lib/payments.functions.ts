@@ -268,19 +268,8 @@ export const createKorapayCheckout = createServerFn({ method: "POST" })
       .select("email, full_name")
       .eq("id", userId)
       .maybeSingle();
-    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    let email = (profile?.email ?? "").trim();
-    if (!EMAIL_RE.test(email)) {
-      // Profile email missing/malformed — fall back to the auth account email.
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
-      email = (authUser?.user?.email ?? "").trim();
-    }
-    if (!EMAIL_RE.test(email)) {
-      console.error("[korapay] no valid email for user", userId);
-      throw new Error(
-        "Your account doesn't have a valid email address, which card payments require. Please contact support so we can fix it — you have not been charged.",
-      );
-    }
+    const email = profile?.email;
+    if (!email) throw new Error("Missing account email");
 
     // Bind reference to the caller (verify enforces the same rule).
     const reference = `lumify_${data.packId}_${userId.slice(0, 8)}_${Date.now()}`;
@@ -334,11 +323,6 @@ export const createKorapayCheckout = createServerFn({ method: "POST" })
       res = null;
     }
 
-    if (res && res.status === 422) {
-      throw new Error(
-        "The payment provider rejected your account details. Please contact support — you have not been charged.",
-      );
-    }
     if (!res || !res.ok || text.trimStart().startsWith("<")) {
       throw new Error(
         "Our payment provider is temporarily unavailable. Please try again in a moment — you have not been charged.",
