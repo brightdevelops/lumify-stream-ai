@@ -2194,7 +2194,7 @@ function StudioLayout(p: StudioProps) {
             <button
               type="button"
               onClick={() => navigate({ to: "/credits" })}
-              className="inline-flex w-full items-center justify-center gap-2"
+              className="press-btn inline-flex w-full items-center justify-center gap-2"
               style={{
                 marginTop: 16,
                 background: "var(--primary)",
@@ -2203,7 +2203,6 @@ function StudioLayout(p: StudioProps) {
                 fontSize: 13.5,
                 borderRadius: 12,
                 padding: "12px 20px",
-                boxShadow: "0 6px 20px -10px rgba(198,242,78,.55)",
                 transition: "all 150ms ease",
               }}
             >
