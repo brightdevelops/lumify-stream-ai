@@ -1818,8 +1818,8 @@ function StudioLayout(p: StudioProps) {
                             onChange={(e) => handleCameraChange(e.target.value)}
                             disabled={needsCameraUnlock}
                             title="Pick the device Lumify should capture"
-                            className="lumi-touch-tall rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
-                            style={{ height: 40, minWidth: 210, opacity: needsCameraUnlock ? 0.6 : 1 }}
+                            className="press-btn lumi-touch-tall rounded-lg border bg-[color:var(--sidebar)] px-3 text-[13px] focus:border-[color:var(--primary)]"
+                            style={{ textTransform: "none", letterSpacing: 0, height: 40, minWidth: 210, opacity: needsCameraUnlock ? 0.6 : 1 }}
                           >
                             {cameras.length === 0 && <option value="">No camera detected</option>}
                             {cameras.map((cam: MediaDeviceInfo, i: number) => (
