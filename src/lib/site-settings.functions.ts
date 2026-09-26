@@ -37,37 +37,6 @@ export const setMaintenanceMode = createServerFn({ method: "POST" })
     return { enabled: data.enabled };
   });
 
-/**
- * Which realtime engine new streams use.
- * `engine_use_xmax` true (or missing) = Xmax x2.0, false = Decart Lucy.
- */
-export const getEngineSetting = createServerFn({ method: "GET" }).handler(async () => {
-  const { createClient } = await import("@supabase/supabase-js");
-  const supa = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
-  const { data } = await supa
-    .from("site_settings")
-    .select("value")
-    .eq("key", "engine_use_xmax")
-    .maybeSingle();
-  return { useXmax: data?.value !== false }; // missing row => Xmax
-});
-
-/** Admin-only switch between the Xmax and Decart engines. */
-export const setEngineSetting = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ useXmax: z.boolean() }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.rpc("set_site_setting", {
-      p_key: "engine_use_xmax",
-      p_value: data.useXmax,
-    });
-    if (error) throw new Error(error.message);
-    return { useXmax: data.useXmax };
-  });
 
 /**
  * Emails that bypass maintenance mode (owner/admin accounts that need to

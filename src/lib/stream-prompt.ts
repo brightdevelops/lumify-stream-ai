@@ -1,7 +1,7 @@
 /**
  * Shared prompt templates for the streaming engines.
  *
- * Both engine arms (Xmax x2.0 and Decart Lucy) use this single appearance-only
+ * The Decart engine uses this single appearance-only
  * template set. Video-to-video models paint what the prompt describes, so the
  * templates describe appearance only — no behavioral instructions and no
  * negations. Edit here and both engines change together.
