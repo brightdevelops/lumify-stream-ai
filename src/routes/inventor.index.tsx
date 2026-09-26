@@ -50,7 +50,6 @@ function OverviewPage() {
         ))}
       </div>
 
-      <EngineCard />
 
 
       <AnnouncementEditor />
