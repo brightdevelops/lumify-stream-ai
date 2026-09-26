@@ -61,7 +61,7 @@ export function AppSidebar() {
         data-tour={it.tour}
         className={`flex items-center gap-3 rounded-full px-3.5 py-2.5 text-[13.5px] transition-colors ${
           active
-            ? "bg-primary text-primary-foreground font-semibold"
+            ? "press-btn bg-primary text-primary-foreground font-semibold"
             : "text-[color:var(--muted-foreground)] hover:text-foreground hover:bg-card"
         }`}
       >
