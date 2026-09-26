@@ -975,7 +975,7 @@ function StreamPage() {
           const realtimeClient = await Promise.race([
             decartClient.realtime.connect(stream, {
               model: decartModels.realtime(DECART_MODEL as never),
-              // Same shared sink the Xmax arm uses: output panel + OBS broadcast + recorder.
+              // Shared sink: output panel + OBS broadcast + recorder.
               onRemoteStream: (transformedStream: MediaStream) => {
                 console.log("[decart] remote video track subscribed from inference server");
                 handleRemoteStream(transformedStream);

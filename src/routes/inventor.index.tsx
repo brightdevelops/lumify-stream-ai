@@ -1,10 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
 import { Users, CreditCard, Wallet, TrendingUp, Coins, Activity } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { inventorGetMetrics, type InventorMetrics } from "@/lib/inventor.functions";
+import { NGN, NUM, pkgName, shortDate } from "@/lib/inventor-utils";
+import { AnnouncementEditor } from "@/components/inventor/AnnouncementEditor";
+
+export const Route = createFileRoute("/inventor/")({
+  component: OverviewPage,
+});
+
 
 function OverviewPage() {
   const fn = useServerFn(inventorGetMetrics);
