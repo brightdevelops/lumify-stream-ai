@@ -1,18 +1,18 @@
 import { useEffect } from "react";
+import { APP_VERSION } from "@/lib/app-version";
 
-const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const CHECK_MS = 60 * 1000;
 
 /**
- * Periodically reloads the page so users never sit on a stale view.
- * Skips the reload while a stream is live, while the tab is hidden,
- * or while the user is typing / has unsaved focus in an input.
+ * Checks the server's app version; when it differs from the version this
+ * page was loaded with, hard-reloads. Waits while a stream is live or the
+ * user is typing, and retries on the next check.
  */
 export function AutoRefresh() {
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    let pending = false;
 
-    const shouldSkip = () => {
-      if (document.visibilityState !== "visible") return true;
+    const busy = () => {
       if (document.body.classList.contains("stream-live")) return true;
       const el = document.activeElement as HTMLElement | null;
       if (el) {
@@ -22,12 +22,28 @@ export function AutoRefresh() {
       return false;
     };
 
-    const id = window.setInterval(() => {
-      if (shouldSkip()) return;
-      window.location.reload();
-    }, INTERVAL_MS);
+    const check = async () => {
+      try {
+        if (!pending) {
+          const res = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
+          if (!res.ok) return;
+          const { version } = (await res.json()) as { version?: string };
+          if (version && version !== APP_VERSION) pending = true;
+        }
+        if (pending && !busy()) window.location.reload();
+      } catch {
+        // ignore
+      }
+    };
 
-    return () => window.clearInterval(id);
+    check();
+    const id = window.setInterval(check, CHECK_MS);
+    const onVis = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   return null;
