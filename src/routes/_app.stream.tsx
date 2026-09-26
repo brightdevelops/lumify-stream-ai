@@ -989,7 +989,8 @@ function StreamPage() {
               },
               initialState: {
                 prompt: { text: decartContext.prompt, enhance: false },
-                ...(photo ? { image: photo } : {}),
+                // TEMP DIAGNOSTIC: image omitted from initialState to isolate model vs reference image.
+                // ...(photo ? { image: photo } : {}),
               },
             } as never),
             new Promise((_, reject) => {
