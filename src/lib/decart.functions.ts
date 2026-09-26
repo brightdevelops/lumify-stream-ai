@@ -4,7 +4,8 @@ import { STREAMING_PAUSED, STREAMING_PAUSED_MESSAGE } from "@/lib/maintenance";
 import { assertNotInMaintenance } from "@/lib/site-settings.functions";
 
 const DECART_API_BASE = "https://api.decart.ai";
-export const DECART_MODEL = "lucy-latest";
+// TEMP DIAGNOSTIC: was "lucy-latest". allowedModels uses this constant.
+export const DECART_MODEL = "lucy-2.1";
 
 /**
  * Returns a SHORT-LIVED Decart client token to authenticated users only.
