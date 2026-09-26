@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getStoredSupabaseAccessToken, getStoredSupabaseSession } from "@/lib/supabase-session-storage";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { AnnouncementPopup } from "@/components/AnnouncementPopup";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 import appCss from "../styles.css?url";
 
@@ -100,6 +101,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <VisitTracker />
+      <AutoRefresh />
       {!isOutput && <AnnouncementBanner />}
       {!isOutput && <AnnouncementPopup />}
       <Outlet />
