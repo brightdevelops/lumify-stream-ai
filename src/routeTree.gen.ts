@@ -37,7 +37,6 @@ import { Route as AppTutorialRouteImport } from './routes/_app.tutorial'
 import { Route as AppVoiceRouteImport } from './routes/_app.voice'
 import { Route as AdminVoiceRouteImport } from './routes/admin_.voice'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
-import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
 import { Route as InventorHistoryRouteImport } from './routes/inventor.history'
 import { Route as InventorIpSearchRouteImport } from './routes/inventor.ip-search'
@@ -203,11 +202,6 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InventorIndexRoute = InventorIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => InventorRoute,
-} as any)
 const InventorFinanceRoute = InventorFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -368,7 +362,6 @@ export interface FileRoutesByFullPath {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/tutorials': typeof InventorTutorialsRoute
   '/inventor/users': typeof InventorUsersRoute
-  '/inventor/': typeof InventorIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/cryptomus-webhook': typeof ApiPublicCryptomusWebhookRoute
@@ -387,6 +380,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/inventor': typeof InventorRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/output': typeof OutputRoute
@@ -420,7 +414,6 @@ export interface FileRoutesByTo {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/tutorials': typeof InventorTutorialsRoute
   '/inventor/users': typeof InventorUsersRoute
-  '/inventor': typeof InventorIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/cryptomus-webhook': typeof ApiPublicCryptomusWebhookRoute
@@ -475,7 +468,6 @@ export interface FileRoutesById {
   '/inventor/support': typeof InventorSupportRoute
   '/inventor/tutorials': typeof InventorTutorialsRoute
   '/inventor/users': typeof InventorUsersRoute
-  '/inventor/': typeof InventorIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/cryptomus-webhook': typeof ApiPublicCryptomusWebhookRoute
@@ -530,7 +522,6 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/tutorials'
     | '/inventor/users'
-    | '/inventor/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/cryptomus-webhook'
@@ -549,6 +540,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/forgot-password'
+    | '/inventor'
     | '/login'
     | '/mcp'
     | '/output'
@@ -582,7 +574,6 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/tutorials'
     | '/inventor/users'
-    | '/inventor'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/cryptomus-webhook'
@@ -636,7 +627,6 @@ export interface FileRouteTypes {
     | '/inventor/support'
     | '/inventor/tutorials'
     | '/inventor/users'
-    | '/inventor/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/cryptomus-webhook'
@@ -885,13 +875,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/inventor/': {
-      id: '/inventor/'
-      path: '/'
-      fullPath: '/inventor/'
-      preLoaderRoute: typeof InventorIndexRouteImport
-      parentRoute: typeof InventorRoute
-    }
     '/inventor/finance': {
       id: '/inventor/finance'
       path: '/finance'
@@ -1093,7 +1076,6 @@ interface InventorRouteChildren {
   InventorSupportRoute: typeof InventorSupportRoute
   InventorTutorialsRoute: typeof InventorTutorialsRoute
   InventorUsersRoute: typeof InventorUsersRoute
-  InventorIndexRoute: typeof InventorIndexRoute
 }
 
 const InventorRouteChildren: InventorRouteChildren = {
@@ -1107,7 +1089,6 @@ const InventorRouteChildren: InventorRouteChildren = {
   InventorSupportRoute: InventorSupportRoute,
   InventorTutorialsRoute: InventorTutorialsRoute,
   InventorUsersRoute: InventorUsersRoute,
-  InventorIndexRoute: InventorIndexRoute,
 }
 
 const InventorRouteWithChildren = InventorRoute._addFileChildren(
