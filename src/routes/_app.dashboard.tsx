@@ -88,7 +88,7 @@ function Dashboard() {
           <h1 className="font-display text-[38px] leading-tight">{greet()} <span aria-hidden>👋</span></h1>
           <p className="mt-1 text-[14px] text-[color:var(--muted-foreground)]">Here's how your streams are doing.</p>
         </div>
-        <Link to="/stream" className="btn-primary self-start sm:self-auto"><Play size={15} /> Go live</Link>
+        <Link to="/stream" className="press-btn btn-primary self-start sm:self-auto"><Play size={15} /> Go live</Link>
       </div>
 
       {/* Stats */}
@@ -155,7 +155,7 @@ function Dashboard() {
               <p className="mt-3 text-[14px] text-foreground">
                 You have less than 10 minutes of stream time left. Top up to avoid an interruption mid-stream.
               </p>
-              <Link to="/credits" className="btn-primary mt-4 w-full"><Wallet size={15} /> Buy credits</Link>
+              <Link to="/credits" className="press-btn btn-primary mt-4 w-full"><Wallet size={15} /> Buy credits</Link>
             </div>
           )}
 
