@@ -231,7 +231,7 @@ function WalletPage() {
           <button
             onClick={handlePayment}
             disabled={processing || paused}
-            className="btn-primary lumi-pay-btn w-full mt-6"
+            className="btn-primary lumi-pay-btn press-btn w-full mt-6"
           >
             <WalletIcon size={15} />
             {paused ? "Paused" : processing ? "Processing…" : `Pay ₦${pack.price.toLocaleString()} with Korapay`}
@@ -245,7 +245,7 @@ function WalletPage() {
           <button
             onClick={handleCryptoPayment}
             disabled={cryptoBusy || paused}
-            className="lumi-pay-btn mt-4 w-full rounded-xl border border-[color:var(--border)] px-4 py-3 text-[14px] text-foreground transition-colors hover:border-[color:var(--primary)] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="lumi-pay-btn press-btn mt-4 w-full rounded-xl border border-[color:var(--border)] px-4 py-3 text-[14px] text-foreground transition-colors hover:border-[color:var(--primary)] disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Bitcoin size={15} className="text-primary" />
             {paused ? "Paused" : cryptoBusy ? "Starting…" : "Pay with crypto"}
