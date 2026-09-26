@@ -1903,7 +1903,7 @@ function StudioLayout(p: StudioProps) {
                     }}
                     disabled={!obsUrl}
                     title={obsUrl ? "Open AI output in a new window" : "Available once your stream link is ready"}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-3 text-[11px] font-semibold uppercase tracking-widest text-primary transition disabled:opacity-45"
+                    className="press-btn inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--primary)] bg-[color:var(--accent-soft)] px-3 text-[11px] font-semibold uppercase tracking-widest text-primary transition disabled:opacity-45"
                     style={{ ...MONO, height: 40 }}
                   >
                     <ExternalLink size={13} /> Pop out
