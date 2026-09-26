@@ -794,3 +794,13 @@ body.stream-live *::after {
 .rounded-full[role="progressbar"] {
   border-radius: 999px !important;
 }
+
+/* Tactile "pressable" buttons (Start / Stop stream) */
+.press-btn {
+  position: relative;
+  border-radius: 0.15em !important;
+  box-shadow: inset 0 -0.6em 0 -0.35em rgba(0, 0, 0, 0.17) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.press-btn:not(:disabled):active { top: 0.1em; }
