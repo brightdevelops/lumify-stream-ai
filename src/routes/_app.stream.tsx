@@ -2107,7 +2107,7 @@ function StudioLayout(p: StudioProps) {
                   type="button"
                   onClick={streaming ? stop : start}
                   disabled={connecting || (!streaming && (STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))))}
-                  className="inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="press-btn inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     background: "var(--primary)",
                     color: "#111406",
@@ -2115,7 +2115,6 @@ function StudioLayout(p: StudioProps) {
                     fontSize: 14,
                     borderRadius: 12,
                     padding: "14px 28px",
-                    boxShadow: "0 8px 28px -12px rgba(198,242,78,.65)",
                     transition: "all 150ms ease",
                   }}
                 >
@@ -2125,7 +2124,7 @@ function StudioLayout(p: StudioProps) {
                   type="button"
                   onClick={stop}
                   disabled={!streaming}
-                  className="btn-ghost disabled:opacity-50"
+                  className="press-btn btn-ghost disabled:opacity-50"
                   style={{ padding: "14px 22px", transition: "all 150ms ease" }}
                 >
                   Stop
@@ -2404,7 +2403,7 @@ function StudioLayout(p: StudioProps) {
             type="button"
             onClick={streaming ? stop : start}
             disabled={connecting || (!streaming && (STREAMING_PAUSED || (inputSource === "file" && (!videoFile || !!videoFileError))))}
-            className="inline-flex flex-1 items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="press-btn inline-flex flex-1 items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{
               background: "var(--primary)",
               color: "#111406",
@@ -2422,7 +2421,7 @@ function StudioLayout(p: StudioProps) {
             type="button"
             onClick={stop}
             disabled={!streaming}
-            className="btn-ghost disabled:opacity-50"
+            className="press-btn btn-ghost disabled:opacity-50"
             style={{ minHeight: 48, padding: "12px 18px", transition: "all 150ms ease" }}
           >
             Stop
