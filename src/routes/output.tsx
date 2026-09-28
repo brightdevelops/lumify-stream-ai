@@ -139,48 +139,51 @@ function OutputPage() {
     }
   }, []);
 
-  // ── Viewer connection (+ auto retry) ─────────────────────────────────────
+  // ── Viewer connection (+ guarded auto retry) ─────────────────────────────
   useEffect(() => {
     if (!token) {
       console.error("output: missing stream token");
       return;
     }
     let cancelled = false;
+    let connected = false;
+    let attemptInFlight = false;
+    let iceServers: RTCIceServer[] | undefined;
+
+    const clearRetry = () => {
+      if (retryRef.current) clearTimeout(retryRef.current);
+      retryRef.current = null;
+    };
+
+    const markConnected = () => {
+      if (cancelled) return;
+      connected = true;
+      attemptInFlight = false;
+      clearRetry();
+      setStatus("live");
+    };
 
     const attachStream = (stream: MediaStream) => {
       const v = videoRef.current;
       if (!v) return;
-      v.srcObject = stream;
-      setStatus("live");
+      if (v.srcObject !== stream) v.srcObject = stream;
+      markConnected();
       void tryPlay();
       const track = stream.getVideoTracks()[0];
       if (track) {
-        track.onmute = () => {
-          if (!cancelled) {
-            setStatus("reconnecting");
-            scheduleRetry();
-          }
-        };
-        track.onunmute = () => {
-          if (!cancelled) setStatus("live");
-        };
-        track.onended = () => {
-          if (!cancelled) {
-            setStatus("reconnecting");
-            scheduleRetry();
-          }
-        };
+        track.onunmute = () => markConnected();
+        track.onended = () => handleFailure();
       }
     };
 
-    let iceServers: RTCIceServer[] | undefined;
-
     const connect = () => {
+      attemptInFlight = true;
       try {
         stopViewerRef.current?.();
       } catch (e) {
         console.debug("viewer teardown", e);
       }
+      stopViewerRef.current = null;
       stopViewerRef.current = startViewer(
         token,
         (stream) => {
@@ -188,24 +191,48 @@ function OutputPage() {
         },
         {
           iceServers,
-          onIceFailed: () => {
+          onConnected: markConnected,
+          onIceFailed: () => handleFailure(),
+          onBroadcasterOffline: () => {
             if (cancelled) return;
-            console.warn("output: ICE connection failed — retrying");
-            setStatus("reconnecting");
-            scheduleRetry();
+            // Broadcaster left cleanly — wait for it to come back online;
+            // the signaling channel stays open so it reconnects on its own.
+            connected = false;
+            attemptInFlight = false;
+            clearRetry();
+            setPlaying(false);
+            setStatus("waiting");
           },
         },
       );
     };
 
+    // Arm ONE retry. Only runs while disconnected; cleared on success.
     const scheduleRetry = () => {
-      if (retryRef.current) clearTimeout(retryRef.current);
+      if (cancelled || connected || retryRef.current) return;
       retryRef.current = setTimeout(() => {
-        if (cancelled) return;
-        connect();
-        scheduleRetry();
+        retryRef.current = null;
+        if (cancelled || connected) return;
+        if (!attemptInFlight) connect();
+        // Watchdog: if this attempt hasn't connected in 10s, allow another.
+        retryRef.current = setTimeout(() => {
+          retryRef.current = null;
+          if (cancelled || connected) return;
+          attemptInFlight = false;
+          scheduleRetry();
+        }, 10000);
       }, 3000);
     };
+
+    function handleFailure() {
+      if (cancelled) return;
+      console.warn("output: connection failed — reconnecting");
+      connected = false;
+      attemptInFlight = false;
+      setPlaying(false);
+      setStatus("reconnecting");
+      scheduleRetry();
+    }
 
     (async () => {
       try {
@@ -224,7 +251,7 @@ function OutputPage() {
 
     return () => {
       cancelled = true;
-      if (retryRef.current) clearTimeout(retryRef.current);
+      clearRetry();
       try {
         stopViewerRef.current?.();
       } catch (e) {
@@ -235,7 +262,7 @@ function OutputPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const statusLabel = status === "live" ? "LIVE" : "WAITING FOR BROADCASTER";
+  const statusLabel = status === "live" ? "LIVE" : "WAITING FOR STREAM";
 
   return (
     <div
