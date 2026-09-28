@@ -323,7 +323,7 @@ function OutputPage() {
                 }}
               >
                 <span className="status-dot" style={{ opacity: 0.6 }} />
-                {status === "reconnecting" ? "Reconnecting…" : "Waiting for broadcaster…"}
+                {status === "reconnecting" ? "Reconnecting…" : "Waiting for stream…"}
               </span>
             )}
           </div>
