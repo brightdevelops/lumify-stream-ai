@@ -119,73 +119,109 @@ export function startBroadcaster(streamToken: string, stream: MediaStream) {
 export function startViewer(
   streamToken: string,
   onStream: (stream: MediaStream) => void,
-  options?: { iceServers?: RTCIceServer[]; onIceFailed?: () => void },
+  options?: {
+    iceServers?: RTCIceServer[];
+    onIceFailed?: () => void;
+    onConnected?: () => void;
+    onBroadcasterOffline?: () => void;
+  },
 ) {
   const ch = supabase.channel(channelName(streamToken), {
-
     config: { broadcast: { self: false, ack: false } },
   });
   const viewerId = Math.random().toString(36).slice(2);
   let pc: RTCPeerConnection | null = null;
+  let disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
+
+  const clearDisconnect = () => {
+    if (disconnectTimer) clearTimeout(disconnectTimer);
+    disconnectTimer = null;
+  };
+
+  const closePc = () => {
+    clearDisconnect();
+    if (pc) {
+      pc.ontrack = null;
+      pc.onicecandidate = null;
+      pc.onconnectionstatechange = null;
+      pc.oniceconnectionstatechange = null;
+      pc.onicegatheringstatechange = null;
+      try { pc.close(); } catch {}
+    }
+    pc = null;
+  };
 
   const announce = () => send(ch, { kind: "viewer-ready", viewerId });
 
   ch.on("broadcast", { event: "signal" }, async ({ payload }) => {
+    if (stopped) return;
     const msg = payload as Payload;
     if (msg.kind === "broadcaster-online") {
       announce();
     } else if (msg.kind === "offer" && msg.viewerId === viewerId) {
-      pc?.close();
-      pc = new RTCPeerConnection(rtcConfig(options?.iceServers));
-      logIce("viewer", pc);
-      pc.addEventListener("iceconnectionstatechange", () => {
-        const state = pc?.iceConnectionState;
-        if (state === "failed" || state === "disconnected") {
+      closePc();
+      const local = new RTCPeerConnection(rtcConfig(options?.iceServers));
+      pc = local;
+      logIce("viewer", local);
+      const evaluate = () => {
+        if (pc !== local || stopped) return; // stale peer
+        const c = local.connectionState;
+        const i = local.iceConnectionState;
+        if (c === "connected" || i === "connected" || i === "completed") {
+          clearDisconnect();
+          options?.onConnected?.();
+        } else if (c === "failed" || c === "closed" || i === "failed" || i === "closed") {
+          clearDisconnect();
           options?.onIceFailed?.();
+        } else if (c === "disconnected" || i === "disconnected") {
+          if (!disconnectTimer) {
+            disconnectTimer = setTimeout(() => {
+              disconnectTimer = null;
+              if (pc !== local || stopped) return;
+              if (
+                local.connectionState === "disconnected" ||
+                local.iceConnectionState === "disconnected"
+              ) {
+                options?.onIceFailed?.();
+              }
+            }, 5000);
+          }
         }
-      });
-      pc.ontrack = (ev) => {
-        if (ev.streams[0]) onStream(ev.streams[0]);
       };
-      pc.onicecandidate = (ev) => {
+      local.addEventListener("iceconnectionstatechange", evaluate);
+      local.onconnectionstatechange = evaluate;
+      local.ontrack = (ev) => {
+        if (pc === local && ev.streams[0]) onStream(ev.streams[0]);
+      };
+      local.onicecandidate = (ev) => {
         if (ev.candidate) {
-          send(ch, {
-            kind: "ice",
-            viewerId,
-            from: "viewer",
-            candidate: ev.candidate.toJSON(),
-          });
+          send(ch, { kind: "ice", viewerId, from: "viewer", candidate: ev.candidate.toJSON() });
         }
       };
-      await pc.setRemoteDescription(msg.sdp);
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      await local.setRemoteDescription(msg.sdp);
+      const answer = await local.createAnswer();
+      await local.setLocalDescription(answer);
       send(ch, { kind: "answer", viewerId, sdp: answer });
-    } else if (
-      msg.kind === "ice" &&
-      msg.from === "broadcaster" &&
-      msg.viewerId === viewerId
-    ) {
+    } else if (msg.kind === "ice" && msg.from === "broadcaster" && msg.viewerId === viewerId) {
       if (pc && msg.candidate) {
         try {
           await pc.addIceCandidate(msg.candidate);
         } catch {}
       }
     } else if (msg.kind === "broadcaster-offline") {
-      pc?.close();
-      pc = null;
+      closePc();
+      options?.onBroadcasterOffline?.();
     }
   });
 
   ch.subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      // In case broadcaster is already running
-      announce();
-    }
+    if (status === "SUBSCRIBED") announce();
   });
 
   return () => {
-    pc?.close();
+    stopped = true;
+    closePc();
     supabase.removeChannel(ch);
   };
 }
