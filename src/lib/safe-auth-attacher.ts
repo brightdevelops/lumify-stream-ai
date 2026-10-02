@@ -1,48 +1,27 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
-import { supabase } from "@/integrations/supabase/client";
 import { logAuthEvent } from "@/lib/auth-telemetry";
-
-function decodeExp(token: string): number {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return typeof payload?.exp === "number" ? payload.exp : 0;
-  } catch {
-    return 0;
-  }
-}
 
 /**
  * Attaches the Supabase bearer token to server-function RPCs.
  *
- * Reads the token straight from localStorage (avoids racing the SDK's
- * autoRefresh), but validates its `exp` first: an expired token used to be
- * sent as-is and the server rejected the call with "JWT expired" — most
- * visibly on the credits/checkout page, which is the main protected
- * server-function path a user hits after a long idle session.
+ * STRICTLY READ-ONLY. It reads the stored access token and attaches it as-is,
+ * even when it is close to expiry. It must NEVER call refreshSession() or
+ * setSession(): the browser SDK's autoRefreshToken is the only thing in this
+ * app allowed to refresh a session. A second refresher racing it on the same
+ * rotating refresh token makes Supabase revoke the whole token family and
+ * signs the user out. If a call fails because the token just expired, it
+ * surfaces as a normal error; the SDK will have a fresh token for the next call.
  */
 export const attachStoredSupabaseAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
-  let accessToken = getStoredSupabaseAccessToken();
-  const nowSec = Math.floor(Date.now() / 1000);
-  const exp = accessToken ? decodeExp(accessToken) : 0;
-
-  // Expired or about to expire within 60s → let the SDK hand us a fresh one.
-  if (!accessToken || exp === 0 || exp - nowSec <= 60) {
-    try {
-      const { data } = await supabase.auth.getSession();
-      let session = data.session;
-      if (!session || (session.expires_at ?? 0) - nowSec <= 60) {
-        const refreshed = await supabase.auth.refreshSession();
-        session = refreshed.data.session ?? session;
-      }
-      if (session?.access_token) accessToken = session.access_token;
-    } catch (err) {
-      // fall through to the stored token / error below
-      void logAuthEvent("refresh_failed", {
-        where: "safe_auth_attacher",
-        message: (err as Error)?.message ?? String(err),
-      });
-    }
+  let accessToken: string | null = null;
+  try {
+    accessToken = getStoredSupabaseAccessToken();
+  } catch (err) {
+    void logAuthEvent("refresh_failed", {
+      where: "safe_auth_attacher",
+      message: (err as Error)?.message ?? String(err),
+    });
   }
 
   if (!accessToken) throw new Error("Your session expired. Please sign in again.");
