@@ -1,6 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getStoredSupabaseAccessToken } from "@/lib/supabase-session-storage";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuthEvent } from "@/lib/auth-telemetry";
 
 function decodeExp(token: string): number {
   try {
@@ -35,8 +36,12 @@ export const attachStoredSupabaseAuth = createMiddleware({ type: "function" }).c
         session = refreshed.data.session ?? session;
       }
       if (session?.access_token) accessToken = session.access_token;
-    } catch {
+    } catch (err) {
       // fall through to the stored token / error below
+      void logAuthEvent("refresh_failed", {
+        where: "safe_auth_attacher",
+        message: (err as Error)?.message ?? String(err),
+      });
     }
   }
 
