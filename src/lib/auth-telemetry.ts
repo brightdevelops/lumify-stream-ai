@@ -8,7 +8,15 @@ export type AuthEvent =
   | "recovery_failed"
   | "loading_timeout"
   | "guard_redirect"
-  | "refresh_failed";
+  | "refresh_failed"
+  | "clock_skew_detected"
+  | "refresh_loop_blocked";
+
+/** Last user id seen in this tab; survives sign-out so events stay attributable. */
+let lastKnownUserId: string | null = null;
+export function rememberAuthUser(id: string | null | undefined) {
+  if (id) lastKnownUserId = id;
+}
 
 /**
  * Server-computed issue time is `expires_at - expires_in`, so the difference
@@ -32,12 +40,13 @@ export function logAuthEvent(
   try {
     if (typeof window === "undefined") return;
     const s = session ?? getStoredSupabaseSession();
+    rememberAuthUser(s?.user?.id);
     void supabase
       .from("auth_events")
       .insert({
         user_id: s?.user?.id ?? null,
         event,
-        detail: detail as never,
+        detail: { ...detail, last_known_user_id: lastKnownUserId } as never,
         clock_skew_seconds: computeClockSkewSeconds(s ?? null),
         visibility_state: typeof document !== "undefined" ? document.visibilityState : null,
         user_agent: navigator?.userAgent ?? null,
