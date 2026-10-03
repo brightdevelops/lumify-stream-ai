@@ -5,7 +5,9 @@ import {
   getStoredSupabaseSession,
   parseStoredSupabaseSession,
 } from "@/lib/supabase-session-storage";
-import { logAuthEvent } from "@/lib/auth-telemetry";
+import { logAuthEvent, rememberAuthUser } from "@/lib/auth-telemetry";
+import { checkSessionClock, recordTokenRefresh } from "@/lib/auth-guard";
+import { ClockSkewBanner } from "@/components/ClockSkewBanner";
 
 type AuthCtx = {
   user: User | null;
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const applySession = (s: Session | null) => {
       if (!mounted) return;
       if (s) hadSessionRef.current = true;
+      rememberAuthUser(s?.user?.id);
       sessionRef.current = s;
       setSession(s);
     };
@@ -115,6 +118,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION).
       if (s) {
         lastSignedInAtRef.current = Date.now();
+        // Read-only guards: may stop the SDK refresher + show a banner, never touch the session.
+        if (event === "TOKEN_REFRESHED") recordTokenRefresh(s);
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+          checkSessionClock(s);
+        }
         // Keep the realtime socket's token fresh through long sessions.
         try {
           supabase.realtime.setAuth(s.access_token);
@@ -211,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{ user: session?.user ?? null, session, loading, signOut }}>
+      <ClockSkewBanner />
       {children}
     </Ctx.Provider>
   );
