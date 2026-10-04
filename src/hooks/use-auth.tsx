@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const intentionalSignOutRef = useRef(false);
   const lastSignedInAtRef = useRef(0);
   const loadingRef = useRef(true);
+  const seenTokensRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let mounted = true;
@@ -120,7 +121,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastSignedInAtRef.current = Date.now();
         // Read-only guards: may stop the SDK refresher + show a banner, never touch the session.
         if (event === "TOKEN_REFRESHED") recordTokenRefresh(s);
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        // Clock skew is only valid for a FRESHLY minted token. Tokens restored
+        // from storage (INITIAL_SESSION, or the SDK's SIGNED_IN re-emit on tab
+        // focus with the same token) are remembered and never checked.
+        if (event === "INITIAL_SESSION") {
+          seenTokensRef.current.add(s.access_token);
+        } else if (
+          (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") &&
+          !seenTokensRef.current.has(s.access_token)
+        ) {
+          seenTokensRef.current.add(s.access_token);
           checkSessionClock(s);
         }
         // Keep the realtime socket's token fresh through long sessions.
