@@ -43,11 +43,31 @@ function haltRefresh(kind: "clock_skew" | "refresh_loop") {
   }
 }
 
-/** Call on SIGNED_IN / TOKEN_REFRESHED / INITIAL_SESSION. */
+let haltReason: "clock_skew" | "refresh_loop" | null = null;
+
+/** Call ONLY with a freshly issued token (SIGNED_IN / TOKEN_REFRESHED). */
 export function checkSessionClock(session: Session | null) {
   const skew = computeClockSkewSeconds(session);
-  if (skew === null || Math.abs(skew) <= MAX_CLOCK_SKEW_SECONDS) return;
+  if (skew === null) return;
+  if (Math.abs(skew) <= MAX_CLOCK_SKEW_SECONDS) {
+    // Normal clock on a fresh token: clear a clock-skew banner and resume refresh.
+    if (banner?.kind === "clock_skew") {
+      banner = null;
+      listeners.forEach((l) => l());
+    }
+    if (halted && haltReason === "clock_skew") {
+      halted = false;
+      haltReason = null;
+      try {
+        void supabase.auth.startAutoRefresh().catch(() => {});
+      } catch {
+        // best-effort
+      }
+    }
+    return;
+  }
   const first = !halted;
+  if (first) haltReason = "clock_skew";
   haltRefresh("clock_skew");
   if (first) void logAuthEvent("clock_skew_detected", { skew_seconds: skew }, session);
 }
