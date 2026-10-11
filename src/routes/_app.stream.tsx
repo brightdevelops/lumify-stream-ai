@@ -1694,8 +1694,7 @@ function StudioLayout(p: StudioProps) {
                   <div className="lumi-panel-empty">
                     <PanelEmpty
                       icon={<CameraIcon size={19} />}
-                      title="Camera off"
-                      hint="Face a window or lamp for the best AI output"
+                      title=""
                     />
                   </div>
                 )}
