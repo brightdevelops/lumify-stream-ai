@@ -1,3 +1,4 @@
+import { notifySupport } from "@/lib/support-email.functions";
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -164,27 +165,7 @@ export function SupportWidget() {
       // Fire-and-forget admin notification for EVERY user message so the
       // admin sees follow-ups even after an AI auto-reply.
       try {
-        const { data: sess } = await supabase.auth.getSession();
-        const token = sess.session?.access_token;
-        if (token) {
-          await fetch("/lovable/email/transactional/send", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              templateName: "support-notification",
-              idempotencyKey: `chat-${cid}-${Date.now()}`,
-              templateData: {
-                userEmail: user.email,
-                subject: "Live chat message",
-                message: body,
-                submittedAt: new Date().toLocaleString(),
-              },
-            }),
-          });
-        }
+        await notifySupport({ data: { conversationId: cid!, kind: "chat", subject: "Live chat message", message: body, submittedAt: new Date().toLocaleString() } });
       } catch (notifyErr) {
         console.warn("Chat notification email failed to enqueue", notifyErr);
       }
@@ -202,27 +183,7 @@ export function SupportWidget() {
         });
         if (result?.replied && result?.reply) {
           try {
-            const { data: sess2 } = await supabase.auth.getSession();
-            const token2 = sess2.session?.access_token;
-            if (token2) {
-              await fetch("/lovable/email/transactional/send", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token2}`,
-                },
-                body: JSON.stringify({
-                  templateName: "support-notification",
-                  idempotencyKey: `chat-autoreply-${cid}-${Date.now()}`,
-                  templateData: {
-                    userEmail: user.email,
-                    subject: "🤖 Auto-reply sent",
-                    message: `User asked: ${body}\n\nAuto-reply (${result.replied}): ${result.reply}`,
-                    submittedAt: new Date().toLocaleString(),
-                  },
-                }),
-              });
-            }
+            await notifySupport({ data: { conversationId: cid!, kind: "autoreply", subject: "🤖 Auto-reply sent", message: `User asked: ${body}\n\nAuto-reply (${result.replied}): ${result.reply}`, submittedAt: new Date().toLocaleString() } });
           } catch (mailErr) {
             console.warn("Auto-reply notification email failed", mailErr);
           }
