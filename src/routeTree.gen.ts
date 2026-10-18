@@ -36,7 +36,6 @@ import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppTutorialRouteImport } from './routes/_app.tutorial'
 import { Route as AppVoiceRouteImport } from './routes/_app.voice'
 import { Route as AdminVoiceRouteImport } from './routes/admin_.voice'
-import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as InventorIndexRouteImport } from './routes/inventor.index'
 import { Route as InventorFinanceRouteImport } from './routes/inventor.finance'
 import { Route as InventorHistoryRouteImport } from './routes/inventor.history'
@@ -55,13 +54,11 @@ import { Route as ApiPublicCryptomusWebhookRouteImport } from './routes/api/publ
 import { Route as ApiPublicResolveStreamTokenRouteImport } from './routes/api/public/resolve-stream-token'
 import { Route as ApiPublicTrackVisitRouteImport } from './routes/api/public/track-visit'
 import { Route as ApiVoiceStreamRouteImport } from './routes/api/voice/stream'
-import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as ApiPublicApiV1SplatRouteImport } from './routes/api/public/api-v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -199,11 +196,6 @@ const AdminVoiceRoute = AdminVoiceRouteImport.update({
   path: '/admin/voice',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
-  id: '/email/unsubscribe',
-  path: '/email/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const InventorIndexRoute = InventorIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -297,9 +289,9 @@ const ApiVoiceStreamRoute = ApiVoiceStreamRouteImport.update({
   path: '/api/voice/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
-  id: '/lovable/email/suppression',
-  path: '/lovable/email/suppression',
+const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
+  id: '/lovable/email/events',
+  path: '/lovable/email/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicApiV1SplatRoute = ApiPublicApiV1SplatRouteImport.update({
@@ -317,22 +309,10 @@ const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
   path: '/lovable/email/auth/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
     path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -363,7 +343,6 @@ export interface FileRoutesByFullPath {
   '/tutorial': typeof AppTutorialRoute
   '/voice': typeof AppVoiceRoute
   '/admin/voice': typeof AdminVoiceRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
   '/inventor/ip-search': typeof InventorIpSearchRoute
@@ -382,13 +361,11 @@ export interface FileRoutesByFullPath {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/api/voice/stream': typeof ApiVoiceStreamRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -416,7 +393,6 @@ export interface FileRoutesByTo {
   '/tutorial': typeof AppTutorialRoute
   '/voice': typeof AppVoiceRoute
   '/admin/voice': typeof AdminVoiceRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
   '/inventor/ip-search': typeof InventorIpSearchRoute
@@ -435,13 +411,11 @@ export interface FileRoutesByTo {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/api/voice/stream': typeof ApiVoiceStreamRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -472,7 +446,6 @@ export interface FileRoutesById {
   '/_app/tutorial': typeof AppTutorialRoute
   '/_app/voice': typeof AppVoiceRoute
   '/admin_/voice': typeof AdminVoiceRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/inventor/finance': typeof InventorFinanceRoute
   '/inventor/history': typeof InventorHistoryRoute
   '/inventor/ip-search': typeof InventorIpSearchRoute
@@ -491,13 +464,11 @@ export interface FileRoutesById {
   '/api/public/resolve-stream-token': typeof ApiPublicResolveStreamTokenRoute
   '/api/public/track-visit': typeof ApiPublicTrackVisitRoute
   '/api/voice/stream': typeof ApiVoiceStreamRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/api/public/api-v1/$': typeof ApiPublicApiV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -528,7 +499,6 @@ export interface FileRouteTypes {
     | '/tutorial'
     | '/voice'
     | '/admin/voice'
-    | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
     | '/inventor/ip-search'
@@ -547,13 +517,11 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/api/voice/stream'
-    | '/lovable/email/suppression'
+    | '/lovable/email/events'
     | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -581,7 +549,6 @@ export interface FileRouteTypes {
     | '/tutorial'
     | '/voice'
     | '/admin/voice'
-    | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
     | '/inventor/ip-search'
@@ -600,13 +567,11 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/api/voice/stream'
-    | '/lovable/email/suppression'
+    | '/lovable/email/events'
     | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
   id:
     | '__root__'
     | '/'
@@ -636,7 +601,6 @@ export interface FileRouteTypes {
     | '/_app/tutorial'
     | '/_app/voice'
     | '/admin_/voice'
-    | '/email/unsubscribe'
     | '/inventor/finance'
     | '/inventor/history'
     | '/inventor/ip-search'
@@ -655,13 +619,11 @@ export interface FileRouteTypes {
     | '/api/public/resolve-stream-token'
     | '/api/public/track-visit'
     | '/api/voice/stream'
-    | '/lovable/email/suppression'
+    | '/lovable/email/events'
     | '/api/public/api-v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -683,7 +645,6 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminVoiceRoute: typeof AdminVoiceRoute
-  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicAppVersionRoute: typeof ApiPublicAppVersionRoute
@@ -691,13 +652,11 @@ export interface RootRouteChildren {
   ApiPublicResolveStreamTokenRoute: typeof ApiPublicResolveStreamTokenRoute
   ApiPublicTrackVisitRoute: typeof ApiPublicTrackVisitRoute
   ApiVoiceStreamRoute: typeof ApiVoiceStreamRoute
-  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   ApiPublicApiV1SplatRoute: typeof ApiPublicApiV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
-  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
-  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -891,13 +850,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminVoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/email/unsubscribe': {
-      id: '/email/unsubscribe'
-      path: '/email/unsubscribe'
-      fullPath: '/email/unsubscribe'
-      preLoaderRoute: typeof EmailUnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/inventor/': {
       id: '/inventor/'
       path: '/'
@@ -1024,11 +976,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiVoiceStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/suppression': {
-      id: '/lovable/email/suppression'
-      path: '/lovable/email/suppression'
-      fullPath: '/lovable/email/suppression'
-      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+    '/lovable/email/events': {
+      id: '/lovable/email/events'
+      path: '/lovable/email/events'
+      fullPath: '/lovable/email/events'
+      preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/api-v1/$': {
@@ -1052,25 +1004,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
       fullPath: '/lovable/email/transactional/preview'
       preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1154,7 +1092,6 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdminVoiceRoute: AdminVoiceRoute,
-  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicAppVersionRoute: ApiPublicAppVersionRoute,
@@ -1162,13 +1099,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicResolveStreamTokenRoute: ApiPublicResolveStreamTokenRoute,
   ApiPublicTrackVisitRoute: ApiPublicTrackVisitRoute,
   ApiVoiceStreamRoute: ApiVoiceStreamRoute,
-  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  LovableEmailEventsRoute: LovableEmailEventsRoute,
   ApiPublicApiV1SplatRoute: ApiPublicApiV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
-  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
-  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
