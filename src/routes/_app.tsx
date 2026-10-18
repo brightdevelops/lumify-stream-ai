@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { ApologyNotice } from "@/components/ApologyNotice";
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
@@ -67,6 +68,7 @@ function PageShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <div key={pathname} className="lumi-app-page mx-auto w-full max-w-[1220px] px-5 md:px-[34px] py-8 md:py-10 app-page-enter">
+      <ApologyNotice />
       <Outlet />
     </div>
   );
