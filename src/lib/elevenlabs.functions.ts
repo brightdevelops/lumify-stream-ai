@@ -14,7 +14,7 @@ const TTS_MODEL = "eleven_flash_v2_5"; // cost decision: flash tier, NOT multili
 const STS_MODEL = "eleven_multilingual_sts_v2";
 const OWNER_TAG = "lumify-owner:";
 const CLONE_COST = 150;
-const MAX_CLONES = 5;
+const MAX_CLONES = 1;
 const MAX_CLONE_BYTES = 3 * 1024 * 1024;
 const MAX_SEGMENT_SECONDS = 15;
 const speechCost = (chars: number) => Math.max(15, Math.ceil(chars / 10));
@@ -220,7 +220,7 @@ export const elCloneVoice = createServerFn({ method: "POST" })
     const bytes = fromBase64(data.clipBase64);
     if (bytes.byteLength > MAX_CLONE_BYTES) throw new Error("Clip is larger than 3 MB.");
     const owned = (await accountVoices(true)).filter((v) => ownerOf(v) === context.userId).length;
-    if (owned >= MAX_CLONES) throw new Error(`You can save up to ${MAX_CLONES} cloned voices. Delete one to make room.`);
+    if (owned >= MAX_CLONES) throw new Error(`You have 1 custom voice slot (more coming soon). Delete your voice to make room.`);
     if (!(await charge(context.userId, CLONE_COST, `Voice clone · ${data.name}`))) {
       throw new Error(`Voice cloning costs ${CLONE_COST} credits and your balance is too low. Top up your wallet to continue.`);
     }
