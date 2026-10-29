@@ -4,14 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  listCartesiaVoices,
-  cloneCartesiaVoice,
-  generateCartesiaSpeech,
-  listMyClonedVoices,
-  deleteClonedVoice,
-  
+  elListVoices,
+  elCloneVoice,
+  elTextToSpeech,
+  elDeleteVoice,
   type VoiceSummary,
-} from "@/lib/cartesia.functions";
+} from "@/lib/elevenlabs.functions";
+import { LiveVoice } from "@/components/voice/LiveVoice";
 import {
   saveGeneration,
   listMyGenerations,
@@ -64,9 +63,9 @@ const LANGS: Array<[string, string]> = [
   ["ko", "Korean"], ["ar", "Arabic"],
 ];
 
-const EMOTIONS = ["neutral", "calm", "happy", "excited", "content", "contemplative", "surprised", "sad", "angry", "scared"];
 
-const AUDIO_MAX = 15 * 1024 * 1024;
+
+const AUDIO_MAX = 3 * 1024 * 1024;
 const VIDEO_MAX = 100 * 1024 * 1024;
 
 function fmtTime(s: number) {
@@ -244,7 +243,8 @@ function PricingCard() {
 }
 
 function VoiceStudio() {
-  const [tab, setTab] = useState<"library" | "mine" | "clone">("library");
+  const [mode, setMode] = useState<"tts" | "live">("tts");
+  const [tab, setTab] = useState<"library" | "anime" | "mine" | "clone">("library");
   const [selected, setSelected] = useState<VoiceSummary | null>(null);
 
   return (
@@ -256,6 +256,22 @@ function VoiceStudio() {
         <p className="mt-1 text-[13px] text-[#6b7160]">Clone a voice. Type anything. Hear it speak.</p>
       </header>
 
+      <div className="mb-4 flex w-full max-w-[420px] rounded-full p-[3px]" style={{ background: "#101309" }} role="tablist">
+        {([["tts", "Text to speech"], ["live", "Live voice"]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={mode === k}
+            onClick={() => setMode(k)}
+            className="min-h-[44px] flex-1 rounded-full text-[11px] font-bold uppercase tracking-[0.08em] transition-colors duration-150"
+            style={mode === k ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "live" ? <LiveVoice renderPicker={(sel, onSel) => <LivePicker selected={sel} onSelect={onSel} />} /> : <>
       <PricingNotice />
 
       <div className="grid gap-4 min-[960px]:grid-cols-[400px_minmax(0,1fr)]">
@@ -265,6 +281,7 @@ function VoiceStudio() {
         </div>
         <Composer selected={selected} />
       </div>
+      </>}
     </div>
   );
 }
@@ -272,9 +289,30 @@ function VoiceStudio() {
 
 /* ---------------- left column ---------------- */
 
+function LivePicker({ selected, onSelect }: { selected: VoiceSummary | null; onSelect: (v: VoiceSummary) => void }) {
+  const [tab, setTab] = useState<"anime" | "mine" | "library">("anime");
+  return (
+    <>
+      <div className="mt-3 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
+        {([["anime", "Anime"], ["mine", "My voices"], ["library", "Library"]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className="min-h-[36px] flex-1 rounded-full text-[12px] font-semibold transition-colors duration-150"
+            style={tab === k ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <VoiceList key={tab} owner={tab === "mine"} category={tab} selected={selected} onSelect={onSelect} onCloneCta={() => {}} />
+    </>
+  );
+}
+
 function VoicePicker(props: {
-  tab: "library" | "mine" | "clone";
-  setTab: (t: "library" | "mine" | "clone") => void;
+  tab: "library" | "anime" | "mine" | "clone";
+  setTab: (t: "library" | "anime" | "mine" | "clone") => void;
   selected: VoiceSummary | null;
   setSelected: (v: VoiceSummary | null) => void;
 }) {
@@ -294,7 +332,7 @@ function VoicePicker(props: {
         )}
       </div>
       <div className="mt-3 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
-        {([["library", "Library"], ["mine", "My voices"], ["clone", "Clone new"]] as const).map(([k, label]) => (
+        {([["library", "Library"], ["anime", "Anime"], ["mine", "My voices"], ["clone", "Clone new"]] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
@@ -320,6 +358,7 @@ function VoicePicker(props: {
         <VoiceList
           key={tab}
           owner={tab === "mine"}
+          category={tab === "anime" ? "anime" : tab === "mine" ? "mine" : "library"}
           selected={selected}
           onSelect={setSelected}
           onCloneCta={() => setTab("clone")}
@@ -334,8 +373,10 @@ function VoicePicker(props: {
 /** In-memory preview audio cache (object URLs), keyed by voice id. */
 const PREVIEW_CACHE = new Map<string, string>();
 
-function VoiceList(props: {
+export function VoiceList(props: {
   owner: boolean;
+  category?: "library" | "anime" | "mine";
+  hideDelete?: boolean;
   selected: VoiceSummary | null;
   onSelect: (v: VoiceSummary) => void;
   onCloneCta: () => void;
@@ -343,13 +384,13 @@ function VoiceList(props: {
   onDeleted?: (id: string) => void;
 }) {
   const { owner, selected, onSelect, onCloneCta, onCount, onDeleted } = props;
-  const fetchVoices = useServerFn(listCartesiaVoices);
-  const fetchMine = useServerFn(listMyClonedVoices);
-  const removeVoice = useServerFn(deleteClonedVoice);
+  const category = props.category ?? (owner ? "mine" : "library");
+  const fetchVoices = useServerFn(elListVoices);
+  const removeVoice = useServerFn(elDeleteVoice);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmVoice, setConfirmVoice] = useState<VoiceSummary | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const tts = useServerFn(generateCartesiaSpeech);
+  const tts = useServerFn(elTextToSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [language, setLanguage] = useState("");
@@ -386,33 +427,12 @@ function VoiceList(props: {
       setLoading(true);
       setError(null);
       try {
-        if (owner) {
-          // Clones are private to the user who made them — read our own ownership table.
-          const mine = await fetchMine({});
-          const q = debounced.toLowerCase();
-          const filtered = mine.data.filter(
-            (v) =>
-              (!q || v.name.toLowerCase().includes(q)) &&
-              (!language || (v.language || "").toLowerCase().startsWith(language)),
-          );
-          setVoices(filtered);
-          setHasMore(false);
-          setCursor(null);
-          onCount?.(mine.count);
-          return;
-        }
-        const res = await fetchVoices({
-          data: {
-            limit: 30,
-            ...(startingAfter ? { starting_after: startingAfter } : {}),
-            ...(debounced ? { q: debounced } : {}),
-            ...(language ? { language } : {}),
-            
-          },
-        });
-        setVoices((prev) => (startingAfter ? [...prev, ...res.data] : res.data));
-        setHasMore(Boolean(res.has_more));
-        setCursor(res.next_page ?? (res.data.length ? res.data[res.data.length - 1].id : null));
+        const res = await fetchVoices({ data: { category, ...(debounced ? { q: debounced } : {}) } });
+        const filtered = res.data.filter((v) => !language || (v.language || "").toLowerCase().startsWith(language));
+        setVoices(filtered);
+        setHasMore(false);
+        setCursor(startingAfter ?? null);
+        if (category === "mine") onCount?.(res.count);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not load voices.");
         if (!startingAfter) setVoices([]);
@@ -420,7 +440,7 @@ function VoiceList(props: {
         setLoading(false);
       }
     },
-    [fetchVoices, fetchMine, debounced, language, owner, onCount],
+    [fetchVoices, debounced, language, category, onCount],
   );
 
   useEffect(() => { void load(); }, [load]);
@@ -485,9 +505,6 @@ function VoiceList(props: {
           transcript: SAMPLE_LINES[lang] ?? SAMPLE_LINES["en"],
           voice_id: v.id,
           speed: 1.0,
-          volume: 1.0,
-          language: lang,
-          format: "mp3" as const,
           is_preview: true,
         },
       });
@@ -736,7 +753,7 @@ function VoiceList(props: {
 }
 
 function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
-  const clone = useServerFn(cloneCartesiaVoice);
+  const clone = useServerFn(elCloneVoice);
   const [clip, setClip] = useState<Clip | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [name, setName] = useState("");
@@ -765,7 +782,7 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
   const handleFile = async (file: File) => {
     setError(null);
     const isVideo = file.type.startsWith("video/");
-    if (!isVideo && file.size > AUDIO_MAX) { setError("Audio clips must be under 15 MB."); return; }
+    if (!isVideo && file.size > AUDIO_MAX) { setError("Audio clips must be under 3 MB."); return; }
     if (isVideo && file.size > VIDEO_MAX) { setError("Video files must be under 100 MB."); return; }
 
     if (!isVideo) { await setClipFromBlob(file, file.name, false); return; }
@@ -972,12 +989,10 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
 /* ---------------- right column ---------------- */
 
 function Composer({ selected }: { selected: VoiceSummary | null }) {
-  const tts = useServerFn(generateCartesiaSpeech);
+  const tts = useServerFn(elTextToSpeech);
   const [transcript, setTranscript] = useState("");
   const [speed, setSpeed] = useState(1.0);
-  const [volume, setVolume] = useState(1.0);
-  const [emotion, setEmotion] = useState("neutral");
-  const [format, setFormat] = useState<"mp3" | "wav">("mp3");
+  const format = "mp3" as const;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Generation | null>(null);
@@ -1071,7 +1086,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       ext,
       url: URL.createObjectURL(blob),
       filename: `lumify-voice-${voiceName.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${ext}`,
-      summary: `${voiceName} · ${emotion[0].toUpperCase()}${emotion.slice(1)} · ${speed.toFixed(1)}× · ${ext.toUpperCase()} · ${fmtSize(sizeLabel)}`,
+      summary: `${voiceName} · ${speed.toFixed(1)}× · ${ext.toUpperCase()} · ${fmtSize(sizeLabel)}`,
     };
     window.dispatchEvent(new Event("lumify:credits-changed"));
     setCurrent(gen);
@@ -1082,7 +1097,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   /** Fallback: existing blocking bytes path. */
   const generateBytes = async (text: string, voice: VoiceSummary) => {
     const res = await tts({
-      data: { transcript: text, voice_id: voice.id, speed, volume, emotion, format },
+      data: { transcript: text, voice_id: voice.id, speed },
     });
     if (res.error) {
       setError(res.error);
@@ -1103,89 +1118,11 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     setBusy(true);
     setError(null);
 
-    let started = false;
     try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) throw new Error("no-session");
-
-      const res = await fetch("/api/voice/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ transcript: text, voice_id: voice.id, speed, volume, emotion }),
-      });
-
-      if (!res.ok || !res.body) {
-        if (res.status === 402 || res.status === 403) {
-          let msg = "Generation failed.";
-          try {
-            msg = String(((await res.json()) as { error?: string }).error ?? msg);
-          } catch {
-            /* ignore */
-          }
-          setError(msg);
-          setCurrent(null);
-          return;
-        }
-        throw new Error("stream-unavailable");
-      }
-
-      started = true;
-
-      const sampleRate = Number(res.headers.get("X-Sample-Rate") ?? 44100) || 44100;
-      const reader = res.body.getReader();
-      const parts: Uint8Array[] = [];
-      let carry = new Uint8Array(0);
-      let total = 0;
-
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (!value || value.length === 0) continue;
-
-
-        let bytes = value;
-        if (carry.length) {
-          const merged = new Uint8Array(carry.length + value.length);
-          merged.set(carry, 0);
-          merged.set(value, carry.length);
-          bytes = merged;
-          carry = new Uint8Array(0);
-        }
-        if (bytes.length % 2 === 1) {
-          carry = bytes.slice(bytes.length - 1);
-          bytes = bytes.slice(0, bytes.length - 1);
-        }
-        if (!bytes.length) continue;
-
-        parts.push(bytes);
-        total += bytes.length;
-
-        // Audio is accumulated only — no live playback.
-
-      }
-
-      if (total === 0) throw new Error("stream-empty");
-
-      const pcm = new Uint8Array(total);
-      let off = 0;
-      for (const p of parts) {
-        pcm.set(p, off);
-        off += p.length;
-      }
-      finish(pcmToWavBlob(pcm, sampleRate), "wav", pcm.length + 44, voice.name, text, voice.id);
-    } catch (e) {
-      if (started) {
-        setError(e instanceof Error && e.message !== "stream-empty" ? e.message : "Generation failed.");
-        setCurrent(null);
-      } else {
-        try {
-          await generateBytes(text, voice);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Generation failed.");
-          setCurrent(null);
-        }
-      }
+      await generateBytes(text, voice);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Generation failed.");
+      setCurrent(null);
     } finally {
       
       setBusy(false);
@@ -1229,39 +1166,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
 
       <section className={CARD} style={CARD_STYLE}>
         <div className="voice-dock flex flex-wrap items-end gap-4">
-          <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
-          <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
-          <div className="shrink-0">
-            <div className={FIELD_LABEL}>Emotion</div>
-            <select
-              value={emotion}
-              disabled={busy}
-              onChange={(e) => setEmotion(e.target.value)}
-              className={`${INPUT} mt-2 w-[150px]`}
-              style={INPUT_STYLE}
-            >
-              {EMOTIONS.map((e) => (
-                <option key={e} value={e}>{e[0].toUpperCase() + e.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <div className="voice-dock-divider h-10 w-px self-end" style={{ background: "#262b1c" }} />
-          <div className="shrink-0">
-            <div className={FIELD_LABEL}>Format</div>
-            <div className="mt-2 flex h-10 items-center rounded-full p-[3px]" style={{ background: "#101309" }}>
-              {(["mp3", "wav"] as const).map((f) => (
-                <button
-                  key={f}
-                  disabled={busy}
-                  onClick={() => setFormat(f)}
-                  className="h-full rounded-full px-4 text-[12px] font-semibold uppercase transition-colors duration-150"
-                  style={format === f ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SliderField label="Speed" value={speed} min={0.7} max={1.2} step={0.05} onChange={setSpeed} disabled={busy} />
         </div>
       </section>
 
