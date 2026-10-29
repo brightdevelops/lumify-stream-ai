@@ -1,0 +1,2 @@
+ALTER TABLE public.voice_usage DROP CONSTRAINT IF EXISTS voice_usage_kind_check;
+ALTER TABLE public.voice_usage ADD CONSTRAINT voice_usage_kind_check CHECK (kind = ANY (ARRAY['generation','clone','live_convert']));
