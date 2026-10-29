@@ -266,7 +266,6 @@ export const elConvertSegment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ pcmBase64: z.string().min(1).max(1_400_000), voice_id: z.string().min(1), session_id: z.string().min(1).max(80) }).parse(i))
   .handler(async ({ data, context }) => {
-    const { setResponseStatus } = await import("@tanstack/react-start/server");
     const pcm = fromBase64(data.pcmBase64);
     const seconds = pcm.byteLength / 32000;
     if (seconds > MAX_SEGMENT_SECONDS) throw new Error("Segment too long (max 15 seconds).");
@@ -274,7 +273,6 @@ export const elConvertSegment = createServerFn({ method: "POST" })
     await assertVoiceAccess(data.voice_id, context.userId);
     const cost = Math.ceil(seconds * VOICE_LIVE_CREDITS_PER_SECOND);
     if (!(await charge(context.userId, cost, `Live voice · ${seconds.toFixed(1)}s`))) {
-      setResponseStatus(402);
       return { audioBase64: "", seconds, credits_charged: 0, error: "Your balance is too low. Top up your wallet to continue." };
     }
     let buf: Uint8Array;
