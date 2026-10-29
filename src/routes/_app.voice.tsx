@@ -271,7 +271,7 @@ function VoiceStudio() {
         ))}
       </div>
 
-      {mode === "live" ? <LiveVoice /> : <>
+      {mode === "live" ? <LiveVoice renderPicker={(sel, onSel) => <LivePicker selected={sel} onSelect={onSel} />} /> : <>
       <PricingNotice />
 
       <div className="grid gap-4 min-[960px]:grid-cols-[400px_minmax(0,1fr)]">
@@ -288,6 +288,27 @@ function VoiceStudio() {
 
 
 /* ---------------- left column ---------------- */
+
+function LivePicker({ selected, onSelect }: { selected: VoiceSummary | null; onSelect: (v: VoiceSummary) => void }) {
+  const [tab, setTab] = useState<"anime" | "mine" | "library">("anime");
+  return (
+    <>
+      <div className="mt-3 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
+        {([["anime", "Anime"], ["mine", "My voices"], ["library", "Library"]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className="min-h-[36px] flex-1 rounded-full text-[12px] font-semibold transition-colors duration-150"
+            style={tab === k ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <VoiceList key={tab} owner={tab === "mine"} category={tab} selected={selected} onSelect={onSelect} onCloneCta={() => {}} />
+    </>
+  );
+}
 
 function VoicePicker(props: {
   tab: "library" | "anime" | "mine" | "clone";
