@@ -63,9 +63,9 @@ const LANGS: Array<[string, string]> = [
   ["ko", "Korean"], ["ar", "Arabic"],
 ];
 
-const EMOTIONS = ["neutral", "calm", "happy", "excited", "content", "contemplative", "surprised", "sad", "angry", "scared"];
 
-const AUDIO_MAX = 15 * 1024 * 1024;
+
+const AUDIO_MAX = 3 * 1024 * 1024;
 const VIDEO_MAX = 100 * 1024 * 1024;
 
 function fmtTime(s: number) {
