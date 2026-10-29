@@ -205,7 +205,7 @@ function PricingCard() {
     {
       icon: <Mic size={14} color="#c6f24e" />,
       title: "Clone a voice",
-      desc: "One-time 150 credits per voice. Keep up to 5 — deleting a voice frees a slot.",
+      desc: "One-time 150 credits per voice. 1 custom voice slot · more coming soon.",
     },
     {
       icon: <Play size={14} color="#c6f24e" />,
@@ -327,7 +327,7 @@ function VoicePicker(props: {
             className="rounded-full border px-2 py-0.5 font-mono text-[10px] text-[#9aa08c]"
             style={{ background: "#101309", borderColor: "#262b1c" }}
           >
-            {mineCount}/5 slots
+            {mineCount}/1 slot
           </span>
         )}
       </div>
@@ -714,7 +714,7 @@ export function VoiceList(props: {
             <div className="text-[16px] font-semibold text-[#f2f4ec]">Delete this voice?</div>
             <p className="mt-2 text-[13px] leading-relaxed text-[#9aa08c]">
               &ldquo;{confirmVoice.name}&rdquo; will be deleted permanently. This can&rsquo;t be undone, and no
-              credits are refunded — but it frees one of your 5 slots.
+              credits are refunded — but it frees your 1 custom voice slot.
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
@@ -960,7 +960,7 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
       </button>
 
       <div className="text-[11px] leading-relaxed text-[#6b7160]">
-        One-time 150 credits per voice · keep up to 5 · deleting frees a slot.
+        One-time 150 credits per voice · 1 custom voice slot · more coming soon.
       </div>
 
 
