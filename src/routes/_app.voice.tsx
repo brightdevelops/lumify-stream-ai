@@ -11,6 +11,8 @@ import {
   type VoiceSummary,
 } from "@/lib/elevenlabs.functions";
 import { LiveVoice } from "@/components/voice/LiveVoice";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import {
   saveGeneration,
   listMyGenerations,
@@ -205,7 +207,7 @@ function PricingCard() {
     {
       icon: <Mic size={14} color="#c6f24e" />,
       title: "Clone a voice",
-      desc: "One-time 150 credits per voice. 1 custom voice slot · more coming soon.",
+      desc: "1 custom voice slot. Re-clone up to 5× per day · 150 credits each.",
     },
     {
       icon: <Play size={14} color="#c6f24e" />,
@@ -318,6 +320,14 @@ function VoicePicker(props: {
 }) {
   const { tab, setTab, selected, setSelected } = props;
   const [mineCount, setMineCount] = useState<number | null>(null);
+  const fetchMine = useServerFn(elListVoices);
+  const refreshMine = useCallback(async () => {
+    const result = await fetchMine({ data: { category: "mine" } });
+    setMineCount(result.count);
+    if (selected?.category === "mine" && !result.data.some((v) => v.id === selected.id)) setSelected(null);
+    return result.count;
+  }, [fetchMine, selected, setSelected]);
+  useEffect(() => { void refreshMine().catch(() => setMineCount(null)); }, [refreshMine]);
   return (
     <section className={CARD} style={CARD_STYLE}>
       <div className="flex items-center justify-between">
@@ -331,6 +341,7 @@ function VoicePicker(props: {
           </span>
         )}
       </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">Re-clone up to 5× per day · 150 credits each</p>
       <div className="mt-3 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
         {([["library", "Library"], ["anime", "Anime"], ["mine", "My voices"], ["clone", "Clone new"]] as const).map(([k, label]) => (
           <button
@@ -352,7 +363,9 @@ function VoicePicker(props: {
 
       {tab === "clone" ? (
         <CloneForm
-          onCloned={(v) => { setSelected(v); setTab("mine"); }}
+          hasVoice={(mineCount ?? 0) > 0}
+          refreshMine={refreshMine}
+          onCloned={(v) => { setMineCount(1); setSelected(v); setTab("mine"); }}
         />
       ) : (
         <VoiceList
@@ -752,7 +765,7 @@ export function VoiceList(props: {
   );
 }
 
-function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
+function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSummary) => void; hasVoice: boolean; refreshMine: () => Promise<number> }) {
   const clone = useServerFn(elCloneVoice);
   const [clip, setClip] = useState<Clip | null>(null);
   const [extracting, setExtracting] = useState(false);
@@ -760,6 +773,8 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
   const [language, setLanguage] = useState("en");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState(false);
+  const [checkingSlot, setCheckingSlot] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -857,6 +872,8 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
       onCloned(created);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Cloning failed.");
+      window.dispatchEvent(new Event("lumify:credits-changed"));
+      await refreshMine().catch(() => undefined);
     } finally {
       setBusy(false);
     }
@@ -960,7 +977,7 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
       </button>
 
       <div className="text-[11px] leading-relaxed text-[#6b7160]">
-        One-time 150 credits per voice · 1 custom voice slot · more coming soon.
+        1 custom voice slot · Re-clone up to 5× per day · 150 credits each.
       </div>
 
 
@@ -968,14 +985,34 @@ function CloneForm({ onCloned }: { onCloned: (v: VoiceSummary) => void }) {
         <div className="rounded-xl p-3 text-[12px]" style={{ background: "rgba(255,122,107,.12)", color: "#ff7a6b" }}>{error}</div>
       )}
 
-      <button
-        onClick={submit}
-        disabled={!canClone}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl text-[13.5px] font-bold transition-colors duration-150 disabled:opacity-40"
-        style={{ background: "#c6f24e", color: "#111406", boxShadow: "0 6px 24px -6px rgba(198,242,78,.25)" }}
+      <Button
+        onClick={async () => {
+          setCheckingSlot(true);
+          setError(null);
+          try {
+            if (await refreshMine() > 0) setConfirmReplace(true);
+            else await submit();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "Could not load your voice slot. Please try again.");
+          } finally { setCheckingSlot(false); }
+        }}
+        disabled={!canClone || checkingSlot}
+        className="h-11 w-full rounded-xl text-[13.5px] font-bold whitespace-normal"
       >
-        {busy ? (<><Loader2 size={15} className="animate-spin" /> Cloning…</>) : "Clone voice · 150 credits"}
-      </button>
+        {busy || checkingSlot ? (<><Loader2 size={15} className="animate-spin" /> {busy ? "Cloning…" : "Checking slot…"}</>) : hasVoice ? "Replace my voice · 150 credits" : "Clone voice · 150 credits"}
+      </Button>
+      <AlertDialog open={confirmReplace} onOpenChange={setConfirmReplace}>
+        <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace my voice?</AlertDialogTitle>
+            <AlertDialogDescription>This replaces your current custom voice. Your old voice will be deleted and can&apos;t be recovered.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="whitespace-normal" onClick={() => void submit()}>Replace my voice · 150 credits</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {toast && (
         <div className="flex items-center gap-2 rounded-xl border p-3 text-[12.5px] text-[#f2f4ec]" style={{ background: "#14170f", borderColor: "#262b1c" }}>

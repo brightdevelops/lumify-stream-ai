@@ -8,6 +8,13 @@
       "when": 1793311186176,
       "tag": "0000_voice_usage_live_convert",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793344237986,
+      "tag": "0001_voice_clone_serialization",
+      "breakpoints": true
     }
   ]
 }

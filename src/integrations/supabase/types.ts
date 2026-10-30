@@ -1074,6 +1074,24 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_clone_operations: {
+        Row: {
+          expires_at: string
+          operation_id: string
+          user_id: string
+        }
+        Insert: {
+          expires_at: string
+          operation_id: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          operation_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       voice_generations: {
         Row: {
           bytes: number | null
@@ -1448,6 +1466,10 @@ export type Database = {
         Returns: boolean
       }
       auto_close_stale_stream_sessions: { Args: never; Returns: undefined }
+      begin_voice_clone: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: Json
+      }
       can_start_stream: {
         Args: never
         Returns: {
@@ -1490,9 +1512,17 @@ export type Database = {
         Returns: boolean
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      end_voice_clone: {
+        Args: { p_operation_id: string; p_user_id: string }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      finish_voice_clone: {
+        Args: { p_operation_id: string; p_user_id: string; p_voice_id: string }
+        Returns: undefined
       }
       get_my_ledger: {
         Args: { row_limit?: number }
