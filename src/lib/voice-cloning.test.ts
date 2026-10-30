@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { CLONE_COST, MAX_CLONE_BYTES, createReplacement, enforceCloneWindow } from "./voice-cloning";
+import { CLONE_COST, MAX_CLONE_BYTES, createCartesiaWithTwin, createReplacement, enforceCloneWindow } from "./voice-cloning";
 
 const now = Date.parse("2026-10-30T07:09:00Z");
 const hour = 3_600_000;
