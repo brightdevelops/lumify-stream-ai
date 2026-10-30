@@ -674,8 +674,8 @@ export function VoiceList(props: {
                     {v.language}
                   </span>
                 )}
-                {(!needsRetry || !forLive) && (
-                <button
+                {(
+                 <button
                   onClick={(e) => { e.stopPropagation(); void togglePreview(v); }}
                   aria-label="Preview voice"
                   className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
