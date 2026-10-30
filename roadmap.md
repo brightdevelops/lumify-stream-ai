@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Restructure Voice Studio providers: Cartesia for TTS + cloning, ElevenLabs only for Live Voice; twin clones in both providers (elevenlabs_voice_id on user_cloned_voices, retry-twin path, dual delete, live picker from user_cloned_voices)
+- [x] Restructure Voice Studio providers: Cartesia for TTS + cloning, ElevenLabs only for Live Voice; twin clones in both providers (elevenlabs_voice_id on user_cloned_voices, retry-twin path, dual delete, live picker from user_cloned_voices)
 - [ ] Paid verification of twin flow on test accounts (blocked: emekaihechi860@gmail.com has 0 credits; second designated test account needed)
 - [x] Trace reported clone denial to provider 403; confirm owner UUID matches raw description, unify ownership helpers, strengthen raw cache and pass 21 focused tests
 - [ ] Resolve provider voice_access_denied and verify paid owner/replacement/isolation matrix (blocked: designated test wallet emekaihechi860@gmail.com has 0 credits; second designated test account needed for authenticated isolation)
