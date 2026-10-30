@@ -398,6 +398,8 @@ export function VoiceList(props: {
   owner: boolean;
   category?: "library" | "anime" | "mine";
   hideDelete?: boolean;
+  /** Live voice mode: ElevenLabs library/anime, clones selectable only with a twin. */
+  forLive?: boolean;
   selected: VoiceSummary | null;
   onSelect: (v: VoiceSummary) => void;
   onCloneCta: () => void;
@@ -406,12 +408,18 @@ export function VoiceList(props: {
 }) {
   const { owner, selected, onSelect, onCloneCta, onCount, onDeleted } = props;
   const category = props.category ?? (owner ? "mine" : "library");
-  const fetchVoices = useServerFn(elListVoices);
-  const removeVoice = useServerFn(elDeleteVoice);
+  const forLive = props.forLive === true;
+  const fetchLibrary = useServerFn(listCartesiaVoices);
+  const fetchLive = useServerFn(elListVoices);
+  const fetchMine = useServerFn(listMyClonedVoices);
+  const removeVoice = useServerFn(deleteClonedVoice);
+  const retryTwinFn = useServerFn(retryElevenLabsTwin);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmVoice, setConfirmVoice] = useState<VoiceSummary | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const tts = useServerFn(elTextToSpeech);
+  const ttsCartesia = useServerFn(generateCartesiaSpeech);
+  const ttsLive = useServerFn(elTextToSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [language, setLanguage] = useState("");
@@ -448,12 +456,27 @@ export function VoiceList(props: {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetchVoices({ data: { category, ...(debounced ? { q: debounced } : {}) } });
-        const filtered = res.data.filter((v) => !language || (v.language || "").toLowerCase().startsWith(language));
-        setVoices(filtered);
-        setHasMore(false);
-        setCursor(startingAfter ?? null);
-        if (category === "mine") onCount?.(res.count);
+        let list: VoiceSummary[];
+        if (category === "mine") {
+          const res = await fetchMine({});
+          // Live voice selects the ElevenLabs twin; the row keeps the Cartesia id for delete/retry.
+          list = forLive ? res.data.map((v) => ({ ...v, id: v.elevenlabs_voice_id ?? v.id })) : res.data;
+          onCount?.(res.count);
+          setHasMore(false);
+          setCursor(null);
+        } else if (forLive) {
+          const res = await fetchLive({ data: { category: category === "anime" ? "anime" : "library", ...(debounced ? { q: debounced } : {}) } });
+          list = res.data;
+          setHasMore(false);
+          setCursor(null);
+        } else {
+          const res = await fetchLibrary({ data: { ...(debounced ? { q: debounced } : {}), ...(startingAfter ? { starting_after: startingAfter } : {}) } });
+          list = res.data;
+          setHasMore(res.has_more);
+          setCursor(res.next_page);
+        }
+        const filtered = list.filter((v) => !language || (v.language || "").toLowerCase().startsWith(language));
+        setVoices((prev) => (startingAfter ? [...prev, ...filtered] : filtered));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not load voices.");
         if (!startingAfter) setVoices([]);
@@ -461,7 +484,7 @@ export function VoiceList(props: {
         setLoading(false);
       }
     },
-    [fetchVoices, debounced, language, category, onCount],
+    [fetchMine, fetchLive, fetchLibrary, forLive, debounced, language, category, onCount],
   );
 
   useEffect(() => { void load(); }, [load]);
@@ -521,14 +544,10 @@ export function VoiceList(props: {
     setLoadingId(v.id);
     try {
       const lang = (v.language || "en").slice(0, 2).toLowerCase();
-      const res = await tts({
-        data: {
-          transcript: SAMPLE_LINES[lang] ?? SAMPLE_LINES["en"],
-          voice_id: v.id,
-          speed: 1.0,
-          is_preview: true,
-        },
-      });
+      const transcript = SAMPLE_LINES[lang] ?? SAMPLE_LINES["en"];
+      const res = forLive
+        ? await ttsLive({ data: { transcript, voice_id: v.id, speed: 1.0, is_preview: true } })
+        : await ttsCartesia({ data: { transcript, voice_id: v.id, speed: 1.0, volume: 1.0, format: "mp3", is_preview: true } });
       if (previewSeq.current !== seq) return;
       if (res.error) {
         setPreviewError(res.error);
@@ -557,12 +576,25 @@ export function VoiceList(props: {
     }
   };
 
+  const retryTwin = async (v: VoiceSummary) => {
+    setRetryingId(v.id);
+    try {
+      await retryTwinFn({ data: { voice_id: v.cartesia_voice_id ?? v.id } });
+      setNotice("Live voice is now available for this clone");
+      await load();
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : "Could not enable live voice for this clone.");
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const confirmDelete = async () => {
     const v = confirmVoice;
     if (!v) return;
     setDeletingId(v.id);
     try {
-      await removeVoice({ data: { voice_id: v.id } });
+      await removeVoice({ data: { voice_id: v.cartesia_voice_id ?? v.id } });
       if (playingId === v.id) { audioRef.current?.pause(); setPlayingId(null); }
       const cached = PREVIEW_CACHE.get(v.id);
       if (cached) { URL.revokeObjectURL(cached); PREVIEW_CACHE.delete(v.id); }
