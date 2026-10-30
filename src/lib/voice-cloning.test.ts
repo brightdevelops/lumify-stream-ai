@@ -33,12 +33,38 @@ describe("voice cloning rules", () => {
     expect(s.recorded).toEqual([first, second]);
     expect(s.order).toEqual(["delete", "create", "delete", "create"]);
   });
-  it("refuses creation six before charging or deleting, with hours from the oldest of five", async () => {
+  it("refusal charges nothing: creation six is refused before charging or deleting", async () => {
     const s = setup(rows([23, 20, 10, 5, 1]));
-    await expect(createReplacement(s.deps)).rejects.toThrow("about 1h.");
+    await expect(createReplacement(s.deps)).rejects.toThrow("You've used your 5 voice clones for today — you can clone again in about 1h.");
     expect(s.balance()).toBe(1000);
     expect(s.deps.charge).not.toHaveBeenCalled();
+    expect(s.deps.refund).not.toHaveBeenCalled();
     expect(s.deps.deleteOwned).not.toHaveBeenCalled();
+    expect(s.deps.create).not.toHaveBeenCalled();
+  });
+  it("first clone of the day succeeds and charges exactly 150", async () => {
+    const s = setup();
+    await createReplacement(s.deps);
+    expect(s.balance()).toBe(850);
+    expect(s.deps.charge).toHaveBeenCalledTimes(1);
+  });
+  it("allows five successful clones in 24h and refuses only the sixth", async () => {
+    const s = setup([]);
+    for (let i = 0; i < 5; i++) await createReplacement(s.deps);
+    expect(s.balance()).toBe(250);
+    await expect(createReplacement(s.deps)).rejects.toThrow("5 voice clones");
+    expect(s.balance()).toBe(250);
+    expect(s.deps.charge).toHaveBeenCalledTimes(5);
+  });
+  it("refunded failures do not count toward the limit", async () => {
+    const s = setup(rows([3, 2, 1, 0.5]));
+    s.deps.create.mockRejectedValueOnce(new Error("Provider failed"));
+    await expect(createReplacement(s.deps)).rejects.toThrow();
+    await createReplacement(s.deps);
+    expect(s.balance()).toBe(850);
+  });
+  it("ignores rows older than 24 hours", () => {
+    expect(() => enforceCloneWindow(rows([30, 25, 24.1, 48, 72, 1]), now)).not.toThrow();
   });
   it("frees capacity exactly when a successful attempt reaches 24 hours", () => {
     const attempts = rows([24, 20, 10, 5, 1]);

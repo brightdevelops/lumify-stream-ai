@@ -6,10 +6,15 @@ export function enforceCloneWindow(createdAt: string[], now: number) {
   const recent = createdAt.map(Date.parse).filter((at) => at > now - DAY_MS).sort((a, b) => a - b);
   if (recent.length < 5) return;
   const hours = Math.max(1, Math.ceil((recent[recent.length - 5] + DAY_MS - now) / 3_600_000));
-  throw new Error(`You've used your 5 clones for today — you can clone again in about ${hours}h.`);
+  throw new Error(`You've used your 5 voice clones for today — you can clone again in about ${hours}h.`);
 }
 
-/** Serialized by a database operation lease at the authenticated caller. */
+/**
+ * Order: (input validated by caller) → ownership/slot → 24h window → charge → delete-old/create.
+ * Nothing before `charge` may spend credits; anything after it refunds on failure.
+ * `createdAt` holds only SUCCESSFUL creations (written by `record`), so the in-flight
+ * attempt and refunded attempts are never counted.
+ */
 export async function createReplacement(deps: {
   createdAt: string[]; now: number;
   charge: () => Promise<boolean>;
@@ -19,8 +24,8 @@ export async function createReplacement(deps: {
   record: (id: string) => Promise<void>;
   refund: () => Promise<void>;
 }) {
-  enforceCloneWindow(deps.createdAt, deps.now);
   const oldIds = await deps.ownedVoiceIds();
+  enforceCloneWindow(deps.createdAt, deps.now);
   if (!(await deps.charge())) throw new Error(`Voice cloning costs ${CLONE_COST} credits and your balance is too low. Top up your wallet to continue.`);
   let deleted = false;
   let newId: string | undefined;
