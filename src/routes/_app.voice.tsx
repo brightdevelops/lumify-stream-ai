@@ -1016,7 +1016,7 @@ function CloneForm({ onCloned, hasVoice, freeReclone, refreshMine }: { onCloned:
         disabled={!canClone || checkingSlot}
         className="h-11 w-full rounded-xl text-[13.5px] font-bold whitespace-normal"
       >
-        {busy || checkingSlot ? (<><Loader2 size={15} className="animate-spin" /> {busy ? "Cloning…" : "Checking slot…"}</>) : hasVoice ? "Replace my voice · 150 credits" : "Clone voice · 150 credits"}
+        {busy || checkingSlot ? (<><Loader2 size={15} className="animate-spin" /> {busy ? "Cloning…" : "Checking slot…"}</>) : hasVoice ? "Replace my voice · 150 credits" : freeReclone ? "Clone voice · free" : "Clone voice · 150 credits"}
       </Button>
       <AlertDialog open={confirmReplace} onOpenChange={setConfirmReplace}>
         <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md rounded-xl">
@@ -1043,12 +1043,10 @@ function CloneForm({ onCloned, hasVoice, freeReclone, refreshMine }: { onCloned:
 /* ---------------- right column ---------------- */
 
 function Composer({ selected }: { selected: VoiceSummary | null }) {
-  const tts = useServerFn(generateCartesiaSpeech);
+  const tts = useServerFn(elTextToSpeech);
   const [transcript, setTranscript] = useState("");
   const [speed, setSpeed] = useState(1.0);
-  const [volume, setVolume] = useState(1.0);
-  const [emotion, setEmotion] = useState("neutral");
-  const [format, setFormat] = useState<"mp3" | "wav">("mp3");
+  const [stability, setStability] = useState(0.5);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Generation | null>(null);
