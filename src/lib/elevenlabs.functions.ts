@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { VOICE_LIVE_CREDITS_PER_SECOND } from "@/lib/pricing";
 import { CLONE_COST, MAX_CLONE_BYTES, createReplacement } from "@/lib/voice-cloning";
+import { canDelete, canUse, createRawVoiceCache, ownerDescription, ownerOf, type RawVoice } from "@/lib/voice-access";
 
 /**
  * Voice Studio provider layer. All user clones live in ONE shared provider
@@ -13,7 +14,6 @@ import { CLONE_COST, MAX_CLONE_BYTES, createReplacement } from "@/lib/voice-clon
 const API = "https://api.elevenlabs.io";
 const TTS_MODEL = "eleven_flash_v2_5"; // cost decision: flash tier, NOT multilingual v2
 const STS_MODEL = "eleven_multilingual_sts_v2";
-const OWNER_TAG = "lumify-owner:";
 const MAX_SEGMENT_SECONDS = 15;
 const speechCost = (chars: number) => Math.max(15, Math.ceil(chars / 10));
 
@@ -47,7 +47,11 @@ function apiKey() {
 }
 
 /** User-facing provider failure: reason code only, never the provider name. */
-async function providerError(res: Response, what: string) {
+type VoiceAccessDiagnostic = { voiceId: string; rawDescription: string | null; ownerTag: string | null; requestingUserId: string; localAccessAllowed: boolean };
+function accessDiagnostic(voiceId: string, voice: RawVoice | undefined, userId: string): VoiceAccessDiagnostic {
+  return { voiceId, rawDescription: voice?.description ?? null, ownerTag: voice ? ownerOf(voice) : null, requestingUserId: userId, localAccessAllowed: canUse(voice, userId) };
+}
+async function providerError(res: Response, what: string, access?: VoiceAccessDiagnostic) {
   let code = `http_${res.status}`;
   try {
     const j = (await res.json()) as { detail?: { status?: string; code?: string } | string };
@@ -56,25 +60,29 @@ async function providerError(res: Response, what: string) {
     /* ignore */
   }
   console.error(`[voice] ${what} failed`, res.status, code);
+  if (code === "voice_access_denied" && access) {
+    // Server logs only: do not expose another user's owner tag in client errors.
+    console.error("[voice-access-denied]", JSON.stringify({ source: "provider", status: res.status, code, ...access }));
+  }
   return new Error(`${what} failed. Please try again. (code: ${code})`);
 }
 
-type RawVoice = { voice_id: string; name?: string; description?: string | null; category?: string; preview_url?: string | null; labels?: Record<string, string>; fine_tuning?: { language?: string } };
-
-let voiceCache: { at: number; voices: RawVoice[] } | null = null;
-async function accountVoices(force = false): Promise<RawVoice[]> {
-  if (!force && voiceCache && Date.now() - voiceCache.at < 60_000) return voiceCache.voices;
-  const res = await fetch(`${API}/v2/voices?page_size=100&include_total_count=false`, { headers: { "xi-api-key": apiKey() } });
-  if (!res.ok) throw await providerError(res, "Loading voices");
-  const j = (await res.json()) as { voices?: RawVoice[] };
-  voiceCache = { at: Date.now(), voices: j.voices ?? [] };
-  return voiceCache.voices;
-}
-const ownerOf = (v: RawVoice) => {
-  const d = v.description ?? "";
-  const i = d.indexOf(OWNER_TAG);
-  return i < 0 ? null : d.slice(i + OWNER_TAG.length).split(/\s/)[0];
-};
+const voiceCache = createRawVoiceCache(async () => {
+  const voices: RawVoice[] = [];
+  let nextPageToken: string | undefined;
+  do {
+    const query = new URLSearchParams({ page_size: "100", include_total_count: "false" });
+    if (nextPageToken) query.set("next_page_token", nextPageToken);
+    const res = await fetch(`${API}/v2/voices?${query}`, { headers: { "xi-api-key": apiKey() } });
+    if (!res.ok) throw await providerError(res, "Loading voices");
+    const page = (await res.json()) as { voices?: RawVoice[]; has_more?: boolean; next_page_token?: string };
+    voices.push(...(page.voices ?? []));
+    if (page.has_more && (!page.next_page_token || page.next_page_token === nextPageToken)) throw new Error("Could not load all voices. Please try again.");
+    nextPageToken = page.has_more ? page.next_page_token : undefined;
+  } while (nextPageToken);
+  return voices;
+});
+const accountVoices = (force = false) => voiceCache.get(force);
 const toSummary = (v: RawVoice, category: VoiceCategory): VoiceSummary => ({
   id: v.voice_id,
   name: v.name ?? "Untitled",
@@ -86,11 +94,16 @@ const toSummary = (v: RawVoice, category: VoiceCategory): VoiceSummary => ({
 
 /** Throws if the voice is a clone tagged for another user. */
 async function assertVoiceAccess(voiceId: string, userId: string) {
-  if (ANIME_IDS.has(voiceId)) return;
-  const voices = await accountVoices();
-  const v = voices.find((x) => x.voice_id === voiceId);
-  const owner = v ? ownerOf(v) : null;
-  if (owner && owner !== userId) throw new Error("This voice isn't available to you.");
+  // Authorization cannot trust a list cached by a different Worker before a replacement.
+  const v = ANIME_IDS.has(voiceId)
+    ? { voice_id: voiceId, category: "premade" }
+    : (await accountVoices(true)).find((x) => x.voice_id === voiceId);
+  const access = accessDiagnostic(voiceId, v, userId);
+  if (!canUse(v, userId)) {
+    console.error("[voice-access-denied]", JSON.stringify({ source: "local", ...access }));
+    throw new Error("This voice isn't available to you.");
+  }
+  return access;
 }
 
 async function admin() {
@@ -135,12 +148,12 @@ export const elListVoices = createServerFn({ method: "POST" })
     const q = (data.q ?? "").toLowerCase();
     const match = (v: VoiceSummary) => !q || v.name.toLowerCase().includes(q);
     if (data.category === "anime") return { data: ANIME_VOICES.filter(match), count: 0 };
-    const all = await accountVoices();
+    const all = await accountVoices(data.category === "mine");
     if (data.category === "mine") {
-      const mine = all.filter((v) => ownerOf(v) === context.userId).map((v) => toSummary(v, "mine"));
+      const mine = all.filter((v) => canDelete(v, context.userId)).map((v) => toSummary(v, "mine"));
       return { data: mine.filter(match), count: mine.length };
     }
-    const lib = all.filter((v) => !ownerOf(v) && !ANIME_IDS.has(v.voice_id)).map((v) => toSummary(v, "library"));
+    const lib = all.filter((v) => ownerOf(v) === null && canUse(v, context.userId) && !ANIME_IDS.has(v.voice_id)).map((v) => toSummary(v, "library"));
     return { data: lib.filter(match), count: 0 };
   });
 
@@ -158,7 +171,7 @@ export const elTextToSpeech = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    await assertVoiceAccess(data.voice_id, context.userId);
+    const access = await assertVoiceAccess(data.voice_id, context.userId);
     const isPreview = data.is_preview === true;
     const samplePath = `el/${data.voice_id}.mp3`;
     if (isPreview) {
@@ -187,7 +200,7 @@ export const elTextToSpeech = createServerFn({ method: "POST" })
           voice_settings: { stability: data.stability ?? 0.5, similarity_boost: 0.75, speed: data.speed ?? 1.0 },
         }),
       });
-      if (!res.ok) throw await providerError(res, "Voice generation");
+      if (!res.ok) throw await providerError(res, "Voice generation", access);
       buf = new Uint8Array(await res.arrayBuffer());
     } catch (e) {
       if (cost > 0) await refund(context.userId, cost, "Voice generation refund (provider error)");
@@ -219,7 +232,7 @@ export const elCloneVoice = createServerFn({ method: "POST" })
     if (bytes.byteLength > MAX_CLONE_BYTES) throw new Error("Clip is larger than 3 MB.");
     const form = new FormData();
     form.append("name", data.name);
-    form.append("description", `${OWNER_TAG}${context.userId}`);
+    form.append("description", ownerDescription(context.userId));
     form.append("remove_background_noise", "true");
     if (data.language) form.append("labels", JSON.stringify({ language: data.language }));
     form.append("files", new Blob([bytes], { type }), data.clipName);
@@ -232,20 +245,23 @@ export const elCloneVoice = createServerFn({ method: "POST" })
     try {
       voiceId = await createReplacement({
         createdAt: window.created_at, now: Date.parse(window.now),
-        ownedVoiceIds: async () => (await accountVoices(true)).filter((v) => ownerOf(v) === context.userId).map((v) => v.voice_id),
+        ownedVoiceIds: async () => (await accountVoices(true)).filter((v) => canDelete(v, context.userId)).map((v) => v.voice_id),
         charge: () => charge(context.userId, CLONE_COST, `Voice clone · ${data.name}`),
         deleteOwned: async (id) => {
           const voice = (await accountVoices(true)).find((v) => v.voice_id === id);
-          if (!voice || ownerOf(voice) !== context.userId) throw new Error("You can only delete voices you cloned.");
+          if (!canDelete(voice, context.userId)) {
+            console.error("[voice-access-denied]", JSON.stringify({ source: "local-delete", ...accessDiagnostic(id, voice, context.userId) }));
+            throw new Error("You can only delete voices you cloned.");
+          }
           const res = await fetch(`${API}/v1/voices/${encodeURIComponent(id)}`, { method: "DELETE", headers: { "xi-api-key": apiKey() }, signal: AbortSignal.timeout(30_000) });
-          if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice");
-          voiceCache = null;
+          if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice", accessDiagnostic(id, voice, context.userId));
+          voiceCache.invalidate();
           await sb.storage.from("voice-samples").remove([`el/${id}.mp3`]).catch(() => undefined);
         },
         create: async () => {
           const res = await fetch(`${API}/v1/voices/add`, { method: "POST", headers: { "xi-api-key": apiKey() }, body: form, signal: AbortSignal.timeout(90_000) });
           if (!res.ok) throw await providerError(res, "Voice cloning");
-          voiceCache = null;
+          voiceCache.invalidate();
           return String(((await res.json()) as { voice_id?: string }).voice_id ?? "");
         },
         record: async (id) => {
@@ -255,7 +271,7 @@ export const elCloneVoice = createServerFn({ method: "POST" })
         refund: () => refund(context.userId, CLONE_COST, "Voice clone refund (provider error)"),
       });
     } finally {
-      voiceCache = null;
+      voiceCache.invalidate();
       const { error } = await sb.rpc("end_voice_clone", { p_user_id: context.userId, p_operation_id: operationId });
       if (error) console.error("[voice] clone lease release failed", error.code);
     }
@@ -267,10 +283,13 @@ export const elDeleteVoice = createServerFn({ method: "POST" })
   .inputValidator((i) => z.object({ voice_id: z.string().min(1) }).parse(i))
   .handler(async ({ data, context }) => {
     const v = (await accountVoices(true)).find((x) => x.voice_id === data.voice_id);
-    if (!v || ownerOf(v) !== context.userId) throw new Error("You can only delete voices you cloned.");
+    if (!canDelete(v, context.userId)) {
+      console.error("[voice-access-denied]", JSON.stringify({ source: "local-delete", ...accessDiagnostic(data.voice_id, v, context.userId) }));
+      throw new Error("You can only delete voices you cloned.");
+    }
     const res = await fetch(`${API}/v1/voices/${encodeURIComponent(data.voice_id)}`, { method: "DELETE", headers: { "xi-api-key": apiKey() } });
-    if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice");
-    voiceCache = null;
+    if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice", accessDiagnostic(data.voice_id, v, context.userId));
+    voiceCache.invalidate();
     try {
       await (await admin()).storage.from("voice-samples").remove([`el/${data.voice_id}.mp3`]);
     } catch {
@@ -288,7 +307,7 @@ export const elConvertSegment = createServerFn({ method: "POST" })
     const seconds = pcm.byteLength / 32000;
     if (seconds > MAX_SEGMENT_SECONDS) throw new Error("Segment too long (max 15 seconds).");
     if (seconds <= 0) throw new Error("Empty segment.");
-    await assertVoiceAccess(data.voice_id, context.userId);
+    const access = await assertVoiceAccess(data.voice_id, context.userId);
     const cost = Math.ceil(seconds * VOICE_LIVE_CREDITS_PER_SECOND);
     if (!(await charge(context.userId, cost, `Live voice · ${seconds.toFixed(1)}s`))) {
       return { audioBase64: "", seconds, credits_charged: 0, error: "Your balance is too low. Top up your wallet to continue." };
@@ -305,7 +324,7 @@ export const elConvertSegment = createServerFn({ method: "POST" })
         headers: { "xi-api-key": apiKey() },
         body: form,
       });
-      if (!res.ok) throw await providerError(res, "Voice conversion");
+      if (!res.ok) throw await providerError(res, "Voice conversion", access);
       buf = new Uint8Array(await res.arrayBuffer());
     } catch (e) {
       await refund(context.userId, cost, "Live voice refund (provider error)");
