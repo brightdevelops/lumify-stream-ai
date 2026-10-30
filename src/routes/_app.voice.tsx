@@ -523,9 +523,7 @@ export function VoiceList(props: {
     try {
       const lang = (v.language || "en").slice(0, 2).toLowerCase();
       const transcript = SAMPLE_LINES[lang] ?? SAMPLE_LINES["en"];
-      const res = forLive
-        ? await ttsLive({ data: { transcript, voice_id: v.id, speed: 1.0, is_preview: true } })
-        : await ttsCartesia({ data: { transcript, voice_id: v.id, speed: 1.0, volume: 1.0, format: "mp3", is_preview: true } });
+      const res = await ttsPreview({ data: { transcript, voice_id: v.id, speed: 1.0, is_preview: true } });
       if (previewSeq.current !== seq) return;
       if (res.error) {
         setPreviewError(res.error);
@@ -554,25 +552,12 @@ export function VoiceList(props: {
     }
   };
 
-  const retryTwin = async (v: VoiceSummary) => {
-    setRetryingId(v.id);
-    try {
-      await retryTwinFn({ data: { voice_id: v.cartesia_voice_id ?? v.id } });
-      setNotice("Live voice is now available for this clone");
-      await load();
-    } catch (e) {
-      setPreviewError(e instanceof Error ? e.message : "Could not enable live voice for this clone.");
-    } finally {
-      setRetryingId(null);
-    }
-  };
-
   const confirmDelete = async () => {
     const v = confirmVoice;
     if (!v) return;
     setDeletingId(v.id);
     try {
-      await removeVoice({ data: { voice_id: v.cartesia_voice_id ?? v.id } });
+      await removeVoice({ data: { voice_id: v.id } });
       if (playingId === v.id) { audioRef.current?.pause(); setPlayingId(null); }
       const cached = PREVIEW_CACHE.get(v.id);
       if (cached) { URL.revokeObjectURL(cached); PREVIEW_CACHE.delete(v.id); }
