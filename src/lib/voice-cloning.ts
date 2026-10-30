@@ -45,33 +45,3 @@ export async function createReplacement(deps: {
     throw error;
   }
 }
-
-/**
- * Twin creation inside a paid clone. The Cartesia voice is the paid product:
- * if it cannot be saved, the provider voice is cleaned up and the whole clone
- * fails (the caller refunds). A failed ElevenLabs twin NEVER fails the clone —
- * the voice stays usable for text to speech and the twin can be retried free.
- */
-export async function createCartesiaWithTwin(deps: {
-  createCartesia: () => Promise<string>;
-  saveRow: (cartesiaId: string) => Promise<void>;
-  createTwin: () => Promise<string>;
-  setTwin: (cartesiaId: string, twinId: string) => Promise<void>;
-  cleanupCartesia: (id: string) => Promise<void>;
-}): Promise<{ id: string; twinId: string | null }> {
-  const id = await deps.createCartesia();
-  if (!id) throw new Error("Voice cloning returned no voice.");
-  try {
-    await deps.saveRow(id);
-  } catch (error) {
-    await deps.cleanupCartesia(id).catch(() => undefined);
-    throw error;
-  }
-  try {
-    const twinId = await deps.createTwin();
-    await deps.setTwin(id, twinId);
-    return { id, twinId };
-  } catch {
-    return { id, twinId: null };
-  }
-}
