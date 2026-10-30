@@ -4,12 +4,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  elListVoices,
-  elCloneVoice,
-  elTextToSpeech,
-  elDeleteVoice,
+  listCartesiaVoices,
+  listMyClonedVoices,
+  generateCartesiaSpeech,
+  cloneCartesiaVoice,
+  deleteClonedVoice,
+  retryElevenLabsTwin,
   type VoiceSummary,
-} from "@/lib/elevenlabs.functions";
+} from "@/lib/cartesia.functions";
+import { elListVoices, elTextToSpeech } from "@/lib/elevenlabs.functions";
 import { LiveVoice } from "@/components/voice/LiveVoice";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -63,6 +66,11 @@ const LANGS: Array<[string, string]> = [
   ["en", "English"], ["es", "Spanish"], ["fr", "French"], ["de", "German"],
   ["pt", "Portuguese"], ["hi", "Hindi"], ["zh", "Chinese"], ["ja", "Japanese"],
   ["ko", "Korean"], ["ar", "Arabic"],
+];
+
+const EMOTIONS: Array<[string, string]> = [
+  ["neutral", "Neutral"], ["happy", "Happy"], ["excited", "Excited"],
+  ["calm", "Calm"], ["sad", "Sad"], ["angry", "Angry"],
 ];
 
 
@@ -246,7 +254,7 @@ function PricingCard() {
 
 function VoiceStudio() {
   const [mode, setMode] = useState<"tts" | "live">("tts");
-  const [tab, setTab] = useState<"library" | "anime" | "mine" | "clone">("library");
+  const [tab, setTab] = useState<"library" | "mine" | "clone">("library");
   const [selected, setSelected] = useState<VoiceSummary | null>(null);
 
   return (
@@ -307,22 +315,22 @@ function LivePicker({ selected, onSelect }: { selected: VoiceSummary | null; onS
           </button>
         ))}
       </div>
-      <VoiceList key={tab} owner={tab === "mine"} category={tab} selected={selected} onSelect={onSelect} onCloneCta={() => {}} />
+      <VoiceList key={tab} owner={tab === "mine"} category={tab} forLive selected={selected} onSelect={onSelect} onCloneCta={() => {}} />
     </>
   );
 }
 
 function VoicePicker(props: {
-  tab: "library" | "anime" | "mine" | "clone";
-  setTab: (t: "library" | "anime" | "mine" | "clone") => void;
+  tab: "library" | "mine" | "clone";
+  setTab: (t: "library" | "mine" | "clone") => void;
   selected: VoiceSummary | null;
   setSelected: (v: VoiceSummary | null) => void;
 }) {
   const { tab, setTab, selected, setSelected } = props;
   const [mineCount, setMineCount] = useState<number | null>(null);
-  const fetchMine = useServerFn(elListVoices);
+  const fetchMine = useServerFn(listMyClonedVoices);
   const refreshMine = useCallback(async () => {
-    const result = await fetchMine({ data: { category: "mine" } });
+    const result = await fetchMine({});
     setMineCount(result.count);
     if (selected?.category === "mine" && !result.data.some((v) => v.id === selected.id)) setSelected(null);
     return result.count;
@@ -343,7 +351,7 @@ function VoicePicker(props: {
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">Re-clone up to 5× per day · 150 credits each</p>
       <div className="mt-3 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
-        {([["library", "Library"], ["anime", "Anime"], ["mine", "My voices"], ["clone", "Clone new"]] as const).map(([k, label]) => (
+        {([["library", "Library"], ["mine", "My voices"], ["clone", "Clone new"]] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
@@ -371,7 +379,7 @@ function VoicePicker(props: {
         <VoiceList
           key={tab}
           owner={tab === "mine"}
-          category={tab === "anime" ? "anime" : tab === "mine" ? "mine" : "library"}
+          category={tab === "mine" ? "mine" : "library"}
           selected={selected}
           onSelect={setSelected}
           onCloneCta={() => setTab("clone")}
