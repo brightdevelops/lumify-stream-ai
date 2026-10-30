@@ -47,6 +47,10 @@ export async function createReplacement(deps: {
 }
 
 /**
+ * DEPRECATED — kept for rollback safety only, used by the unreferenced
+ * Cartesia path (src/lib/cartesia.functions.ts). The twin system was removed:
+ * a clone is now ONE ElevenLabs voice.
+ *
  * Twin creation inside a paid clone. The Cartesia voice is the paid product:
  * if it cannot be saved, the provider voice is cleaned up and the whole clone
  * fails (the caller refunds). A failed ElevenLabs twin NEVER fails the clone —

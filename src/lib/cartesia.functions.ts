@@ -269,7 +269,7 @@ export const cloneCartesiaVoice = createServerFn({ method: "POST" })
             .from("user_cloned_voices")
             .select("cartesia_voice_id")
             .eq("user_id", context.userId);
-          return (rows ?? []).map((r) => r.cartesia_voice_id);
+          return (rows ?? []).map((r) => r.cartesia_voice_id).filter((id): id is string => Boolean(id));
         },
         charge: () => charge(context.userId, CLONE_COST, `Voice clone · ${data.name}`),
         deleteOwned: (id) => deleteOwnedClone(id, context.userId),

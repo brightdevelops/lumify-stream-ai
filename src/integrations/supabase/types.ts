@@ -1028,31 +1028,34 @@ export type Database = {
       }
       user_cloned_voices: {
         Row: {
-          cartesia_voice_id: string
+          cartesia_voice_id: string | null
           created_at: string
           elevenlabs_voice_id: string | null
           id: string
           language: string | null
           name: string
           user_id: string
+          voice_id: string | null
         }
         Insert: {
-          cartesia_voice_id: string
+          cartesia_voice_id?: string | null
           created_at?: string
           elevenlabs_voice_id?: string | null
           id?: string
           language?: string | null
           name: string
           user_id: string
+          voice_id?: string | null
         }
         Update: {
-          cartesia_voice_id?: string
+          cartesia_voice_id?: string | null
           created_at?: string
           elevenlabs_voice_id?: string | null
           id?: string
           language?: string | null
           name?: string
           user_id?: string
+          voice_id?: string | null
         }
         Relationships: []
       }
@@ -1131,6 +1134,24 @@ export type Database = {
           user_id?: string
           voice_id?: string | null
           voice_name?: string | null
+        }
+        Relationships: []
+      }
+      voice_reclone_grants: {
+        Row: {
+          granted_at: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          used_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1490,6 +1511,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      consume_reclone_grant: { Args: { p_user_id: string }; Returns: boolean }
       deduct_and_mark_session: {
         Args: { p_amount: number; p_credits: number; p_session_id?: string }
         Returns: number
@@ -1554,13 +1576,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: {
-          cartesia_voice_id: string
+          cartesia_voice_id: string | null
           created_at: string
           elevenlabs_voice_id: string | null
           id: string
           language: string | null
           name: string
           user_id: string
+          voice_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -1635,6 +1658,16 @@ export type Database = {
           out_user_email: string
           out_user_id: string
         }[]
+      }
+      save_el_cloned_voice: {
+        Args: {
+          p_language: string
+          p_max: number
+          p_name: string
+          p_user_id: string
+          p_voice_id: string
+        }
+        Returns: string
       }
       set_site_setting: {
         Args: { p_key: string; p_value: boolean }

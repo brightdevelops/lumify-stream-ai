@@ -6,9 +6,10 @@ import { CLONE_COST, MAX_CLONE_BYTES, createReplacement } from "@/lib/voice-clon
 import { canDelete, canUse, createRawVoiceCache, ownerDescription, ownerOf, type RawVoice } from "@/lib/voice-access";
 
 /**
- * Voice Studio provider layer. All user clones live in ONE shared provider
- * account and are tagged with `lumify-owner:<user_id>` in their description.
- * Ownership is enforced here on every list / speak / convert / delete call.
+ * Voice Studio provider layer — ElevenLabs powers everything: text to speech,
+ * cloning and live voice. A user's clone is ONE ElevenLabs voice, tagged with
+ * `lumify-owner:<user_id>` in its description and tracked in
+ * user_cloned_voices.voice_id (the ownership source of truth).
  */
 
 const API = "https://api.elevenlabs.io";
@@ -25,10 +26,6 @@ export type VoiceSummary = {
   language: string;
   preview_file_url: string;
   category?: VoiceCategory;
-  /** False when the ElevenLabs twin is missing — live voice offers a free retry. */
-  live_ready?: boolean;
-  cartesia_voice_id?: string;
-  elevenlabs_voice_id?: string | null;
 };
 
 /** Curated anime-style library voices (mixed EN/JP, male/female). */
@@ -152,13 +149,36 @@ export const elListVoices = createServerFn({ method: "POST" })
     const q = (data.q ?? "").toLowerCase();
     const match = (v: VoiceSummary) => !q || v.name.toLowerCase().includes(q);
     if (data.category === "anime") return { data: ANIME_VOICES.filter(match), count: 0 };
-    const all = await accountVoices(data.category === "mine");
     if (data.category === "mine") {
-      const mine = all.filter((v) => canDelete(v, context.userId)).map((v) => toSummary(v, "mine"));
-      return { data: mine.filter(match), count: mine.length };
+      const mine = await myCloneRows(context.userId);
+      const list = mine.map((r) => ({ id: r.voice_id, name: r.name, description: "Cloned voice", language: r.language ?? "", preview_file_url: "", category: "mine" as const }));
+      return { data: list.filter(match), count: list.length };
     }
+    const all = await accountVoices();
     const lib = all.filter((v) => ownerOf(v) === null && canUse(v, context.userId) && !ANIME_IDS.has(v.voice_id)).map((v) => toSummary(v, "library"));
     return { data: lib.filter(match), count: 0 };
+  });
+
+type CloneRow = { voice_id: string; name: string; language: string | null };
+async function myCloneRows(userId: string): Promise<CloneRow[]> {
+  const sb = await admin();
+  const { data, error } = await sb.from("user_cloned_voices").select("voice_id, name, language").eq("user_id", userId).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).filter((r): r is CloneRow & { voice_id: string } => Boolean(r.voice_id));
+}
+
+/** My voices — the caller's own clones — plus whether a free re-clone is available. */
+export const listMyClonedVoices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const rows = await myCloneRows(context.userId);
+    const sb = await admin();
+    const { data: grant } = await sb.from("voice_reclone_grants").select("used_at").eq("user_id", context.userId).maybeSingle();
+    return {
+      data: rows.map((r) => ({ id: r.voice_id, name: r.name, description: "Cloned voice", language: r.language ?? "", preview_file_url: "", category: "mine" as const })) as VoiceSummary[],
+      count: rows.length,
+      free_reclone: Boolean(grant && !grant.used_at),
+    };
   });
 
 export const elTextToSpeech = createServerFn({ method: "POST" })
@@ -224,6 +244,33 @@ export const elTextToSpeech = createServerFn({ method: "POST" })
 
 const CLONE_TYPES = ["audio/wav", "audio/x-wav", "audio/wave", "audio/mpeg", "audio/mp3", "audio/mp4", "audio/m4a", "audio/x-m4a", "audio/aac", "audio/ogg", "audio/webm", "audio/flac", "audio/x-flac"];
 
+/** Delete a clone the user owns: provider voice, ownership row, stored clip and cached sample. */
+async function deleteOwnedClone(voiceId: string, userId: string) {
+  const sb = await admin();
+  const { data: row } = await sb.from("user_cloned_voices").select("user_id").eq("voice_id", voiceId).maybeSingle();
+  const voice = (await accountVoices(true)).find((v) => v.voice_id === voiceId);
+  if ((!row || row.user_id !== userId) && !canDelete(voice, userId)) {
+    console.error("[voice-access-denied]", JSON.stringify({ source: "local-delete", ...accessDiagnostic(voiceId, voice, userId) }));
+    throw new Error("You can only delete voices you cloned.");
+  }
+  const res = await fetch(`${API}/v1/voices/${encodeURIComponent(voiceId)}`, { method: "DELETE", headers: { "xi-api-key": apiKey() }, signal: AbortSignal.timeout(30_000) });
+  if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice", accessDiagnostic(voiceId, voice, userId));
+  voiceCache.invalidate();
+  await sb.from("user_cloned_voices").delete().eq("voice_id", voiceId);
+  try {
+    await sb.storage.from("voice-samples").remove([`el/${voiceId}.mp3`, `clips/${userId}/${voiceId}`]);
+  } catch (e) {
+    console.error("[voice-samples] cleanup failed", e);
+  }
+}
+
+/**
+ * Single-provider clone: one ElevenLabs voice, owner-tagged, tracked in
+ * user_cloned_voices.voice_id. Order: validate → lease + ownership/slot →
+ * 24h window → charge (skipped for a free re-clone grant) → delete old →
+ * create → save row + clip. Failures after charging refund (or restore the
+ * grant) automatically.
+ */
 export const elCloneVoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
@@ -245,23 +292,29 @@ export const elCloneVoice = createServerFn({ method: "POST" })
     const { data: windowData, error: beginError } = await sb.rpc("begin_voice_clone", { p_user_id: context.userId, p_operation_id: operationId });
     if (beginError) throw new Error(beginError.message);
     const window = z.object({ created_at: z.array(z.string()), now: z.string() }).parse(windowData);
+
+    // A legacy-upgrade grant makes this one creation free; it is consumed up
+    // front and restored if the clone fails.
+    const { data: freeData, error: grantError } = await sb.rpc("consume_reclone_grant", { p_user_id: context.userId });
+    if (grantError) console.error("[voice] re-clone grant check failed", grantError);
+    const free = !grantError && freeData === true;
+    const restoreGrant = async () => {
+      try {
+        await sb.from("voice_reclone_grants").update({ used_at: null }).eq("user_id", context.userId);
+      } catch (e) {
+        console.error("[voice] re-clone grant restore failed", e);
+      }
+    };
+
     let voiceId: string;
     try {
       voiceId = await createReplacement({
-        createdAt: window.created_at, now: Date.parse(window.now),
-        ownedVoiceIds: async () => (await accountVoices(true)).filter((v) => canDelete(v, context.userId)).map((v) => v.voice_id),
-        charge: () => charge(context.userId, CLONE_COST, `Voice clone · ${data.name}`),
-        deleteOwned: async (id) => {
-          const voice = (await accountVoices(true)).find((v) => v.voice_id === id);
-          if (!canDelete(voice, context.userId)) {
-            console.error("[voice-access-denied]", JSON.stringify({ source: "local-delete", ...accessDiagnostic(id, voice, context.userId) }));
-            throw new Error("You can only delete voices you cloned.");
-          }
-          const res = await fetch(`${API}/v1/voices/${encodeURIComponent(id)}`, { method: "DELETE", headers: { "xi-api-key": apiKey() }, signal: AbortSignal.timeout(30_000) });
-          if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice", accessDiagnostic(id, voice, context.userId));
-          voiceCache.invalidate();
-          await sb.storage.from("voice-samples").remove([`el/${id}.mp3`]).catch(() => undefined);
-        },
+        // Free re-clones are a migration courtesy: they never count toward the 5/24h window.
+        createdAt: free ? [] : window.created_at,
+        now: Date.parse(window.now),
+        ownedVoiceIds: async () => (await myCloneRows(context.userId)).map((r) => r.voice_id),
+        charge: free ? async () => true : () => charge(context.userId, CLONE_COST, `Voice clone · ${data.name}`),
+        deleteOwned: (id) => deleteOwnedClone(id, context.userId),
         create: async () => {
           const res = await fetch(`${API}/v1/voices/add`, { method: "POST", headers: { "xi-api-key": apiKey() }, body: form, signal: AbortSignal.timeout(90_000) });
           if (!res.ok) throw await providerError(res, "Voice cloning");
@@ -269,54 +322,51 @@ export const elCloneVoice = createServerFn({ method: "POST" })
           return String(((await res.json()) as { voice_id?: string }).voice_id ?? "");
         },
         record: async (id) => {
-          const { error } = await sb.rpc("finish_voice_clone", { p_user_id: context.userId, p_operation_id: operationId, p_voice_id: id });
-          if (error) throw new Error("Could not save your voice creation. Please try again.");
+          const { error: saveError } = await sb.rpc("save_el_cloned_voice", { p_user_id: context.userId, p_voice_id: id, p_name: data.name, p_language: data.language ?? "en", p_max: 1 });
+          if (saveError) throw new Error("Could not save your voice creation. Please try again.");
+          // Keep the clip so a future re-clone can reuse it.
+          const { error: upErr } = await sb.storage.from("voice-samples").upload(`clips/${context.userId}/${id}`, bytes, { contentType: type, upsert: true });
+          if (upErr) console.error("[voice-samples] clip store failed", { user_id: context.userId, voice_id: id, error: upErr });
+          if (free) {
+            await logUsage({ user_id: context.userId, kind: "clone", characters: 0, credits: 0, voice_id: id });
+          } else {
+            const { error } = await sb.rpc("finish_voice_clone", { p_user_id: context.userId, p_operation_id: operationId, p_voice_id: id });
+            if (error) throw new Error("Could not save your voice creation. Please try again.");
+          }
         },
-        refund: () => refund(context.userId, CLONE_COST, "Voice clone refund (provider error)"),
+        refund: free ? restoreGrant : () => refund(context.userId, CLONE_COST, "Voice clone refund (provider error)"),
       });
     } finally {
       voiceCache.invalidate();
       const { error } = await sb.rpc("end_voice_clone", { p_user_id: context.userId, p_operation_id: operationId });
       if (error) console.error("[voice] clone lease release failed", error.code);
     }
-    return { id: voiceId, name: data.name, description: "Cloned voice", language: data.language ?? "", preview_file_url: "", category: "mine" as const, credits_charged: CLONE_COST };
+    return { id: voiceId, name: data.name, description: "Cloned voice", language: data.language ?? "", preview_file_url: "", category: "mine" as const, credits_charged: free ? 0 : CLONE_COST };
   });
 
 export const elDeleteVoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ voice_id: z.string().min(1) }).parse(i))
   .handler(async ({ data, context }) => {
-    const v = (await accountVoices(true)).find((x) => x.voice_id === data.voice_id);
-    if (!canDelete(v, context.userId)) {
-      console.error("[voice-access-denied]", JSON.stringify({ source: "local-delete", ...accessDiagnostic(data.voice_id, v, context.userId) }));
-      throw new Error("You can only delete voices you cloned.");
-    }
-    const res = await fetch(`${API}/v1/voices/${encodeURIComponent(data.voice_id)}`, { method: "DELETE", headers: { "xi-api-key": apiKey() } });
-    if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice", accessDiagnostic(data.voice_id, v, context.userId));
-    voiceCache.invalidate();
-    try {
-      await (await admin()).storage.from("voice-samples").remove([`el/${data.voice_id}.mp3`]);
-    } catch {
-      /* ignore */
-    }
+    await deleteOwnedClone(data.voice_id, context.userId);
     return { ok: true };
   });
 
 /**
- * Live-convert access: a clone's ElevenLabs twin is authorized against the
- * user_cloned_voices row (the ownership source of truth), not just the
- * provider tag. Anime/library voices keep the tag-based check.
+ * Live-convert access: a clone is authorized against the user_cloned_voices
+ * row (the ownership source of truth), not just the provider tag.
+ * Anime/library voices keep the tag-based check.
  */
 async function assertLiveVoiceAccess(voiceId: string, userId: string) {
   const sb = await admin();
   const { data: row } = await sb
     .from("user_cloned_voices")
     .select("user_id")
-    .eq("elevenlabs_voice_id", voiceId)
+    .eq("voice_id", voiceId)
     .maybeSingle();
   if (row) {
     if (row.user_id !== userId) {
-      console.error("[voice-access-denied]", JSON.stringify({ source: "twin-table", voiceId, requestingUserId: userId }));
+      console.error("[voice-access-denied]", JSON.stringify({ source: "clone-table", voiceId, requestingUserId: userId }));
       throw new Error("This voice isn't available to you.");
     }
     return undefined;
@@ -345,6 +395,7 @@ export const elConvertSegment = createServerFn({ method: "POST" })
       form.append("model_id", STS_MODEL);
       form.append("file_format", "pcm_s16le_16");
       form.append("remove_background_noise", "true");
+      form.append("voice_settings", JSON.stringify({ stability: 0.5, similarity_boost: 0.9 }));
       const res = await fetch(`${API}/v1/speech-to-speech/${encodeURIComponent(data.voice_id)}?output_format=mp3_44100_128`, {
         method: "POST",
         headers: { "xi-api-key": apiKey() },

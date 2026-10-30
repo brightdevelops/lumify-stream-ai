@@ -4,15 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  listCartesiaVoices,
+  elListVoices,
+  elTextToSpeech,
+  elCloneVoice,
+  elDeleteVoice,
   listMyClonedVoices,
-  generateCartesiaSpeech,
-  cloneCartesiaVoice,
-  deleteClonedVoice,
-  retryElevenLabsTwin,
   type VoiceSummary,
-} from "@/lib/cartesia.functions";
-import { elListVoices, elTextToSpeech } from "@/lib/elevenlabs.functions";
+} from "@/lib/elevenlabs.functions";
 import { LiveVoice } from "@/components/voice/LiveVoice";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -67,13 +65,6 @@ const LANGS: Array<[string, string]> = [
   ["pt", "Portuguese"], ["hi", "Hindi"], ["zh", "Chinese"], ["ja", "Japanese"],
   ["ko", "Korean"], ["ar", "Arabic"],
 ];
-
-const EMOTIONS: Array<[string, string]> = [
-  ["neutral", "Neutral"], ["happy", "Happy"], ["excited", "Excited"],
-  ["calm", "Calm"], ["sad", "Sad"], ["angry", "Angry"],
-];
-
-
 
 const AUDIO_MAX = 3 * 1024 * 1024;
 const VIDEO_MAX = 100 * 1024 * 1024;
@@ -328,10 +319,12 @@ function VoicePicker(props: {
 }) {
   const { tab, setTab, selected, setSelected } = props;
   const [mineCount, setMineCount] = useState<number | null>(null);
+  const [freeReclone, setFreeReclone] = useState(false);
   const fetchMine = useServerFn(listMyClonedVoices);
   const refreshMine = useCallback(async () => {
     const result = await fetchMine({});
     setMineCount(result.count);
+    setFreeReclone(result.free_reclone === true);
     if (selected?.category === "mine" && !result.data.some((v) => v.id === selected.id)) setSelected(null);
     return result.count;
   }, [fetchMine, selected, setSelected]);
@@ -372,8 +365,9 @@ function VoicePicker(props: {
       {tab === "clone" ? (
         <CloneForm
           hasVoice={(mineCount ?? 0) > 0}
+          freeReclone={freeReclone}
           refreshMine={refreshMine}
-          onCloned={(v) => { setMineCount(1); setSelected(v); setTab("mine"); }}
+          onCloned={(v) => { setMineCount(1); setFreeReclone(false); setSelected(v); setTab("mine"); }}
         />
       ) : (
         <VoiceList
@@ -398,7 +392,7 @@ export function VoiceList(props: {
   owner: boolean;
   category?: "library" | "anime" | "mine";
   hideDelete?: boolean;
-  /** Live voice mode: ElevenLabs library/anime, clones selectable only with a twin. */
+  /** Live voice mode picker (same voices; kept for call-site clarity). */
   forLive?: boolean;
   selected: VoiceSummary | null;
   onSelect: (v: VoiceSummary) => void;
@@ -408,18 +402,13 @@ export function VoiceList(props: {
 }) {
   const { owner, selected, onSelect, onCloneCta, onCount, onDeleted } = props;
   const category = props.category ?? (owner ? "mine" : "library");
-  const forLive = props.forLive === true;
-  const fetchLibrary = useServerFn(listCartesiaVoices);
-  const fetchLive = useServerFn(elListVoices);
+  const fetchVoices = useServerFn(elListVoices);
   const fetchMine = useServerFn(listMyClonedVoices);
-  const removeVoice = useServerFn(deleteClonedVoice);
-  const retryTwinFn = useServerFn(retryElevenLabsTwin);
-  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const removeVoice = useServerFn(elDeleteVoice);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmVoice, setConfirmVoice] = useState<VoiceSummary | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const ttsCartesia = useServerFn(generateCartesiaSpeech);
-  const ttsLive = useServerFn(elTextToSpeech);
+  const ttsPreview = useServerFn(elTextToSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [language, setLanguage] = useState("");
@@ -459,22 +448,14 @@ export function VoiceList(props: {
         let list: VoiceSummary[];
         if (category === "mine") {
           const res = await fetchMine({});
-          // Live voice selects the ElevenLabs twin; the row keeps the Cartesia id for delete/retry.
-          list = forLive ? res.data.map((v) => ({ ...v, id: v.elevenlabs_voice_id ?? v.id })) : res.data;
+          list = res.data;
           onCount?.(res.count);
-          setHasMore(false);
-          setCursor(null);
-        } else if (forLive) {
-          const res = await fetchLive({ data: { category: category === "anime" ? "anime" : "library", ...(debounced ? { q: debounced } : {}) } });
-          list = res.data;
-          setHasMore(false);
-          setCursor(null);
         } else {
-          const res = await fetchLibrary({ data: { ...(debounced ? { q: debounced } : {}), ...(startingAfter ? { starting_after: startingAfter } : {}) } });
+          const res = await fetchVoices({ data: { category: category === "anime" ? "anime" : "library", ...(debounced ? { q: debounced } : {}) } });
           list = res.data;
-          setHasMore(res.has_more);
-          setCursor(res.next_page);
         }
+        setHasMore(false);
+        setCursor(null);
         const filtered = list.filter((v) => !language || (v.language || "").toLowerCase().startsWith(language));
         setVoices((prev) => (startingAfter ? [...prev, ...filtered] : filtered));
       } catch (e) {
@@ -484,7 +465,7 @@ export function VoiceList(props: {
         setLoading(false);
       }
     },
-    [fetchMine, fetchLive, fetchLibrary, forLive, debounced, language, category, onCount],
+    [fetchMine, fetchVoices, debounced, language, category, onCount],
   );
 
   useEffect(() => { void load(); }, [load]);
@@ -545,9 +526,7 @@ export function VoiceList(props: {
     try {
       const lang = (v.language || "en").slice(0, 2).toLowerCase();
       const transcript = SAMPLE_LINES[lang] ?? SAMPLE_LINES["en"];
-      const res = forLive
-        ? await ttsLive({ data: { transcript, voice_id: v.id, speed: 1.0, is_preview: true } })
-        : await ttsCartesia({ data: { transcript, voice_id: v.id, speed: 1.0, volume: 1.0, format: "mp3", is_preview: true } });
+      const res = await ttsPreview({ data: { transcript, voice_id: v.id, speed: 1.0, is_preview: true } });
       if (previewSeq.current !== seq) return;
       if (res.error) {
         setPreviewError(res.error);
@@ -576,25 +555,12 @@ export function VoiceList(props: {
     }
   };
 
-  const retryTwin = async (v: VoiceSummary) => {
-    setRetryingId(v.id);
-    try {
-      await retryTwinFn({ data: { voice_id: v.cartesia_voice_id ?? v.id } });
-      setNotice("Live voice is now available for this clone");
-      await load();
-    } catch (e) {
-      setPreviewError(e instanceof Error ? e.message : "Could not enable live voice for this clone.");
-    } finally {
-      setRetryingId(null);
-    }
-  };
-
   const confirmDelete = async () => {
     const v = confirmVoice;
     if (!v) return;
     setDeletingId(v.id);
     try {
-      await removeVoice({ data: { voice_id: v.cartesia_voice_id ?? v.id } });
+      await removeVoice({ data: { voice_id: v.id } });
       if (playingId === v.id) { audioRef.current?.pause(); setPlayingId(null); }
       const cached = PREVIEW_CACHE.get(v.id);
       if (cached) { URL.revokeObjectURL(cached); PREVIEW_CACHE.delete(v.id); }
@@ -677,8 +643,7 @@ export function VoiceList(props: {
         ) : (
           voices.map((v) => {
             const isSel = selected?.id === v.id;
-            const needsRetry = category === "mine" && v.live_ready === false;
-            const selectable = !(needsRetry && forLive);
+            const selectable = true;
             return (
               <div
                 key={v.id}
@@ -703,20 +668,6 @@ export function VoiceList(props: {
                     )}
                   </div>
                   <div className="truncate text-[12px] text-[#9aa08c]">{v.description || "—"}</div>
-                  {needsRetry && (
-                    <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: "#ffd28a" }}>
-                      <span>Live voice unavailable for this clone</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); void retryTwin(v); }}
-                        disabled={retryingId === v.id}
-                        className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors duration-150 disabled:opacity-50"
-                        style={{ borderColor: "rgba(255,210,138,.4)", color: "#ffd28a" }}
-                      >
-                        {retryingId === v.id ? <Loader2 size={10} className="animate-spin" /> : null}
-                        {retryingId === v.id ? "Retrying…" : "Retry"}
-                      </button>
-                    </div>
-                  )}
                 </div>
                 {v.language && (
                   <span
@@ -726,8 +677,8 @@ export function VoiceList(props: {
                     {v.language}
                   </span>
                 )}
-                {(!needsRetry || !forLive) && (
-                <button
+                {(
+                 <button
                   onClick={(e) => { e.stopPropagation(); void togglePreview(v); }}
                   aria-label="Preview voice"
                   className="grid h-7 w-7 shrink-0 place-items-center rounded-full border transition-colors duration-150"
@@ -823,8 +774,8 @@ export function VoiceList(props: {
   );
 }
 
-function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSummary) => void; hasVoice: boolean; refreshMine: () => Promise<number> }) {
-  const clone = useServerFn(cloneCartesiaVoice);
+function CloneForm({ onCloned, hasVoice, freeReclone, refreshMine }: { onCloned: (v: VoiceSummary) => void; hasVoice: boolean; freeReclone: boolean; refreshMine: () => Promise<number> }) {
+  const clone = useServerFn(elCloneVoice);
   const [clip, setClip] = useState<Clip | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [name, setName] = useState("");
@@ -939,6 +890,14 @@ function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSum
 
   return (
     <div className="mt-4 space-y-4">
+      {freeReclone && !hasVoice && (
+        <div
+          className="rounded-xl border p-3 text-[12.5px] leading-relaxed"
+          style={{ background: "rgba(198,242,78,.08)", borderColor: "rgba(198,242,78,.3)", color: "#f2f4ec" }}
+        >
+          Voice system upgraded — please re-clone your voice. This one is <span className="font-semibold" style={{ color: "#c6f24e" }}>free</span>.
+        </div>
+      )}
       <input
         ref={fileRef}
         type="file"
@@ -1057,7 +1016,7 @@ function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSum
         disabled={!canClone || checkingSlot}
         className="h-11 w-full rounded-xl text-[13.5px] font-bold whitespace-normal"
       >
-        {busy || checkingSlot ? (<><Loader2 size={15} className="animate-spin" /> {busy ? "Cloning…" : "Checking slot…"}</>) : hasVoice ? "Replace my voice · 150 credits" : "Clone voice · 150 credits"}
+        {busy || checkingSlot ? (<><Loader2 size={15} className="animate-spin" /> {busy ? "Cloning…" : "Checking slot…"}</>) : hasVoice ? "Replace my voice · 150 credits" : freeReclone ? "Clone voice · free" : "Clone voice · 150 credits"}
       </Button>
       <AlertDialog open={confirmReplace} onOpenChange={setConfirmReplace}>
         <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md rounded-xl">
@@ -1084,12 +1043,10 @@ function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSum
 /* ---------------- right column ---------------- */
 
 function Composer({ selected }: { selected: VoiceSummary | null }) {
-  const tts = useServerFn(generateCartesiaSpeech);
+  const tts = useServerFn(elTextToSpeech);
   const [transcript, setTranscript] = useState("");
   const [speed, setSpeed] = useState(1.0);
-  const [volume, setVolume] = useState(1.0);
-  const [emotion, setEmotion] = useState("neutral");
-  const [format, setFormat] = useState<"mp3" | "wav">("mp3");
+  const [stability, setStability] = useState(0.5);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Generation | null>(null);
@@ -1183,7 +1140,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       ext,
       url: URL.createObjectURL(blob),
       filename: `lumify-voice-${voiceName.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${ext}`,
-      summary: `${voiceName} · ${speed.toFixed(1)}× · ${ext.toUpperCase()} · ${fmtSize(sizeLabel)}`,
+      summary: `${voiceName} · ${speed.toFixed(1)}× · MP3 · ${fmtSize(sizeLabel)}`,
     };
     window.dispatchEvent(new Event("lumify:credits-changed"));
     setCurrent(gen);
@@ -1194,7 +1151,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   /** Fallback: existing blocking bytes path. */
   const generateBytes = async (text: string, voice: VoiceSummary) => {
     const res = await tts({
-      data: { transcript: text, voice_id: voice.id, speed, volume, emotion, format },
+      data: { transcript: text, voice_id: voice.id, speed, stability },
     });
     if (res.error) {
       setError(res.error);
@@ -1204,7 +1161,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const bin = atob(res.audioBase64);
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text, voice.id);
+    finish(new Blob([arr], { type: res.contentType }), "mp3", res.bytes, voice.name, text, voice.id);
 
   };
 
@@ -1263,30 +1220,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
 
       <section className={CARD} style={CARD_STYLE}>
         <div className="voice-dock flex flex-wrap items-end gap-4">
-          <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
-          <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
-          <div style={{ flex: "1 1 140px", minWidth: 140 }}>
-            <div className={FIELD_LABEL}>Emotion</div>
-            <select value={emotion} onChange={(e) => setEmotion(e.target.value)} disabled={busy} className={`${INPUT} mt-2`} style={INPUT_STYLE}>
-              {EMOTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: "0 0 auto" }}>
-            <div className={FIELD_LABEL}>Format</div>
-            <div className="mt-2 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
-              {(["mp3", "wav"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFormat(f)}
-                  disabled={busy}
-                  className="min-h-[36px] rounded-full px-4 text-[12px] font-semibold uppercase transition-colors duration-150 disabled:opacity-50"
-                  style={format === f ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SliderField label="Speed" value={speed} min={0.7} max={1.2} step={0.05} onChange={setSpeed} disabled={busy} />
+          <SliderField label="Stability" value={stability} min={0} max={1} step={0.05} onChange={setStability} disabled={busy} suffix="" />
         </div>
       </section>
 
@@ -1450,9 +1385,9 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
 
 function SliderField(props: {
   label: string; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; disabled?: boolean;
+  onChange: (v: number) => void; disabled?: boolean; suffix?: string;
 }) {
-  const { label, value, min, max, step, onChange, disabled } = props;
+  const { label, value, min, max, step, onChange, disabled, suffix = "×" } = props;
   const pct = ((value - min) / (max - min)) * 100;
   return (
     <div style={{ flex: "1 1 180px", minWidth: 180 }}>
@@ -1471,7 +1406,7 @@ function SliderField(props: {
         />
 
         <span className="w-[44px] text-[13px] text-[#f2f4ec]" style={{ fontFamily: "Georgia, serif" }}>
-          {value.toFixed(1)}×
+          {value.toFixed(1)}{suffix}
         </span>
       </div>
     </div>

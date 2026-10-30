@@ -1,7 +1,8 @@
 /**
- * ElevenLabs twin management for user clones. Server-only: every user clone
- * exists as a Cartesia voice (text to speech) plus an ElevenLabs twin (live
- * voice). The twin always carries the shared ownership tag.
+ * DEPRECATED — kept for rollback safety only. The twin system was removed:
+ * ElevenLabs now powers TTS, cloning and live voice, and a clone is ONE
+ * ElevenLabs voice (user_cloned_voices.voice_id). This module is referenced
+ * only by the unreferenced Cartesia rollback path (src/lib/cartesia.functions.ts).
  */
 import { ownerDescription } from "@/lib/voice-access";
 
