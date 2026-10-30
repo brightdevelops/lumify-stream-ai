@@ -365,8 +365,9 @@ function VoicePicker(props: {
       {tab === "clone" ? (
         <CloneForm
           hasVoice={(mineCount ?? 0) > 0}
+          freeReclone={freeReclone}
           refreshMine={refreshMine}
-          onCloned={(v) => { setMineCount(1); setSelected(v); setTab("mine"); }}
+          onCloned={(v) => { setMineCount(1); setFreeReclone(false); setSelected(v); setTab("mine"); }}
         />
       ) : (
         <VoiceList
@@ -889,6 +890,14 @@ function CloneForm({ onCloned, hasVoice, freeReclone, refreshMine }: { onCloned:
 
   return (
     <div className="mt-4 space-y-4">
+      {freeReclone && !hasVoice && (
+        <div
+          className="rounded-xl border p-3 text-[12.5px] leading-relaxed"
+          style={{ background: "rgba(198,242,78,.08)", borderColor: "rgba(198,242,78,.3)", color: "#f2f4ec" }}
+        >
+          Voice system upgraded — please re-clone your voice. This one is <span className="font-semibold" style={{ color: "#c6f24e" }}>free</span>.
+        </div>
+      )}
       <input
         ref={fileRef}
         type="file"
