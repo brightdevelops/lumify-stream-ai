@@ -1220,30 +1220,8 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
 
       <section className={CARD} style={CARD_STYLE}>
         <div className="voice-dock flex flex-wrap items-end gap-4">
-          <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
-          <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
-          <div style={{ flex: "1 1 140px", minWidth: 140 }}>
-            <div className={FIELD_LABEL}>Emotion</div>
-            <select value={emotion} onChange={(e) => setEmotion(e.target.value)} disabled={busy} className={`${INPUT} mt-2`} style={INPUT_STYLE}>
-              {EMOTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: "0 0 auto" }}>
-            <div className={FIELD_LABEL}>Format</div>
-            <div className="mt-2 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
-              {(["mp3", "wav"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFormat(f)}
-                  disabled={busy}
-                  className="min-h-[36px] rounded-full px-4 text-[12px] font-semibold uppercase transition-colors duration-150 disabled:opacity-50"
-                  style={format === f ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SliderField label="Speed" value={speed} min={0.7} max={1.2} step={0.05} onChange={setSpeed} disabled={busy} />
+          <SliderField label="Stability" value={stability} min={0} max={1} step={0.05} onChange={setStability} disabled={busy} />
         </div>
       </section>
 
