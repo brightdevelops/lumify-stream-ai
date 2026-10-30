@@ -322,7 +322,7 @@ export const elCloneVoice = createServerFn({ method: "POST" })
           return String(((await res.json()) as { voice_id?: string }).voice_id ?? "");
         },
         record: async (id) => {
-          const { error: saveError } = await sb.rpc("save_el_cloned_voice", { p_user_id: context.userId, p_voice_id: id, p_name: data.name, p_language: data.language ?? null, p_max: 1 });
+          const { error: saveError } = await sb.rpc("save_el_cloned_voice", { p_user_id: context.userId, p_voice_id: id, p_name: data.name, p_language: data.language ?? "en", p_max: 1 });
           if (saveError) throw new Error("Could not save your voice creation. Please try again.");
           // Keep the clip so a future re-clone can reuse it.
           const { error: upErr } = await sb.storage.from("voice-samples").upload(`clips/${context.userId}/${id}`, bytes, { contentType: type, upsert: true });
