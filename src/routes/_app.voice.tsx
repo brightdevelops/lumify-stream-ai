@@ -4,15 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { Mic, MicOff, Upload, Play, Pause, Download, Loader2, X, Check, Sparkles, Trash2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  listCartesiaVoices,
+  elListVoices,
+  elTextToSpeech,
+  elCloneVoice,
+  elDeleteVoice,
   listMyClonedVoices,
-  generateCartesiaSpeech,
-  cloneCartesiaVoice,
-  deleteClonedVoice,
-  retryElevenLabsTwin,
   type VoiceSummary,
-} from "@/lib/cartesia.functions";
-import { elListVoices, elTextToSpeech } from "@/lib/elevenlabs.functions";
+} from "@/lib/elevenlabs.functions";
 import { LiveVoice } from "@/components/voice/LiveVoice";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -67,13 +65,6 @@ const LANGS: Array<[string, string]> = [
   ["pt", "Portuguese"], ["hi", "Hindi"], ["zh", "Chinese"], ["ja", "Japanese"],
   ["ko", "Korean"], ["ar", "Arabic"],
 ];
-
-const EMOTIONS: Array<[string, string]> = [
-  ["neutral", "Neutral"], ["happy", "Happy"], ["excited", "Excited"],
-  ["calm", "Calm"], ["sad", "Sad"], ["angry", "Angry"],
-];
-
-
 
 const AUDIO_MAX = 3 * 1024 * 1024;
 const VIDEO_MAX = 100 * 1024 * 1024;
