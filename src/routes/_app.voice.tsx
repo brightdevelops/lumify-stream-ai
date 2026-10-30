@@ -726,6 +726,7 @@ export function VoiceList(props: {
                     {v.language}
                   </span>
                 )}
+                {(!needsRetry || !forLive) && (
                 <button
                   onClick={(e) => { e.stopPropagation(); void togglePreview(v); }}
                   aria-label="Preview voice"
@@ -738,6 +739,7 @@ export function VoiceList(props: {
                 >
                   {loadingId === v.id ? <Loader2 size={12} className="animate-spin" /> : playingId === v.id ? <Pause size={12} /> : <Play size={12} />}
                 </button>
+                )}
                 {owner && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setConfirmVoice(v); }}
@@ -822,7 +824,7 @@ export function VoiceList(props: {
 }
 
 function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSummary) => void; hasVoice: boolean; refreshMine: () => Promise<number> }) {
-  const clone = useServerFn(elCloneVoice);
+  const clone = useServerFn(cloneCartesiaVoice);
   const [clip, setClip] = useState<Clip | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [name, setName] = useState("");
@@ -1082,10 +1084,12 @@ function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSum
 /* ---------------- right column ---------------- */
 
 function Composer({ selected }: { selected: VoiceSummary | null }) {
-  const tts = useServerFn(elTextToSpeech);
+  const tts = useServerFn(generateCartesiaSpeech);
   const [transcript, setTranscript] = useState("");
   const [speed, setSpeed] = useState(1.0);
-  const format = "mp3" as const;
+  const [volume, setVolume] = useState(1.0);
+  const [emotion, setEmotion] = useState("neutral");
+  const [format, setFormat] = useState<"mp3" | "wav">("mp3");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Generation | null>(null);
@@ -1190,7 +1194,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   /** Fallback: existing blocking bytes path. */
   const generateBytes = async (text: string, voice: VoiceSummary) => {
     const res = await tts({
-      data: { transcript: text, voice_id: voice.id, speed },
+      data: { transcript: text, voice_id: voice.id, speed, volume, emotion, format },
     });
     if (res.error) {
       setError(res.error);
@@ -1259,7 +1263,30 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
 
       <section className={CARD} style={CARD_STYLE}>
         <div className="voice-dock flex flex-wrap items-end gap-4">
-          <SliderField label="Speed" value={speed} min={0.7} max={1.2} step={0.05} onChange={setSpeed} disabled={busy} />
+          <SliderField label="Speed" value={speed} min={0.6} max={1.5} step={0.05} onChange={setSpeed} disabled={busy} />
+          <SliderField label="Volume" value={volume} min={0.5} max={2.0} step={0.1} onChange={setVolume} disabled={busy} />
+          <div style={{ flex: "1 1 140px", minWidth: 140 }}>
+            <div className={FIELD_LABEL}>Emotion</div>
+            <select value={emotion} onChange={(e) => setEmotion(e.target.value)} disabled={busy} className={`${INPUT} mt-2`} style={INPUT_STYLE}>
+              {EMOTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: "0 0 auto" }}>
+            <div className={FIELD_LABEL}>Format</div>
+            <div className="mt-2 flex rounded-full p-[3px]" style={{ background: "#101309" }}>
+              {(["mp3", "wav"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFormat(f)}
+                  disabled={busy}
+                  className="min-h-[36px] rounded-full px-4 text-[12px] font-semibold uppercase transition-colors duration-150 disabled:opacity-50"
+                  style={format === f ? { background: "#c6f24e", color: "#111406" } : { color: "#9aa08c" }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
