@@ -25,6 +25,10 @@ export type VoiceSummary = {
   language: string;
   preview_file_url: string;
   category?: VoiceCategory;
+  /** False when the ElevenLabs twin is missing — live voice offers a free retry. */
+  live_ready?: boolean;
+  cartesia_voice_id?: string;
+  elevenlabs_voice_id?: string | null;
 };
 
 /** Curated anime-style library voices (mixed EN/JP, male/female). */
@@ -298,6 +302,28 @@ export const elDeleteVoice = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Live-convert access: a clone's ElevenLabs twin is authorized against the
+ * user_cloned_voices row (the ownership source of truth), not just the
+ * provider tag. Anime/library voices keep the tag-based check.
+ */
+async function assertLiveVoiceAccess(voiceId: string, userId: string) {
+  const sb = await admin();
+  const { data: row } = await sb
+    .from("user_cloned_voices")
+    .select("user_id")
+    .eq("elevenlabs_voice_id", voiceId)
+    .maybeSingle();
+  if (row) {
+    if (row.user_id !== userId) {
+      console.error("[voice-access-denied]", JSON.stringify({ source: "twin-table", voiceId, requestingUserId: userId }));
+      throw new Error("This voice isn't available to you.");
+    }
+    return undefined;
+  }
+  return assertVoiceAccess(voiceId, userId);
+}
+
 /** Live voice changer: one 16kHz mono s16le segment (≤15s) → converted mp3. */
 export const elConvertSegment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -307,7 +333,7 @@ export const elConvertSegment = createServerFn({ method: "POST" })
     const seconds = pcm.byteLength / 32000;
     if (seconds > MAX_SEGMENT_SECONDS) throw new Error("Segment too long (max 15 seconds).");
     if (seconds <= 0) throw new Error("Empty segment.");
-    const access = await assertVoiceAccess(data.voice_id, context.userId);
+    const access = await assertLiveVoiceAccess(data.voice_id, context.userId);
     const cost = Math.ceil(seconds * VOICE_LIVE_CREDITS_PER_SECOND);
     if (!(await charge(context.userId, cost, `Live voice · ${seconds.toFixed(1)}s`))) {
       return { audioBase64: "", seconds, credits_charged: 0, error: "Your balance is too low. Top up your wallet to continue." };
