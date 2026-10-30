@@ -1140,7 +1140,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       ext,
       url: URL.createObjectURL(blob),
       filename: `lumify-voice-${voiceName.replace(/\s+/g, "-").toLowerCase()}-${stamp()}.${ext}`,
-      summary: `${voiceName} · ${speed.toFixed(1)}× · ${ext.toUpperCase()} · ${fmtSize(sizeLabel)}`,
+      summary: `${voiceName} · ${speed.toFixed(1)}× · MP3 · ${fmtSize(sizeLabel)}`,
     };
     window.dispatchEvent(new Event("lumify:credits-changed"));
     setCurrent(gen);
@@ -1151,7 +1151,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
   /** Fallback: existing blocking bytes path. */
   const generateBytes = async (text: string, voice: VoiceSummary) => {
     const res = await tts({
-      data: { transcript: text, voice_id: voice.id, speed, volume, emotion, format },
+      data: { transcript: text, voice_id: voice.id, speed, stability },
     });
     if (res.error) {
       setError(res.error);
@@ -1161,7 +1161,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
     const bin = atob(res.audioBase64);
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    finish(new Blob([arr], { type: res.contentType }), format, res.bytes, voice.name, text, voice.id);
+    finish(new Blob([arr], { type: res.contentType }), "mp3", res.bytes, voice.name, text, voice.id);
 
   };
 
