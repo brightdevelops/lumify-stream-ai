@@ -319,10 +319,12 @@ function VoicePicker(props: {
 }) {
   const { tab, setTab, selected, setSelected } = props;
   const [mineCount, setMineCount] = useState<number | null>(null);
+  const [freeReclone, setFreeReclone] = useState(false);
   const fetchMine = useServerFn(listMyClonedVoices);
   const refreshMine = useCallback(async () => {
     const result = await fetchMine({});
     setMineCount(result.count);
+    setFreeReclone(result.free_reclone === true);
     if (selected?.category === "mine" && !result.data.some((v) => v.id === selected.id)) setSelected(null);
     return result.count;
   }, [fetchMine, selected, setSelected]);
@@ -771,8 +773,8 @@ export function VoiceList(props: {
   );
 }
 
-function CloneForm({ onCloned, hasVoice, refreshMine }: { onCloned: (v: VoiceSummary) => void; hasVoice: boolean; refreshMine: () => Promise<number> }) {
-  const clone = useServerFn(cloneCartesiaVoice);
+function CloneForm({ onCloned, hasVoice, freeReclone, refreshMine }: { onCloned: (v: VoiceSummary) => void; hasVoice: boolean; freeReclone: boolean; refreshMine: () => Promise<number> }) {
+  const clone = useServerFn(elCloneVoice);
   const [clip, setClip] = useState<Clip | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [name, setName] = useState("");
