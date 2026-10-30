@@ -1221,7 +1221,7 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
       <section className={CARD} style={CARD_STYLE}>
         <div className="voice-dock flex flex-wrap items-end gap-4">
           <SliderField label="Speed" value={speed} min={0.7} max={1.2} step={0.05} onChange={setSpeed} disabled={busy} />
-          <SliderField label="Stability" value={stability} min={0} max={1} step={0.05} onChange={setStability} disabled={busy} />
+          <SliderField label="Stability" value={stability} min={0} max={1} step={0.05} onChange={setStability} disabled={busy} suffix="" />
         </div>
       </section>
 
@@ -1406,7 +1406,7 @@ function SliderField(props: {
         />
 
         <span className="w-[44px] text-[13px] text-[#f2f4ec]" style={{ fontFamily: "Georgia, serif" }}>
-          {value.toFixed(1)}×
+          {value.toFixed(1)}{suffix}
         </span>
       </div>
     </div>
