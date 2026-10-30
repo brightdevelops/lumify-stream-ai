@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { CLONE_COST, MAX_CLONE_BYTES, createReplacement, enforceCloneWindow } from "./voice-cloning";
+import { CLONE_COST, MAX_CLONE_BYTES, createCartesiaWithTwin, createReplacement, enforceCloneWindow } from "./voice-cloning";
 
 const now = Date.parse("2026-10-30T07:09:00Z");
 const hour = 3_600_000;
@@ -97,5 +97,63 @@ describe("voice cloning rules", () => {
   it("keeps the 3 MB upload cap and 150-credit price", () => {
     expect(MAX_CLONE_BYTES).toBe(3 * 1024 * 1024);
     expect(CLONE_COST).toBe(150);
+  });
+});
+
+describe("twin clone creation", () => {
+  function twinSetup() {
+    const saved: string[] = [];
+    const twins = new Map<string, string>();
+    const cleaned: string[] = [];
+    const deps = {
+      createCartesia: vi.fn(async () => "cartesia-1"),
+      saveRow: vi.fn(async (id: string) => { saved.push(id); }),
+      createTwin: vi.fn(async () => "twin-1"),
+      setTwin: vi.fn(async (id: string, twin: string) => { twins.set(id, twin); }),
+      cleanupCartesia: vi.fn(async (id: string) => { cleaned.push(id); }),
+    };
+    return { deps, saved, twins, cleaned };
+  }
+
+  it("returns both ids when the Cartesia clone and the ElevenLabs twin succeed", async () => {
+    const s = twinSetup();
+    const result = await createCartesiaWithTwin(s.deps);
+    expect(result).toEqual({ id: "cartesia-1", twinId: "twin-1" });
+    expect(s.saved).toEqual(["cartesia-1"]);
+    expect(s.twins.get("cartesia-1")).toBe("twin-1");
+    expect(s.cleaned).toEqual([]);
+  });
+
+  it("keeps the voice when the twin fails: no throw, no cleanup, twinId null for free retry", async () => {
+    const s = twinSetup();
+    s.deps.createTwin.mockRejectedValue(new Error("provider limit"));
+    const result = await createCartesiaWithTwin(s.deps);
+    expect(result).toEqual({ id: "cartesia-1", twinId: null });
+    expect(s.saved).toEqual(["cartesia-1"]);
+    expect(s.cleaned).toEqual([]);
+  });
+
+  it("keeps the voice when saving the twin id fails after the twin was created", async () => {
+    const s = twinSetup();
+    s.deps.setTwin.mockRejectedValue(new Error("db down"));
+    const result = await createCartesiaWithTwin(s.deps);
+    expect(result).toEqual({ id: "cartesia-1", twinId: null });
+    expect(s.cleaned).toEqual([]);
+  });
+
+  it("cleans up the provider voice and throws when the ownership row cannot be saved", async () => {
+    const s = twinSetup();
+    s.deps.saveRow.mockRejectedValue(new Error("could not save"));
+    await expect(createCartesiaWithTwin(s.deps)).rejects.toThrow("could not save");
+    expect(s.cleaned).toEqual(["cartesia-1"]);
+    expect(s.deps.createTwin).not.toHaveBeenCalled();
+  });
+
+  it("throws when the provider returns no voice and saves nothing", async () => {
+    const s = twinSetup();
+    s.deps.createCartesia.mockResolvedValue("");
+    await expect(createCartesiaWithTwin(s.deps)).rejects.toThrow("no voice");
+    expect(s.saved).toEqual([]);
+    expect(s.deps.createTwin).not.toHaveBeenCalled();
   });
 });

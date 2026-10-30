@@ -1030,6 +1030,7 @@ export type Database = {
         Row: {
           cartesia_voice_id: string
           created_at: string
+          elevenlabs_voice_id: string | null
           id: string
           language: string | null
           name: string
@@ -1038,6 +1039,7 @@ export type Database = {
         Insert: {
           cartesia_voice_id: string
           created_at?: string
+          elevenlabs_voice_id?: string | null
           id?: string
           language?: string | null
           name: string
@@ -1046,6 +1048,7 @@ export type Database = {
         Update: {
           cartesia_voice_id?: string
           created_at?: string
+          elevenlabs_voice_id?: string | null
           id?: string
           language?: string | null
           name?: string
@@ -1553,6 +1556,7 @@ export type Database = {
         Returns: {
           cartesia_voice_id: string
           created_at: string
+          elevenlabs_voice_id: string | null
           id: string
           language: string | null
           name: string
