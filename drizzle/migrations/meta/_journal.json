@@ -22,6 +22,13 @@
       "when": 1793355514659,
       "tag": "0002_voice_twin_clones",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793358198016,
+      "tag": "0003_single_provider_el_clones",
+      "breakpoints": true
     }
   ]
 }
