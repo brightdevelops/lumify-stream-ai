@@ -1,0 +1,2 @@
+ALTER TABLE public.user_cloned_voices ADD COLUMN elevenlabs_voice_id text;
+COMMENT ON COLUMN public.user_cloned_voices.elevenlabs_voice_id IS 'ElevenLabs twin of the Cartesia clone; NULL means live voice is unavailable until retried.';

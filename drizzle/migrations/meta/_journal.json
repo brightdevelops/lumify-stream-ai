@@ -15,6 +15,13 @@
       "when": 1793344237986,
       "tag": "0001_voice_clone_serialization",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793355514659,
+      "tag": "0002_voice_twin_clones",
+      "breakpoints": true
     }
   ]
 }
