@@ -640,8 +640,7 @@ export function VoiceList(props: {
         ) : (
           voices.map((v) => {
             const isSel = selected?.id === v.id;
-            const needsRetry = category === "mine" && v.live_ready === false;
-            const selectable = !(needsRetry && forLive);
+            const selectable = true;
             return (
               <div
                 key={v.id}
@@ -666,20 +665,6 @@ export function VoiceList(props: {
                     )}
                   </div>
                   <div className="truncate text-[12px] text-[#9aa08c]">{v.description || "—"}</div>
-                  {needsRetry && (
-                    <div className="mt-1 flex items-center gap-2 text-[11px]" style={{ color: "#ffd28a" }}>
-                      <span>Live voice unavailable for this clone</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); void retryTwin(v); }}
-                        disabled={retryingId === v.id}
-                        className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors duration-150 disabled:opacity-50"
-                        style={{ borderColor: "rgba(255,210,138,.4)", color: "#ffd28a" }}
-                      >
-                        {retryingId === v.id ? <Loader2 size={10} className="animate-spin" /> : null}
-                        {retryingId === v.id ? "Retrying…" : "Retry"}
-                      </button>
-                    </div>
-                  )}
                 </div>
                 {v.language && (
                   <span
