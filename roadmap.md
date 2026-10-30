@@ -1,12 +1,20 @@
 # Roadmap
 
-- [x] Restructure Voice Studio providers: Cartesia for TTS + cloning, ElevenLabs only for Live Voice; twin clones in both providers (elevenlabs_voice_id on user_cloned_voices, retry-twin path, dual delete, live picker from user_cloned_voices)
-- [ ] Paid verification of twin flow on test accounts (blocked: emekaihechi860@gmail.com has 0 credits; second designated test account needed)
-- [x] Trace reported clone denial to provider 403; confirm owner UUID matches raw description, unify ownership helpers, strengthen raw cache and pass 21 focused tests
-- [ ] Resolve provider voice_access_denied and verify paid owner/replacement/isolation matrix (blocked: designated test wallet emekaihechi860@gmail.com has 0 credits; second designated test account needed for authenticated isolation)
+## Current: One voice provider (ElevenLabs powers TTS + cloning + live)
 
-- [x] Implement and verify voice replacement and five successful clones per rolling 24 hours (five live creations, sixth refused; 24-hour aging boundary tested automatically)
+- [ ] DB migration: user_cloned_voices.voice_id (the ElevenLabs clone id), deprecate cartesia_voice_id/elevenlabs_voice_id, voice_reclone_grants table, save/consume RPCs
+- [ ] Data migration: twin rows keep ElevenLabs id as the clone; 223 Cartesia-only rows deleted with one free re-clone grant per user
+- [ ] Provider cleanup: delete legacy Cartesia voices from the Cartesia account
+- [ ] elevenlabs.functions.ts: single-provider clone (owner-tagged, 150 cr, 1 slot, 5/24h before charge, free re-clone path), list-mine from table, delete clears provider+row+clip, live access via voice_id, STS voice_settings 0.5/0.9
+- [ ] voice page: ElevenLabs everywhere, speed+stability only (drop volume/emotion/WAV), remove twin retry UI, free re-clone notice + button
+- [ ] Remove twin system (voice-twins.server.ts, createCartesiaWithTwin); Cartesia functions stay unreferenced
+- [ ] Tests + typecheck + build
+- [ ] Paid verification on test accounts (emekaihechi860@gmail.com funded?; brightcodes0@gmail.com isolation): clone once → same id serves preview/TTS/live; free re-clone path; charges exact
 
-- [x] TURN relay support for WebRTC streaming (ICE servers from server, viewer retry on ICE failure)
-- [x] Switch DECART_API_KEY to the new key
-- [ ] Add TURN_URL / TURN_USERNAME / TURN_CREDENTIAL values (blocked: user declined the form for now)
+## Done
+
+- [x] Twin restructure (superseded by the above)
+- [x] Voice replacement + 5 clones per rolling 24h
+- [x] Clone denial traced to provider 403; ownership helpers unified
+- [x] TURN relay support (secrets still blocked — user declined)
+- [x] DECART_API_KEY switch
