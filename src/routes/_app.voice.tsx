@@ -399,18 +399,13 @@ export function VoiceList(props: {
 }) {
   const { owner, selected, onSelect, onCloneCta, onCount, onDeleted } = props;
   const category = props.category ?? (owner ? "mine" : "library");
-  const forLive = props.forLive === true;
-  const fetchLibrary = useServerFn(listCartesiaVoices);
-  const fetchLive = useServerFn(elListVoices);
+  const fetchVoices = useServerFn(elListVoices);
   const fetchMine = useServerFn(listMyClonedVoices);
-  const removeVoice = useServerFn(deleteClonedVoice);
-  const retryTwinFn = useServerFn(retryElevenLabsTwin);
-  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const removeVoice = useServerFn(elDeleteVoice);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmVoice, setConfirmVoice] = useState<VoiceSummary | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const ttsCartesia = useServerFn(generateCartesiaSpeech);
-  const ttsLive = useServerFn(elTextToSpeech);
+  const ttsPreview = useServerFn(elTextToSpeech);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [language, setLanguage] = useState("");
