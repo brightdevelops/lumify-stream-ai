@@ -445,22 +445,14 @@ export function VoiceList(props: {
         let list: VoiceSummary[];
         if (category === "mine") {
           const res = await fetchMine({});
-          // Live voice selects the ElevenLabs twin; the row keeps the Cartesia id for delete/retry.
-          list = forLive ? res.data.map((v) => ({ ...v, id: v.elevenlabs_voice_id ?? v.id })) : res.data;
+          list = res.data;
           onCount?.(res.count);
-          setHasMore(false);
-          setCursor(null);
-        } else if (forLive) {
-          const res = await fetchLive({ data: { category: category === "anime" ? "anime" : "library", ...(debounced ? { q: debounced } : {}) } });
-          list = res.data;
-          setHasMore(false);
-          setCursor(null);
         } else {
-          const res = await fetchLibrary({ data: { ...(debounced ? { q: debounced } : {}), ...(startingAfter ? { starting_after: startingAfter } : {}) } });
+          const res = await fetchVoices({ data: { category: category === "anime" ? "anime" : "library", ...(debounced ? { q: debounced } : {}) } });
           list = res.data;
-          setHasMore(res.has_more);
-          setCursor(res.next_page);
         }
+        setHasMore(false);
+        setCursor(null);
         const filtered = list.filter((v) => !language || (v.language || "").toLowerCase().startsWith(language));
         setVoices((prev) => (startingAfter ? [...prev, ...filtered] : filtered));
       } catch (e) {
@@ -470,7 +462,7 @@ export function VoiceList(props: {
         setLoading(false);
       }
     },
-    [fetchMine, fetchLive, fetchLibrary, forLive, debounced, language, category, onCount],
+    [fetchMine, fetchVoices, debounced, language, category, onCount],
   );
 
   useEffect(() => { void load(); }, [load]);
