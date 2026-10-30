@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { VOICE_LIVE_CREDITS_PER_SECOND } from "@/lib/pricing";
+import { CLONE_COST, MAX_CLONE_BYTES, createReplacement } from "@/lib/voice-cloning";
 
 /**
  * Voice Studio provider layer. All user clones live in ONE shared provider
@@ -13,9 +14,6 @@ const API = "https://api.elevenlabs.io";
 const TTS_MODEL = "eleven_flash_v2_5"; // cost decision: flash tier, NOT multilingual v2
 const STS_MODEL = "eleven_multilingual_sts_v2";
 const OWNER_TAG = "lumify-owner:";
-const CLONE_COST = 150;
-const MAX_CLONES = 1;
-const MAX_CLONE_BYTES = 3 * 1024 * 1024;
 const MAX_SEGMENT_SECONDS = 15;
 const speechCost = (chars: number) => Math.max(15, Math.ceil(chars / 10));
 
@@ -219,28 +217,48 @@ export const elCloneVoice = createServerFn({ method: "POST" })
     if (!CLONE_TYPES.includes(type)) throw new Error("Unsupported audio format. Use wav, mp3, m4a, aac, ogg, webm or flac.");
     const bytes = fromBase64(data.clipBase64);
     if (bytes.byteLength > MAX_CLONE_BYTES) throw new Error("Clip is larger than 3 MB.");
-    const owned = (await accountVoices(true)).filter((v) => ownerOf(v) === context.userId).length;
-    if (owned >= MAX_CLONES) throw new Error(`You have 1 custom voice slot (more coming soon). Delete your voice to make room.`);
-    if (!(await charge(context.userId, CLONE_COST, `Voice clone · ${data.name}`))) {
-      throw new Error(`Voice cloning costs ${CLONE_COST} credits and your balance is too low. Top up your wallet to continue.`);
-    }
     const form = new FormData();
     form.append("name", data.name);
     form.append("description", `${OWNER_TAG}${context.userId}`);
     form.append("remove_background_noise", "true");
     if (data.language) form.append("labels", JSON.stringify({ language: data.language }));
     form.append("files", new Blob([bytes], { type }), data.clipName);
-    let voiceId = "";
+    const sb = await admin();
+    const operationId = crypto.randomUUID();
+    const { data: windowData, error: beginError } = await sb.rpc("begin_voice_clone", { p_user_id: context.userId, p_operation_id: operationId });
+    if (beginError) throw new Error(beginError.message);
+    const window = z.object({ created_at: z.array(z.string()), now: z.string() }).parse(windowData);
+    let voiceId: string;
     try {
-      const res = await fetch(`${API}/v1/voices/add`, { method: "POST", headers: { "xi-api-key": apiKey() }, body: form });
-      if (!res.ok) throw await providerError(res, "Voice cloning");
-      voiceId = String(((await res.json()) as { voice_id?: string }).voice_id ?? "");
-    } catch (e) {
-      await refund(context.userId, CLONE_COST, "Voice clone refund (provider error)");
-      throw e instanceof Error ? e : new Error("Voice cloning failed.");
+      voiceId = await createReplacement({
+        createdAt: window.created_at, now: Date.parse(window.now),
+        ownedVoiceIds: async () => (await accountVoices(true)).filter((v) => ownerOf(v) === context.userId).map((v) => v.voice_id),
+        charge: () => charge(context.userId, CLONE_COST, `Voice clone · ${data.name}`),
+        deleteOwned: async (id) => {
+          const voice = (await accountVoices(true)).find((v) => v.voice_id === id);
+          if (!voice || ownerOf(voice) !== context.userId) throw new Error("You can only delete voices you cloned.");
+          const res = await fetch(`${API}/v1/voices/${encodeURIComponent(id)}`, { method: "DELETE", headers: { "xi-api-key": apiKey() }, signal: AbortSignal.timeout(30_000) });
+          if (!res.ok && res.status !== 404) throw await providerError(res, "Deleting voice");
+          voiceCache = null;
+          await sb.storage.from("voice-samples").remove([`el/${id}.mp3`]).catch(() => undefined);
+        },
+        create: async () => {
+          const res = await fetch(`${API}/v1/voices/add`, { method: "POST", headers: { "xi-api-key": apiKey() }, body: form, signal: AbortSignal.timeout(90_000) });
+          if (!res.ok) throw await providerError(res, "Voice cloning");
+          voiceCache = null;
+          return String(((await res.json()) as { voice_id?: string }).voice_id ?? "");
+        },
+        record: async (id) => {
+          const { error } = await sb.rpc("finish_voice_clone", { p_user_id: context.userId, p_operation_id: operationId, p_voice_id: id });
+          if (error) throw new Error("Could not save your voice creation. Please try again.");
+        },
+        refund: () => refund(context.userId, CLONE_COST, "Voice clone refund (provider error)"),
+      });
+    } finally {
+      voiceCache = null;
+      const { error } = await sb.rpc("end_voice_clone", { p_user_id: context.userId, p_operation_id: operationId });
+      if (error) console.error("[voice] clone lease release failed", error.code);
     }
-    voiceCache = null;
-    await logUsage({ user_id: context.userId, kind: "clone", characters: 0, credits: CLONE_COST, voice_id: voiceId });
     return { id: voiceId, name: data.name, description: "Cloned voice", language: data.language ?? "", preview_file_url: "", category: "mine" as const, credits_charged: CLONE_COST };
   });
 
