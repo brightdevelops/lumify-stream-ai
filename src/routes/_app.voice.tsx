@@ -392,7 +392,7 @@ export function VoiceList(props: {
   owner: boolean;
   category?: "library" | "anime" | "mine";
   hideDelete?: boolean;
-  /** Live voice mode: ElevenLabs library/anime, clones selectable only with a twin. */
+  /** Live voice mode picker (same voices; kept for call-site clarity). */
   forLive?: boolean;
   selected: VoiceSummary | null;
   onSelect: (v: VoiceSummary) => void;
@@ -1385,9 +1385,9 @@ function Composer({ selected }: { selected: VoiceSummary | null }) {
 
 function SliderField(props: {
   label: string; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; disabled?: boolean;
+  onChange: (v: number) => void; disabled?: boolean; suffix?: string;
 }) {
-  const { label, value, min, max, step, onChange, disabled } = props;
+  const { label, value, min, max, step, onChange, disabled, suffix = "×" } = props;
   const pct = ((value - min) / (max - min)) * 100;
   return (
     <div style={{ flex: "1 1 180px", minWidth: 180 }}>
